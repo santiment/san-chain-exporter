@@ -1,6 +1,6 @@
-# Golem Watcher
+# ERC20 Transfer Event Exporter
 
-A small service that queries Parity at intervals of 5 minutes and stores in InfluxDB all transfers. These transfers are extracted from the BatchTransfer event. Golem watcher is written in javascript and uses ![web3.js](https://github.com/ethereum/web3.js/) library which implements the Ethereum JSON RPC spec.
+A small service that exports all ERC20 Transfer Events from the ethereum blockchain to a Kafka topic. It is written in javascript and uses ![web3.js](https://github.com/ethereum/web3.js/) library which implements the Ethereum JSON RPC spec.
 
 ## Setup
 
@@ -30,7 +30,13 @@ If you want to specify a custom parity service:
 $ PARITY_URL=<parity_url> npm start
 ```
 
-You can make healthcheck GET requests to the service. The healthcheck makes a request to InfluxDB and Parity to make sure the connection is not lost:
+If you want to specify a different kafka host from localhost:9092 you can do:
+
+```bash
+$ KAFKA_HOST=<kafka_host> npm start
+```
+
+You can make healthcheck GET requests to the service. The healthcheck makes a request to Kafka and Parity to make sure the connection is not lost:
 
 ```bash
 curl http://localhost:3000/healthcheck
