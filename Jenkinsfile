@@ -8,8 +8,8 @@ podTemplate(label: 'erc20-transfers-exporter', containers: [
       container('docker') {
         def scmVars = checkout scm
 
-        sh "docker build -t golem-watcher-test:${scmVars.GIT_COMMIT} -f Dockerfile-test ."
-        sh "docker run --rm -t golem-watcher-test:${scmVars.GIT_COMMIT} npm run test"
+        sh "docker build -t erc20-transfers-exporter-test:${scmVars.GIT_COMMIT} -f Dockerfile-test ."
+        sh "docker run --rm -t erc20-transfers-exporter-test:${scmVars.GIT_COMMIT} npm run test"
 
         if (env.BRANCH_NAME == "master") {
           withCredentials([
@@ -20,9 +20,9 @@ podTemplate(label: 'erc20-transfers-exporter', containers: [
           ]) {
             def awsRegistry = "${env.aws_account_id}.dkr.ecr.eu-central-1.amazonaws.com"
             docker.withRegistry("https://${awsRegistry}", "ecr:eu-central-1:ecr-credentials") {
-              sh "docker build -t ${awsRegistry}/golem-watcher:${env.BRANCH_NAME} -t ${awsRegistry}/golem-watcher:${scmVars.GIT_COMMIT} ."
-              sh "docker push ${awsRegistry}/golem-watcher:${env.BRANCH_NAME}"
-              sh "docker push ${awsRegistry}/golem-watcher:${scmVars.GIT_COMMIT}"
+              sh "docker build -t ${awsRegistry}/erc20-transfers-exporter:${env.BRANCH_NAME} -t ${awsRegistry}/erc20-transfers-exporter:${scmVars.GIT_COMMIT} ."
+              sh "docker push ${awsRegistry}/erc20-transfers-exporter:${env.BRANCH_NAME}"
+              sh "docker push ${awsRegistry}/erc20-transfers-exporter:${scmVars.GIT_COMMIT}"
             }
           }
         }
