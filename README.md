@@ -14,7 +14,7 @@ Also make sure you have access to a parity JSON-RPC node to hook it to.
 
 ## Running the service
 
-The service assumes by default that you have a parity JSON-RPC service running on `http://localhost:8545`. If this is not the case you can specify the URL to the parity service using the `PARITY_URL` env variable.
+The service assumes by default that you have a parity JSON-RPC service running on `http://localhost:8545` and that you have a local kafka deployment running on `localhost:9092`. If this is not the case you can specify the URL to the parity service using the `PARITY_URL` env variable and the URL to the kafka service with the env var `KAFKA_HOST`.
 
 Example:
 
@@ -24,26 +24,20 @@ $ npm start
 
 This will start the service on local port 3000.
 
-If you want to specify a custom parity service:
+If you want to specify a custom parity and kafka services:
 
 ```bash
-$ PARITY_URL=<parity_url> npm start
+$ PARITY_URL=<parity_url> KAFKA_HOST=<kafka_host> npm start
 ```
 
-If you want to specify a different kafka host from localhost:9092 you can do:
-
-```bash
-$ KAFKA_HOST=<kafka_host> npm start
-```
-
-You can make healthcheck GET requests to the service. The healthcheck makes a request to Kafka and Parity to make sure the connection is not lost:
+You can make health check GET requests to the service. The health check makes a request to Kafka and Parity to make sure the connection is not lost:
 
 ```bash
 curl http://localhost:3000/healthcheck
 ```
 
-If the healthcheck passes you get response code 200 and response message `ok`.
-If the healthcheck does not pass you get response code 500 and a message describing what failed.
+If the health check passes you get response code 200 and response message `ok`.
+If the health check does not pass you get response code 500 and a message describing what failed.
 
 ## Running the tests
 

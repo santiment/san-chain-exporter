@@ -1,8 +1,6 @@
-/*jslint es6 */
+/* jslint es6 */
 "use strict";
-const {
-  send
-} = require('micro')
+const { send } = require('micro')
 const url = require('url')
 const Web3 = require('web3')
 
@@ -16,7 +14,7 @@ let web3 = new Web3(new Web3.providers.HttpProvider(PARITY_NODE))
 
 const KAFKA_HOST = process.env.KAFKA_HOST || "localhost:9092"
 console.info(`Connecting to kafka host ${KAFKA_HOST}`)
-var kafka = require('kafka-node'),
+const kafka = require('kafka-node'),
     HighLevelProducer = kafka.HighLevelProducer,
     KeyedMessage = kafka.KeyedMessage,
     kafkaClient = new kafka.KafkaClient(KAFKA_HOST),
@@ -44,12 +42,12 @@ async function decodeEvent(event, blockTimestamps) {
   }
 
   return new KeyedMessage(event["address"].toLowerCase(), JSON.stringify({
-    "from": decodeAddress(event["topics"][1]),
-    "to": decodeAddress(event["topics"][2]),
-    "value": web3.utils.hexToNumberString(event["data"]),
-    "contract": event["address"].toLowerCase(),
-    "blockNumber": event["blockNumber"],
-    "timestamp": timestamp
+    from: decodeAddress(event["topics"][1]),
+    to: decodeAddress(event["topics"][2]),
+    value: web3.utils.hexToNumberString(event["data"]),
+    contract: event["address"].toLowerCase(),
+    blockNumber: event["blockNumber"],
+    timestamp: timestamp
   }))
 }
 
@@ -86,6 +84,7 @@ function sendData(events) {
 async function work() {
   const currentBlock = await web3.eth.getBlockNumber()
   console.info(`Fetching transfer events for interval ${lastProcessedBlock}:${currentBlock}`)
+
   while (lastProcessedBlock < currentBlock) {
     const toBlock = Math.min(lastProcessedBlock + BLOCK_INTERVAL, currentBlock)
     const events = await getPastEvents(lastProcessedBlock + 1, toBlock)
@@ -114,7 +113,13 @@ const healthcheckParity = () => {
 }
 
 const healthcheckKafka = () => {
-  return kafkaClient.isConnected
+  return new Promise((resolve, reject) => {
+    if (kafkaClient.brokers.length > 0) {
+      resolve()
+    } else {
+      reject("Kafka client is not connected to any brokers")
+    }
+  }
 }
 
 module.exports = async (request, response) => {
@@ -125,8 +130,8 @@ module.exports = async (request, response) => {
     case '/healthcheck':
       return healthcheckKafka()
         .then(healthcheckParity())
-        .then((result) => send(response, 200, "ok"))
-        .catch((err) => send(response, 500, `Connection to kafka or parity failed. \nError stack:\n${err.stack}`))
+        .then(() => send(response, 200, "ok"))
+        .catch((err) => send(response, 500, `Connection to kafka or parity failed: ${err}`))
 
     default:
       return send(response, 404, 'Not found');
