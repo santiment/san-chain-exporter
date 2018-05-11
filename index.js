@@ -4,20 +4,20 @@ const { send } = require('micro')
 const url = require('url')
 const Web3 = require('web3')
 
-const BLOCK_INTERVAL = 100
-let lastProcessedBlock = 2000000
+const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
+let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
 const TRANSFER_EVENT_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
-const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8001/api/v1/proxy/namespaces/default/services/parity-parity:8545/";
+const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
 console.info(`Connecting to parity node ${PARITY_NODE}`)
 let web3 = new Web3(new Web3.providers.HttpProvider(PARITY_NODE))
 
-const KAFKA_HOST = process.env.KAFKA_HOST || "localhost:9092"
-console.info(`Connecting to kafka host ${KAFKA_HOST}`)
+const KAFKA_URL = process.env.KAFKA_URL || "localhost:9092"
+console.info(`Connecting to kafka host ${KAFKA_URL}`)
 const kafka = require('kafka-node'),
     HighLevelProducer = kafka.HighLevelProducer,
     KeyedMessage = kafka.KeyedMessage,
-    kafkaClient = new kafka.KafkaClient(KAFKA_HOST),
+    kafkaClient = new kafka.KafkaClient(KAFKA_URL),
     producer = new HighLevelProducer(kafkaClient)
 
 const KAFKA_TOPIC = process.env.KAFKA_TOPIC || "erc20_transfers"
