@@ -34,7 +34,7 @@ async function getBlockTimestamp(blockNumber) {
 }
 
 async function decodeEvent(event, blockTimestamps) {
-  if (!event["topics"][1] || !event["topic"][2]) {
+  if (!event["topics"][1] || !event["topics"][2]) {
     return null
   }
 
