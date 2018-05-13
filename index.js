@@ -44,7 +44,7 @@ async function decodeEvent(event, blockTimestamps) {
   return new KeyedMessage(event["address"].toLowerCase(), JSON.stringify({
     from: decodeAddress(event["topics"][1]),
     to: decodeAddress(event["topics"][2]),
-    value: web3.utils.hexToNumberString(event["data"]),
+    value: parseFloat(web3.utils.hexToNumberString(event["data"])),
     contract: event["address"].toLowerCase(),
     blockNumber: event["blockNumber"],
     timestamp: timestamp
@@ -100,7 +100,10 @@ async function work() {
 
 const init = () => {
   // Execute the `work` every 30 sec after it has finished working
-  work().then(() => {
+  work()
+  .then(() => console.log(`Progressed to block ${lastProcessedBlock}`))
+  .catch((error) => console.error(`Error while fetching blocks: ${error}. Retrying in 30 sec...`))
+  .finally(() => {
     setTimeout(work, 30 * 1000)
   })
 }
