@@ -119,7 +119,7 @@ const healthcheckKafka = () => {
     } else {
       reject("Kafka client is not connected to any brokers")
     }
-  }
+  })
 }
 
 module.exports = async (request, response) => {
