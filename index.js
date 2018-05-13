@@ -46,8 +46,9 @@ async function decodeEvent(event, blockTimestamps) {
     to: decodeAddress(event["topics"][2]),
     value: parseFloat(web3.utils.hexToNumberString(event["data"])),
     contract: event["address"].toLowerCase(),
-    blockNumber: event["blockNumber"],
-    timestamp: timestamp
+    blockNumber: web3.utils.hexToNumberString(event["blockNumber"]),
+    timestamp: timestamp,
+    logIndex: web3.utils.hexToNumberString(event["logIndex"])
   }))
 }
 
