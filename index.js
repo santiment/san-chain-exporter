@@ -17,7 +17,7 @@ console.info(`Connecting to kafka host ${KAFKA_URL}`)
 const kafka = require('kafka-node'),
     HighLevelProducer = kafka.HighLevelProducer,
     KeyedMessage = kafka.KeyedMessage,
-    kafkaClient = new kafka.KafkaClient(KAFKA_URL),
+    kafkaClient = new kafka.KafkaClient({kafkaHost: KAFKA_URL}),
     producer = new HighLevelProducer(kafkaClient)
 
 const KAFKA_TOPIC = process.env.KAFKA_TOPIC || "erc20_transfers"
