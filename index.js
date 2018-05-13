@@ -89,7 +89,7 @@ async function work() {
     const toBlock = Math.min(lastProcessedBlock + BLOCK_INTERVAL, currentBlock)
     const events = await getPastEvents(lastProcessedBlock + 1, toBlock)
 
-    if (events != []) {
+    if (events.length > 0) {
       console.info(`Storing ${events.length} messages for blocks ${lastProcessedBlock + 1}:${toBlock}`)
       const result = await sendData(events)
     }
