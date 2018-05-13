@@ -34,7 +34,11 @@ async function getBlockTimestamp(blockNumber) {
 }
 
 async function decodeEvent(event, blockTimestamps) {
-  let timestamp;
+  if (!event["topics"][1] || !event["topic"][2]) {
+    return null
+  }
+
+  let timestamp
   if (!blockTimestamps[event["blockNumber"]]) {
     timestamp = blockTimestamps[event["blockNumber"]] = await getBlockTimestamp(event["blockNumber"])
   } else {
@@ -63,7 +67,9 @@ async function getPastEvents(fromBlock, toBlock) {
 
   const result = []
   for (let i = 0;i < events.length; i++) {
-    result.push(await decodeEvent(events[i], blockTimestamps))
+    const decodedEvent = await decodeEvent(events[i], blockTimestamps)
+
+    if (decodeEvent) result.push(decodeEvent)
   }
 
   return result
