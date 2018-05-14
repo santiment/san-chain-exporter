@@ -5,6 +5,7 @@ const url = require('url')
 const Web3 = require('web3')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
+const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
 let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
 const TRANSFER_EVENT_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
@@ -17,6 +18,7 @@ console.info(`Connecting to kafka host ${KAFKA_URL}`)
 const kafka = require('kafka-node'),
     HighLevelProducer = kafka.HighLevelProducer,
     KeyedMessage = kafka.KeyedMessage,
+    ConsumerGroup = kafka.ConsumerGroup,
     kafkaClient = new kafka.KafkaClient({kafkaHost: KAFKA_URL}),
     producer = new HighLevelProducer(kafkaClient)
 
@@ -93,7 +95,7 @@ async function work() {
   console.info(`Fetching transfer events for interval ${lastProcessedBlock}:${currentBlock}`)
 
   while (lastProcessedBlock < currentBlock) {
-    const toBlock = Math.min(lastProcessedBlock + BLOCK_INTERVAL, currentBlock)
+    const toBlock = Math.min(lastProcessedBlock + BLOCK_INTERVAL, currentBlock - CONFIRMATIONS)
     const events = await getPastEvents(lastProcessedBlock + 1, toBlock)
 
     if (events.length > 0) {
@@ -105,14 +107,18 @@ async function work() {
   }
 }
 
-const init = () => {
-  // Execute the `work` every 30 sec after it has finished working
+const fetchEvents = () => {
   work()
   .then(() => console.log(`Progressed to block ${lastProcessedBlock}`))
   .catch((error) => console.error(`Error while fetching blocks: ${error}. Retrying in 30 sec...`))
   .then(() => {
-    setTimeout(init, 30 * 1000)
+    // Look for new events every 30 sec
+    setTimeout(fetchEvents, 30 * 1000)
   })
+}
+
+const init = () => {
+  fetchEvents()
 }
 
 producer.on("ready", init)
