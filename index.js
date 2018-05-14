@@ -111,7 +111,7 @@ const init = () => {
   .then(() => console.log(`Progressed to block ${lastProcessedBlock}`))
   .catch((error) => console.error(`Error while fetching blocks: ${error}. Retrying in 30 sec...`))
   .then(() => {
-    setTimeout(work, 30 * 1000)
+    setTimeout(init, 30 * 1000)
   })
 }
 
