@@ -71,7 +71,7 @@ async function getPastEvents(fromBlock, toBlock) {
   for (let i = 0;i < events.length; i++) {
     const decodedEvent = await decodeEvent(events[i], blockTimestamps)
 
-    if (decodeEvent) result.push(decodeEvent)
+    if (decodedEvent) result.push(decodedEvent)
   }
 
   return result
