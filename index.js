@@ -5,6 +5,7 @@ const url = require('url')
 const Web3 = require('web3')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
+const KAFKA_MAX_EVENTS_TO_SENT = parseInt(process.env.KAFKA_MAX_EVENTS_TO_SENT || "10000")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
 let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
 const TRANSFER_EVENT_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
@@ -52,7 +53,7 @@ async function decodeEvent(event, blockTimestamps) {
     to: decodeAddress(event["topics"][2]),
     value: parseFloat(web3.utils.hexToNumberString(event["data"])),
     contract: event["address"].toLowerCase(),
-    blockNumber: web3.utils.hexToNumberString(event["blockNumber"]),
+    blockNumber: parseInt(web3.utils.hexToNumberString(event["blockNumber"])),
     timestamp: timestamp,
     logIndex: web3.utils.hexToNumberString(event["logIndex"])
   }))
@@ -77,17 +78,21 @@ async function getPastEvents(fromBlock, toBlock) {
   return result
 }
 
-function sendData(events) {
-  return new Promise((resolve, reject) => {
-    producer.send([{
-      topic: KAFKA_TOPIC,
-      messages: events,
-      attributes: 1
-    }], (err, data) => {
-      if (err) return reject(err)
-      resolve(data)
+async function sendData(events) {
+  for (let i = 0; i < events.length;i += KAFKA_MAX_EVENTS_TO_SENT) {
+    await new Promise((resolve, reject) => {
+      producer.send([{
+        topic: KAFKA_TOPIC,
+        messages: events.slice(i, i + KAFKA_MAX_EVENTS_TO_SENT),
+        attributes: 1
+      }], (err, data) => {
+        if (err) return reject(err)
+        resolve(data)
+      })
     })
-  })
+  }
+
+  return true;
 }
 
 async function work() {
@@ -100,7 +105,7 @@ async function work() {
 
     if (events.length > 0) {
       console.info(`Storing ${events.length} messages for blocks ${lastProcessedBlock + 1}:${toBlock}`)
-      const result = await sendData(events)
+      await sendData(events)
     }
 
     lastProcessedBlock = toBlock
