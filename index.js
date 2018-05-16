@@ -96,11 +96,11 @@ async function sendData(events) {
 }
 
 async function work() {
-  const currentBlock = await web3.eth.getBlockNumber()
+  const currentBlock = await web3.eth.getBlockNumber() - CONFIRMATIONS
   console.info(`Fetching transfer events for interval ${lastProcessedBlock}:${currentBlock}`)
 
   while (lastProcessedBlock < currentBlock) {
-    const toBlock = Math.min(lastProcessedBlock + BLOCK_INTERVAL, currentBlock - CONFIRMATIONS)
+    const toBlock = Math.min(lastProcessedBlock + BLOCK_INTERVAL, currentBlock)
     const events = await getPastEvents(lastProcessedBlock + 1, toBlock)
 
     if (events.length > 0) {
