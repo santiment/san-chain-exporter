@@ -1,5 +1,6 @@
 /* jslint es6 */
 "use strict";
+const pkg = require('./package.json');
 const { send } = require('micro')
 const url = require('url')
 const Web3 = require('web3')
@@ -30,7 +31,7 @@ console.info(`Pushing data to topic ${KAFKA_TOPIC}`)
 const ZOOKEEPER_URL = process.env.ZOOKEEPER_URL || "localhost:2181"
 console.log(`Connecting to zookeeper host ${ZOOKEEPER_URL}`)
 const zookeeperClient = zk.createAsyncClient(ZOOKEEPER_URL)
-const ZOOKEEPER_BLOCK_NUMBER_NODE = `/eth-transfers-exporter/${KAFKA_TOPIC}/block-number`
+const ZOOKEEPER_BLOCK_NUMBER_NODE = `/${pkg.name}/${KAFKA_TOPIC}/block-number`
 
 let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
 
