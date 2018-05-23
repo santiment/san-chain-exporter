@@ -3,11 +3,11 @@
 const { send } = require('micro')
 const url = require('url')
 const Web3 = require('web3')
+const zk = require('node-zookeeper-client-async')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const KAFKA_MAX_EVENTS_TO_SENT = parseInt(process.env.KAFKA_MAX_EVENTS_TO_SENT || "10000")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
-let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
 const TRANSFER_EVENT_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
@@ -25,6 +25,13 @@ const kafka = require('kafka-node'),
 
 const KAFKA_TOPIC = process.env.KAFKA_TOPIC || "erc20_transfers"
 console.info(`Pushing data to topic ${KAFKA_TOPIC}`)
+
+const ZOOKEEPER_URL = process.env.ZOOKEEPER_URL || "localhost:2181"
+console.log(`Connecting to zookeeper host ${ZOOKEEPER_URL}`)
+const zookeeperClient = zk.createAsyncClient(ZOOKEEPER_URL)
+const ZOOKEEPER_BLOCK_NUMBER_NODE = `/eth-transfers-exporter/${KAFKA_TOPIC}/block-number`
+
+let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
 
 const decodeAddress = (value) => {
   return "0x" + value.substring(value.length - 40)
@@ -89,10 +96,17 @@ async function sendData(events) {
         if (err) return reject(err)
         resolve(data)
       })
-    })
+    });
   }
 
   return true;
+}
+
+const saveLastProcessesBlock = () => {
+  const newNodeValue = Buffer.alloc(4)
+  newNodeValue.writeUInt32BE(lastProcessedBlock)
+
+  return zookeeperClient.setDataAsync(ZOOKEEPER_BLOCK_NUMBER_NODE, newNodeValue)
 }
 
 async function work() {
@@ -109,20 +123,38 @@ async function work() {
     }
 
     lastProcessedBlock = toBlock
+    await saveLastProcessesBlock()
   }
 }
 
 const fetchEvents = () => {
   work()
-  .then(() => console.log(`Progressed to block ${lastProcessedBlock}`))
-  .catch((error) => console.error(`Error while fetching blocks: ${error}. Retrying in 30 sec...`))
   .then(() => {
+    console.log(`Progressed to block ${lastProcessedBlock}`)
+
     // Look for new events every 30 sec
     setTimeout(fetchEvents, 30 * 1000)
   })
 }
 
-const init = () => {
+async function fetchLastImportedBlock() {
+  await zookeeperClient.connectAsync()
+  console.info("Successfully connected to zookeeper")
+
+  if (await zookeeperClient.existsAsync(ZOOKEEPER_BLOCK_NUMBER_NODE)) {
+    const previousBlockNumber = await zookeeperClient.getDataAsync(ZOOKEEPER_BLOCK_NUMBER_NODE)
+    lastProcessedBlock = previousBlockNumber.data.readUInt32BE(0)
+    console.info(`Resuming export from block ${lastProcessedBlock}`)
+  } else {
+    const initialNodeValue = Buffer.alloc(4)
+    initialNodeValue.writeUInt32BE(lastProcessedBlock)
+    await zookeeperClient.mkdirpAsync(ZOOKEEPER_BLOCK_NUMBER_NODE, initialNodeValue)
+    console.info(`Initialized node ${ZOOKEEPER_BLOCK_NUMBER_NODE} with value ${lastProcessedBlock}`)
+  }
+}
+
+function init() {
+  fetchLastImportedBlock()
   fetchEvents()
 }
 

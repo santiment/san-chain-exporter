@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/.bin/mocha --reporter spec",
+    "lint": "./node_modules/.bin/jslint '**/*.js'",
     "start": "micro -p 3000"
   },
   "repository": {
@@ -23,7 +24,9 @@
     "jslint": "^0.12.0",
     "kafka-node": "^2.6.1",
     "micro": "^9.0.0",
-    "web3": "^1.0.0-beta.34"
+    "node-zookeeper-client-async": "^1.0.0",
+    "redis": "^2.8.0",
+    "web3": "1.0.0-beta.34"
   },
   "devDependencies": {
     "chai": "^4.1.2",
