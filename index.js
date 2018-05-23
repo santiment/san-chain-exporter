@@ -4,7 +4,7 @@ const { send } = require('micro')
 const url = require('url')
 const Web3 = require('web3')
 const zk = require('node-zookeeper-client-async')
-const { decodeAddress } = require('lib/util')
+const { decodeAddress } = require('./lib/util')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const KAFKA_MAX_EVENTS_TO_SENT = parseInt(process.env.KAFKA_MAX_EVENTS_TO_SENT || "10000")
