@@ -151,9 +151,9 @@ async function fetchLastImportedBlock() {
   }
 }
 
-function init() {
-  fetchLastImportedBlock()
-  fetchEvents()
+async function init() {
+  await fetchLastImportedBlock()
+  await fetchEvents()
 }
 
 producer.on("ready", init)
