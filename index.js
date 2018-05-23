@@ -4,6 +4,7 @@ const { send } = require('micro')
 const url = require('url')
 const Web3 = require('web3')
 const zk = require('node-zookeeper-client-async')
+const { decodeAddress } = require('lib/util')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const KAFKA_MAX_EVENTS_TO_SENT = parseInt(process.env.KAFKA_MAX_EVENTS_TO_SENT || "10000")
@@ -32,10 +33,6 @@ const zookeeperClient = zk.createAsyncClient(ZOOKEEPER_URL)
 const ZOOKEEPER_BLOCK_NUMBER_NODE = `/eth-transfers-exporter/${KAFKA_TOPIC}/block-number`
 
 let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
-
-const decodeAddress = (value) => {
-  return "0x" + value.substring(value.length - 40)
-}
 
 async function getBlockTimestamp(blockNumber) {
   const block = await web3.eth.getBlock(blockNumber)
