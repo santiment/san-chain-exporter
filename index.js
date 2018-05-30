@@ -153,8 +153,13 @@ async function fetchLastImportedBlock() {
 }
 
 async function init() {
-  await fetchLastImportedBlock()
-  await fetchEvents()
+  try {
+    await fetchLastImportedBlock()
+    await fetchEvents()
+  } catch (e) {
+    console.error(e)
+    process.exit(1);
+  }
 }
 
 producer.on("ready", init)
