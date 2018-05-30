@@ -61,8 +61,7 @@ async function decodeEvent(event, blockTimestamps) {
     blockNumber: parseInt(web3.utils.hexToNumberString(event["blockNumber"])),
     timestamp: timestamp,
     transactionHash: event["transactionHash"],
-    transactionIndex: web3.utils.hexToNumberString(event["transactionIndex"]),
-    transactionLogIndex: web3.utils.hexToNumberString(event["transactionLogIndex"])
+    logIndex: parseInt(web3.utils.hexToNumberString(event["logIndex"]))
   }))
 }
 
