@@ -133,6 +133,9 @@ const fetchEvents = () => {
 
     // Look for new events every 30 sec
     setTimeout(fetchEvents, 30 * 1000)
+  }).catch((e) => {
+    console.log(`Error fetching events: ${e}`)
+    process.exit(1)
   })
 }
 
