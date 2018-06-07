@@ -1,6 +1,6 @@
 # ERC20 Transfer Event Exporter
 
-A small service that exports all ERC20 Transfer Events from the ethereum blockchain to a Kafka topic. It is written in javascript and uses ![web3.js](https://github.com/ethereum/web3.js/) library which implements the Ethereum JSON RPC spec.
+A small service that exports all ERC20 Transfer Events from the ethereum blockchain to a Kafka topic. It is written in javascript and uses the https://github.com/ethereum/web3.js/ library which implements the Ethereum JSON RPC spec.
 
 ## Setup
 
