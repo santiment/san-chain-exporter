@@ -4,50 +4,42 @@ A small service that exports all ERC20 Transfer Events from the ethereum blockch
 
 ## Setup
 
-To setup the service install all node packages:
+You need to have access to a parity full node to run this. The easiest way to get access to one is to
+use the parity service we have on staging. You need to setup kubernetes access to the staging k8s cluster.
+Then you need to run a proxy to it, like this:
 
 ```bash
-$ npm install
+$ kubectl proxy --address '0.0.0.0' --accept-hosts='^.*'
 ```
 
-Also make sure you have access to a parity JSON-RPC node to hook it to.
+After that you can access the parity service using the IP of your machine in the current network, like
+this:
+
+```bash
+$ curl --data '{"method":"trace_filter","params":[{"fromBlock":"0x34147D","toBlock":"0x34147D"}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST http://<YOUR_IP>:8001/api/v1/namespaces/default/services/parity-optimized:8545/proxy/
+```
+
+You can use the URL `http://<YOUR_IP>:8001/api/v1/namespaces/default/services/parity-optimized:8545/proxy/`
+as the `PARITY_URL` in the `docker-compose.yml` file.
 
 ## Running the service
+
+The easiest way to run the service is using `docker-compose`:
 
 Example:
 
 ```bash
-$ npm start
+$ docker-compose up --build
 ```
 
-This will start the service on local port 3000.
-
-You can configure the service with the following ENV variables:
-
-* PARITY_URL - the URL to the parity full node. Default: `http://localhost:8545/`
-* KAFKA_URL - the URL to the kafka broker to connect to. Default: `localhost:9092`
-* BLOCK_INTERVAL - the number of blocks for which to fetch the events at once. Default: 100
-* START_BLOCK - the block from which to begin extracting the events. Default: 2000000
-
-If you want to specify a custom parity and kafka services:
-
-```bash
-$ PARITY_URL=<parity_url> KAFKA_URL=<kafka_host> npm start
-```
-
-You can make health check GET requests to the service. The health check makes a request to Kafka and Parity to make sure the connection is not lost:
-
-```bash
-curl http://localhost:3000/healthcheck
-```
-
-If the health check passes you get response code 200 and response message `ok`.
-If the health check does not pass you get response code 500 and a message describing what failed.
+You need to tweak the URL to the parity service in the `docker-compose.yml`. See the `Setup` section
+for more details.
 
 ## Running the tests
 
 You can run the tests with:
 
 ```bash
-$ npm run test
+$ docker build -f Dockerfile-test -t erc20-transfers-exporter-tests .
+$ docker run -it erc20-transfers-exporter-tests
 ```
