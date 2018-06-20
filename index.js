@@ -90,7 +90,7 @@ async function sendData(events) {
       producer.send([{
         topic: KAFKA_TOPIC,
         messages: events.slice(i, i + KAFKA_MAX_EVENTS_TO_SENT),
-        attributes: 1
+        attributes: 0
       }], (err, data) => {
         if (err) return reject(err)
         resolve(data)
