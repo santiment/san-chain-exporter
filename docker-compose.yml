@@ -18,4 +18,5 @@ services:
     environment:
       KAFKA_URL: kafka:9092
       ZOOKEEPER_URL: zookeeper:2181
-      PARITY_URL: http://10.85.2.237:8001/api/v1/namespaces/default/services/parity-parity:8545/proxy/
+      PARITY_URL: http://parity-optimized.default.svc.cluster.local:8545/
+      START_BLOCK: "5710092"
