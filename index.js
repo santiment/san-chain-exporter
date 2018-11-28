@@ -14,7 +14,7 @@ const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
 console.info(`Connecting to parity node ${PARITY_NODE}`)
 let web3 = new Web3(new Web3.providers.HttpProvider(PARITY_NODE))
 
-let lastProcessedBlock = parseInt(process.env.START_BLOCK || "2000000")
+let lastProcessedBlock = parseInt(process.env.START_BLOCK || "0")
 
 async function getBlockTimestamp(blockNumber) {
   const block = await web3.eth.getBlock(blockNumber)
@@ -38,6 +38,7 @@ async function decodeEvent(event, blockTimestamps) {
     from: decodeAddress(event["topics"][1]),
     to: decodeAddress(event["topics"][2]),
     value: parseFloat(web3.utils.hexToNumberString(event["data"])),
+    valueExactBase36: web3.utils.toBN(event["data"]).toString(36),
     contract: event["address"].toLowerCase(),
     blockNumber: parseInt(web3.utils.hexToNumberString(event["blockNumber"])),
     timestamp: timestamp,
