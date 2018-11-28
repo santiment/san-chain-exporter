@@ -50,11 +50,15 @@ async function decodeEvent(event, blockTimestamps) {
 async function getPastEvents(fromBlock, toBlock) {
   const blockTimestamps = {}
 
-  const events = await web3.eth.getPastLogs({
+  let events = await web3.eth.getPastLogs({
     fromBlock: web3.utils.numberToHex(fromBlock),
-    toBlock: web3.utils.numberToHex(toBlock),
-    topics: [TRANSFER_EVENT_TOPIC]
+    toBlock: web3.utils.numberToHex(toBlock)/*,
+    topics: [TRANSFER_EVENT_TOPIC]*/
   })
+
+  // Parity has a bug when filtering topics: https://github.com/paritytech/parity-ethereum/issues/9629
+  // TODO: Revert it when they fix it
+  events = events.filter(x => x.topics && x.topics.includes(TRANSFER_EVENT_TOPIC))
 
   const result = []
   for (let i = 0;i < events.length; i++) {
