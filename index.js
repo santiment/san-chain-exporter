@@ -2,6 +2,7 @@
 "use strict";
 const pkg = require('./package.json');
 const Web3 = require('web3')
+const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
@@ -27,6 +28,7 @@ async function work() {
     const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock)
 
     if (events.length > 0) {
+      stableSort(events, transactionOrder)
       for(let i = 0; i < events.length; i++) {
         events[i].primaryKey = lastProcessedPosition.primaryKey + i + 1
       }
@@ -69,6 +71,10 @@ async function init() {
   await exporter.connect()
   await initLastProcessedBlock()
   await fetchEvents()
+}
+
+function transactionOrder(a, b) {
+  return a.blockNumber - b.blockNumber
 }
 
 init()
