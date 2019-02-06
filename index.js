@@ -2,6 +2,7 @@
 "use strict";
 const pkg = require('./package.json');
 const Web3 = require('web3')
+const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
@@ -74,22 +75,6 @@ async function init() {
 
 function transactionOrder(a, b) {
   return a.blockNumber - b.blockNumber
-}
-
-function stableSort(array, sortFunc) {
-  array.forEach((x, i) => x._position = i)
-
-  array.sort(function(a,b){
-    let sortResult = sortFunc(a,b)
-    if(sortResult != 0) {
-      return sortResult
-    }
-    else {
-      return a._position - b._position
-    }
-  })
-
-  array.forEach(x => delete x._position)
 }
 
 init()
