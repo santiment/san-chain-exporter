@@ -27,6 +27,7 @@ async function work() {
     const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock)
 
     if (events.length > 0) {
+      stableSort(events, transactionOrder)
       for(let i = 0; i < events.length; i++) {
         events[i].primaryKey = lastProcessedPosition.primaryKey + i + 1
       }
@@ -69,6 +70,26 @@ async function init() {
   await exporter.connect()
   await initLastProcessedBlock()
   await fetchEvents()
+}
+
+function transactionOrder(a, b) {
+  return a.blockNumber - b.blockNumber
+}
+
+function stableSort(array, sortFunc) {
+  array.forEach((x, i) => x._position = i)
+
+  array.sort(function(a,b){
+    let sortResult = sortFunc(a,b)
+    if(sortResult != 0) {
+      return sortResult
+    }
+    else {
+      return a._position - b._position
+    }
+  })
+
+  array.forEach(x => delete x._position)
 }
 
 init()

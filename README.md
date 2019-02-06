@@ -51,9 +51,9 @@ The following contracts have been checked manually for custom events (most of th
 * BNB (0xB8c77482e45F1F44dE1745F52C74426C631bDD52)
    * Burn(address indexed,uint256)
    * Freeze(address indexed,uint256)
-      * Implemented as burning. Watched only for BNB
+      * Implemented as sending to `freeze` address. Watched only for BNB
    * Unfreeze(address indexed,uint256)
-      * Implemented as minting. Watched only for BNB
+      * Implemented as receiving from `freeze` address. Watched only for BNB
 * MKR (0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2)
    * Mint(address indexed,uint256)
    * Burn(address indexed,uint256)
