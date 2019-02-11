@@ -7,7 +7,7 @@ const { getPastEvents } = require('./lib/fetch_events')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 
-const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "1")
+const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
