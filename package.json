@@ -19,7 +19,6 @@
   },
   "homepage": "https://github.com/santiment/erc20_transfers_exporter#readme",
   "dependencies": {
-    "rewire": "4.0.1",
     "san-exporter": "git+https://github.com/santiment/san-exporter.git",
     "web3": "1.0.0-beta.34"
   },
@@ -29,6 +28,7 @@
     "jslint": "^0.12.0",
     "mocha": "^4.0.1",
     "seneca-jsonrest-api": "^0.3.1",
-    "test-listen": "^1.1.0"
+    "test-listen": "^1.1.0",
+    "rewire": "4.0.1"
   }
 }
