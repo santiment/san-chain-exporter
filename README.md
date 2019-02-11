@@ -66,7 +66,6 @@ The following contracts have been checked manually for custom events (most of th
    * Mint(address indexed,uint256)
    * Burn(uint256)
       * Not implemented - only a specific address can burn, but we don't know it
-* REP (0x1985365e9f78359a9B6AD760e32412f4a445E862)
 * ZIL (0x05f4a42e251f2d52b8ed15e9fedaacfcef1fad27)
    * Burn(address indexed,uint256)
 * LINK (0x514910771af9ca656af840dff83e8264ecf986ca)
