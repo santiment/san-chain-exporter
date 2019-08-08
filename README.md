@@ -82,3 +82,5 @@ The following contracts have been checked manually for custom events (most of th
    * TokensCollected(address indexed,uint256)
        * Not implemented - I don't know what they are for
 * GNT (0xa74476443119A942dE498590Fe1f2454d7D4aC0d)
+* QNT (0x4a220e6096b25eadb88358cb44068a3248254675)
+   * any tokens sent to contract's addresses are considered as burnt
