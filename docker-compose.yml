@@ -20,3 +20,4 @@ services:
       ZOOKEEPER_URL: zookeeper:2181
       PARITY_URL: http://parity-optimized.default.svc.cluster.local:8545/
       START_BLOCK: "5710092"
+      BLOCK_INTERVAL: "50"
