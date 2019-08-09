@@ -84,3 +84,6 @@ The following contracts have been checked manually for custom events (most of th
 * GNT (0xa74476443119A942dE498590Fe1f2454d7D4aC0d)
 * QNT (0x4a220e6096b25eadb88358cb44068a3248254675)
    * any tokens sent to contract's addresses are considered as burnt
+* WETH (0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2)
+   * Deposit(address,uint256)
+   * Withdrawal(address,uint256)
