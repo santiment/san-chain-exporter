@@ -1,6 +1,6 @@
 {
   "name": "erc20-transfers-exporter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Exporter of all transfer events from the ERC20 tokens",
   "main": "index.js",
   "scripts": {
