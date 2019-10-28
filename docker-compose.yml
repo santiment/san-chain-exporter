@@ -1,4 +1,4 @@
-version: '2'
+version: "2"
 services:
   zookeeper:
     image: wurstmeister/zookeeper
@@ -15,6 +15,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
   exporter:
     build: .
+    volumes:
+      - ./:/app
     environment:
       KAFKA_URL: kafka:9092
       ZOOKEEPER_URL: zookeeper:2181
