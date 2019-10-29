@@ -2,9 +2,11 @@
 "use strict";
 const pkg = require('./package.json');
 const Web3 = require('web3')
+const { send } = require('micro')
+const url = require('url')
 const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
-const { Exporter } = require('san-exporter')
+const { Exporter } = require('@santiment-network/san-exporter')
 const exporter = new Exporter(pkg.name)
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
@@ -29,12 +31,12 @@ async function work() {
 
     if (events.length > 0) {
       stableSort(events, transactionOrder)
-      for(let i = 0; i < events.length; i++) {
+      for (let i = 0; i < events.length; i++) {
         events[i].primaryKey = lastProcessedPosition.primaryKey + i + 1
       }
 
       console.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
-      
+
       await exporter.sendDataWithKey(events, "primaryKey")
 
       lastProcessedPosition.primaryKey += events.length
@@ -47,12 +49,12 @@ async function work() {
 
 async function fetchEvents() {
   await work()
-  .then(() => {
-    console.log(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
+    .then(() => {
+      console.log(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
 
-    // Look for new events every 30 sec
-    setTimeout(fetchEvents, 30 * 1000)
-  })
+      // Look for new events every 30 sec
+      setTimeout(fetchEvents, 30 * 1000)
+    })
 }
 
 async function initLastProcessedBlock() {
@@ -78,3 +80,33 @@ function transactionOrder(a, b) {
 }
 
 init()
+
+const healthcheckParity = () => {
+  return web3.eth.getBlockNumber()
+}
+
+const healthcheckKafka = () => {
+  return new Promise((resolve, reject) => {
+    if (exporter.producer.isConnected()) {
+      resolve()
+    } else {
+      reject("Kafka client is not connected to any brokers")
+    }
+  })
+}
+
+module.exports = async (request, response) => {
+  const req = url.parse(request.url, true);
+  const q = req.query;
+
+  switch (req.pathname) {
+    case '/healthcheck':
+      return healthcheckKafka()
+        .then(healthcheckParity())
+        .then(() => send(response, 200, "ok"))
+        .catch((err) => send(response, 500, `Connection to kafka or parity failed: ${err}`))
+
+    default:
+      return send(response, 404, 'Not found');
+  }
+}
