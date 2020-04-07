@@ -11,6 +11,8 @@ const exporter = new Exporter(pkg.name)
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
+// This multiplier is used to expand the space of the output primary keys. This allows for the event indexes to be added to the primary key.
+const PRIMARY_KEY_MULTIPLIER = 10000
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
 console.info(`Connecting to parity node ${PARITY_NODE}`)
@@ -23,23 +25,28 @@ let lastProcessedPosition = {
 
 async function work() {
   const currentBlock = await web3.eth.getBlockNumber() - CONFIRMATIONS
-  console.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${currentBlock}`)
 
   while (lastProcessedPosition.blockNumber < currentBlock) {
     const toBlock = Math.min(lastProcessedPosition.blockNumber + BLOCK_INTERVAL, currentBlock)
+    console.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
     const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock)
 
     if (events.length > 0) {
       stableSort(events, transactionOrder)
+      const lastEvent = events[events.length -1]
+      if (lastEvent.logIndex >= PRIMARY_KEY_MULTIPLIER) {
+        console.error(`An event with log index ${lastEvent.logIndex} is breaking the primaryKey generation logic at block ${lastEvent.blockNumber}`)
+      }
       for (let i = 0; i < events.length; i++) {
-        events[i].primaryKey = lastProcessedPosition.primaryKey + i + 1
+        const event = events[i]
+        event.primaryKey = event.blockNumber * PRIMARY_KEY_MULTIPLIER + event.logIndex
       }
 
       console.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
 
       await exporter.sendDataWithKey(events, "primaryKey")
 
-      lastProcessedPosition.primaryKey += events.length
+      lastProcessedPosition.primaryKey = lastEvent.primaryKey
     }
 
     lastProcessedPosition.blockNumber = toBlock
@@ -76,7 +83,13 @@ async function init() {
 }
 
 function transactionOrder(a, b) {
-  return a.blockNumber - b.blockNumber
+  const blockDif =  a.blockNumber - b.blockNumber
+  if (blockDif != 0) {
+    return blockDif
+  }
+  else {
+    return a.logIndex - b.logIndex
+  }
 }
 
 init()
