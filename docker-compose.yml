@@ -30,4 +30,4 @@ services:
     ports:
       # port for checking health.
       - "127.0.0.1:3000:3000"
-    command: ./node_modules/.bin/nodemon --exec micro index.js
+    command: ./node_modules/.bin/nodemon --exec ./node_modules/.bin/micro index.js
