@@ -1,5 +1,8 @@
 FROM node:9.11.1-alpine AS builder
 
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+
 RUN apk --no-cache add \
       bash \
       g++ \
@@ -16,10 +19,9 @@ RUN apk add --no-cache --virtual .build-deps gcc zlib-dev libc-dev bsd-compat-he
 
 WORKDIR /app
 
-COPY package.json /app/package.json
-COPY package-lock.json /app/package-lock.json
+COPY package.json package-lock.json /app/
 
-RUN npm install --production
+RUN npm install
 
 FROM node:9.11.1-alpine
 
