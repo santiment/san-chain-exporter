@@ -97,14 +97,13 @@ const healthcheckKafka = () => {
 
 module.exports = async (request, response) => {
   const req = url.parse(request.url, true);
-  const q = req.query;
 
   switch (req.pathname) {
     case '/healthcheck':
       return healthcheckKafka()
-        .then(healthcheckParity())
+        .then(() => healthcheckParity())
         .then(() => send(response, 200, "ok"))
-        .catch((err) => send(response, 500, `Connection to kafka or parity failed: ${err}`))
+        .catch((err) => send(response, 500, err.toString()))
 
     default:
       return send(response, 404, 'Not found');
