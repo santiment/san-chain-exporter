@@ -35,6 +35,29 @@ $ docker-compose up --build
 You need to tweak the URL to the parity service in the `docker-compose.yml`. See the `Setup` section
 for more details.
 
+## Configure
+
+You can configure the service with the following ENV variables:
+
+* PARITY\_URL - Parity node url. Default: `http://localhost:8545/`
+* START\_BLOCK - the block number from which to begin extracting the events. Default: `-1`
+* START\_PRIMARY_KEY - the block primary key from which to begin extracting the events. Default: `-1`
+* BLOCK\_INTERVAL - the number of blocks for which to fetch the events at once. Default: `1000`
+* CONFIRMATIONS - **DESCRIBE**. Default: `3`
+* EXPORT\_TIMEOUT\_MLS - max time interval between successful data pushing to kafka to treat the service as healthy. Default: `1000 * 60 * 5, 5 minutes`
+
+
+#### Health checks
+
+You can make health check GET requests to the service. The health check makes a request to Kafka to make sure the connection is not lost, try to request current block number of the blockchain and also checks time from the previous pushing data to kafka (or time of the service start if no data pushed yet):
+
+```bash
+curl http://localhost:3000/healthcheck
+```
+
+If the health check passes you get response code 200 and response message `ok`.
+If the health check does not pass you get response code 500 and a message describing what failed.
+
 ## Running the tests
 
 You can run the tests with:
