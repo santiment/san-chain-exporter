@@ -63,8 +63,9 @@ If the health check does not pass you get response code 500 and a message descri
 You can run the tests with:
 
 ```bash
-$ docker build -f Dockerfile-test -t erc20-transfers-exporter-tests .
-$ docker run -it erc20-transfers-exporter-tests
+$ docker build --build-arg NODE_ENV=development -t erc20-transfers-exporter-test .
+$ docker run --rm -t erc20-transfers-exporter-test npm test
+
 ```
 
 ## Custom contract events events
