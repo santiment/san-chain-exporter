@@ -11,6 +11,7 @@ const exporter = new Exporter(pkg.name)
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
+const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5)     // 5 minutes
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
 console.info(`Connecting to parity node ${PARITY_NODE}`)
@@ -20,6 +21,9 @@ let lastProcessedPosition = {
   blockNumber: parseInt(process.env.START_BLOCK || "-1"),
   primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
 }
+// To prevent healthcheck failing during initialization and processing first part of data, we set lastExportTime to current time.
+let lastExportTime = Date.now()
+
 
 async function work() {
   const currentBlock = await web3.eth.getBlockNumber() - CONFIRMATIONS
@@ -39,6 +43,7 @@ async function work() {
 
       await exporter.sendDataWithKey(events, "primaryKey")
 
+      lastExportTime = Date.now()
       lastProcessedPosition.primaryKey += events.length
     }
 
@@ -86,25 +91,34 @@ const healthcheckParity = () => {
 }
 
 const healthcheckKafka = () => {
-  return new Promise((resolve, reject) => {
-    if (exporter.producer.isConnected()) {
-      resolve()
-    } else {
-      reject("Kafka client is not connected to any brokers")
-    }
-  })
+  if (exporter.producer.isConnected()) {
+    return Promise.resolve()
+  } else {
+    return Promise.reject("Kafka client is not connected to any brokers")
+  }
+}
+
+const healthcheckExportTimeout = () => {
+  const timeFromLastExport = Date.now() - lastExportTime
+  const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS
+  console.debug(`isExportTimeoutExceeded ${isExportTimeoutExceeded}, timeFromLastExport: ${timeFromLastExport}ms`)
+  if (isExportTimeoutExceeded) {
+    return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${EXPORT_TIMEOUT_MLS}ms.`)
+  } else {
+    return Promise.resolve()
+  }
 }
 
 module.exports = async (request, response) => {
   const req = url.parse(request.url, true);
-  const q = req.query;
 
   switch (req.pathname) {
     case '/healthcheck':
       return healthcheckKafka()
-        .then(healthcheckParity())
-        .then(() => send(response, 200, "ok"))
-        .catch((err) => send(response, 500, `Connection to kafka or parity failed: ${err}`))
+          .then(() => healthcheckParity())
+          .then(() => healthcheckExportTimeout())
+          .then(() => send(response, 200, "ok"))
+          .catch((err) => send(response, 500, err.toString()))
 
     default:
       return send(response, 404, 'Not found');

@@ -1,12 +1,12 @@
 {
   "name": "erc20-transfers-exporter",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Exporter of all transfer events from the ERC20 tokens",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha --reporter spec",
-    "lint": "./node_modules/.bin/jslint '**/*.js'",
-    "start": "./node_modules/.bin/micro index.js"
+    "test": "mocha --reporter spec",
+    "lint": "jslint '**/*.js'",
+    "start": "micro index.js"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,6 @@
   "dependencies": {
     "@santiment-network/san-exporter": "0.0.6",
     "micro": "^9.3.4",
-    "san-exporter": "git+https://github.com/santiment/san-exporter.git",
     "web3": "1.0.0-beta.34"
   },
   "devDependencies": {
@@ -31,6 +30,7 @@
     "mocha": "^4.0.1",
     "seneca-jsonrest-api": "^0.3.1",
     "test-listen": "^1.1.0",
-    "rewire": "4.0.1"
+    "rewire": "4.0.1",
+    "nodemon": "^1.12.7"
   }
 }
