@@ -91,26 +91,22 @@ const healthcheckParity = () => {
 }
 
 const healthcheckKafka = () => {
-  return new Promise((resolve, reject) => {
-    if (exporter.producer.isConnected()) {
-      resolve()
-    } else {
-      reject("Kafka client is not connected to any brokers")
-    }
-  })
+  if (exporter.producer.isConnected()) {
+    return Promise.resolve()
+  } else {
+    return Promise.reject("Kafka client is not connected to any brokers")
+  }
 }
 
 const healthcheckExportTimeout = () => {
   const timeFromLastExport = Date.now() - lastExportTime
-  return new Promise((resolve, reject) => {
-    const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS
-    console.debug(`isExportTimeoutExceeded ${isExportTimeoutExceeded}, timeFromLastExport: ${timeFromLastExport}ms`)
-    if (isExportTimeoutExceeded) {
-      reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${EXPORT_TIMEOUT_MLS}ms.`)
-    } else {
-      resolve()
-    }
-  })
+  const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS
+  console.debug(`isExportTimeoutExceeded ${isExportTimeoutExceeded}, timeFromLastExport: ${timeFromLastExport}ms`)
+  if (isExportTimeoutExceeded) {
+    return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${EXPORT_TIMEOUT_MLS}ms.`)
+  } else {
+    return Promise.resolve()
+  }
 }
 
 module.exports = async (request, response) => {
