@@ -119,8 +119,8 @@ const healthcheckKafka = () => {
 }
 
 const healthcheckExportTimeout = () => {
-  const timeFromLastExport = Date.now() - lastExportTime
-  const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS
+  const timeFromLastExport = Date.now() - lastExportTime;
+  const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS;
   if (isExportTimeoutExceeded) {
     return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${EXPORT_TIMEOUT_MLS}ms.`)
   } else {
