@@ -73,6 +73,7 @@ async function fetchEvents() {
       // Look for new events every 30 sec
       setTimeout(fetchEvents, 30 * 1000)
     })
+    .catch((err) => console.error(err))
 }
 
 async function initLastProcessedBlock() {
@@ -104,7 +105,12 @@ function transactionOrder(a, b) {
   }
 }
 
-init()
+try {
+  init()
+}
+catch(error) {
+  console.error(error);
+}
 
 const healthcheckParity = () => {
   return web3.eth.getBlockNumber()
@@ -121,7 +127,6 @@ const healthcheckKafka = () => {
 const healthcheckExportTimeout = () => {
   const timeFromLastExport = Date.now() - lastExportTime;
   const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS;
-//  console.debug(`isExportTimeoutExceeded ${isExportTimeoutExceeded}, timeFromLastExport: ${timeFromLastExport}ms`)
   if (isExportTimeoutExceeded) {
     return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${EXPORT_TIMEOUT_MLS}ms.`)
   } else {
