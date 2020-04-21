@@ -57,10 +57,10 @@ async function work() {
 
       lastProcessedPosition.primaryKey = lastEvent.primaryKey
       lastExportTime = Date.now()
-      lastProcessedPosition.primaryKey += events.length
     }
 
     lastProcessedPosition.blockNumber = toBlock
+    metrics.currentLedger.set(lastProcessedPosition.blockNumber);
     await exporter.savePosition(lastProcessedPosition)
   }
 }
@@ -139,7 +139,6 @@ module.exports = async (request, response) => {
           .then(() => send(response, 200, "ok"))
           .catch((err) => send(response, 500, err.toString()))
     case '/metrics':
-      metrics.currentLedger.set(lastProcessedPosition.blockNumber);
       response.setHeader('Content-Type', metrics.register.contentType);
       return send(response, 200, metrics.register.metrics());
     default:
