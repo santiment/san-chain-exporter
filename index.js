@@ -8,6 +8,7 @@ const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
 const { Exporter } = require('@santiment-network/san-exporter')
 const exporter = new Exporter(pkg.name)
+const metrics = require('./lib/metrics');
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
@@ -29,7 +30,11 @@ async function work() {
   while (lastProcessedPosition.blockNumber < currentBlock) {
     const toBlock = Math.min(lastProcessedPosition.blockNumber + BLOCK_INTERVAL, currentBlock)
     console.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
-    const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock)
+    metrics.requestsCounter.inc();
+    const startTime = new Date();
+
+    const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock);
+    metrics.requestsResponseTime.observe(new Date() - startTime);
 
     if (events.length > 0) {
       stableSort(events, transactionOrder)
@@ -77,9 +82,10 @@ async function initLastProcessedBlock() {
 }
 
 async function init() {
-  await exporter.connect()
-  await initLastProcessedBlock()
-  await fetchEvents()
+  await exporter.connect();
+  await initLastProcessedBlock();
+  metrics.startCollection();
+  await fetchEvents();
 }
 
 function transactionOrder(a, b) {
@@ -118,6 +124,11 @@ module.exports = async (request, response) => {
         .then(healthcheckParity())
         .then(() => send(response, 200, "ok"))
         .catch((err) => send(response, 500, `Connection to kafka or parity failed: ${err}`))
+    case '/metrics':
+      metrics.currentLedger.set(lastProcessedPosition.blockNumber);
+      response.setHeader('Content-Type', metrics.register.contentType);
+
+      return send(response, 200, metrics.register.metrics());
 
     default:
       return send(response, 404, 'Not found');
