@@ -8,9 +8,6 @@ podTemplate(label: 'erc20-transfers-exporter', containers: [
       container('docker') {
         def scmVars = checkout scm
 
-        sh "docker build -t erc20-transfers-exporter-test:${scmVars.GIT_COMMIT} -f Dockerfile-test ."
-        sh "docker run --rm -t erc20-transfers-exporter-test:${scmVars.GIT_COMMIT} npm run test"
-
         withCredentials([
           string(
             credentialsId: 'aws_account_id',

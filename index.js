@@ -111,11 +111,13 @@ const healthcheckParity = () => {
 }
 
 const healthcheckKafka = () => {
-  if (exporter.producer.isConnected()) {
-    return Promise.resolve()
-  } else {
-    return Promise.reject("Kafka client is not connected to any brokers")
-  }
+  return new Promise((resolve, reject) => {
+    if (exporter.producer.isConnected()) {
+      resolve()
+    } else {
+      reject("Kafka client is not connected to any brokers")
+    }
+  })
 }
 
 const healthcheckExportTimeout = () => {
