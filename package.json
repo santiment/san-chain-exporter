@@ -4,9 +4,9 @@
   "description": "Exporter of all transfer events from the ERC20 tokens",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha --reporter spec",
-    "lint": "./node_modules/.bin/jslint '**/*.js'",
-    "start": "./node_modules/.bin/micro index.js"
+    "test": "mocha --reporter spec",
+    "lint": "jslint '**/*.js'",
+    "start": "micro index.js"
   },
   "repository": {
     "type": "git",

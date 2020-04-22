@@ -21,7 +21,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json /app/
 
-RUN npm install --production
+RUN npm install
 
 FROM node:9.11.1-alpine
 
