@@ -19,8 +19,7 @@ RUN apk add --no-cache --virtual .build-deps gcc zlib-dev libc-dev bsd-compat-he
 
 WORKDIR /app
 
-COPY package.json /app/package.json
-COPY package-lock.json /app/package-lock.json
+COPY package.json package-lock.json /app/
 
 RUN npm install --production
 
