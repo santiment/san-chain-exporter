@@ -9,6 +9,7 @@ const { getPastEvents } = require('./lib/fetch_events')
 const { Exporter } = require('@santiment-network/san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('./lib/metrics');
+const { logger } = require('./logger')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
