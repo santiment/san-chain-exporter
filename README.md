@@ -1,53 +1,31 @@
 # ERC20 Transfer Event Exporter
 
-A small service that exports all ERC20 Transfer Events from the ethereum blockchain to a Kafka topic. It is written in javascript and uses the https://github.com/ethereum/web3.js/ library which implements the Ethereum JSON RPC spec.
+A small service that exports all ERC20 Transfer Events from the ethereum blockchain to a Kafka topic. It is written in javascript and uses the [web3.js](https://github.com/ethereum/web3.js/) library which implements the Ethereum JSON RPC spec.
 
-## Setup
+## Run
 
-You need to have access to a parity full node to run this. The easiest way to get access to one is to
-use the parity service we have on staging. You need to setup kubernetes access to the staging k8s cluster.
-Then you need to run a proxy to it, like this:
-
-```bash
-$ kubectl proxy --address '0.0.0.0' --accept-hosts='^.*'
-```
-
-After that you can access the parity service using the IP of your machine in the current network, like
-this:
-
-```bash
-$ curl --data '{"method":"trace_filter","params":[{"fromBlock":"0x34147D","toBlock":"0x34147D"}],"id":1,"jsonrpc":"2.0"}' -H "Content-Type: application/json" -X POST http://<YOUR_IP>:8001/api/v1/namespaces/default/services/parity-optimized:8545/proxy/
-```
-
-You can use the URL `http://<YOUR_IP>:8001/api/v1/namespaces/default/services/parity-optimized:8545/proxy/`
-as the `PARITY_URL` in the `docker-compose.yml` file.
-
-## Running the service
+You need to have access to a parity full node. By default in docker-compose `PARITY_URL` points to
+the staging instance.
 
 The easiest way to run the service is using `docker-compose`:
-
-Example:
 
 ```bash
 $ docker-compose up --build
 ```
 
-You need to tweak the URL to the parity service in the `docker-compose.yml`. See the `Setup` section
-for more details.
-
 ## Configure
 
 You can configure the service with the following ENV variables:
 
-* PARITY\_URL - Parity node url. Default: `http://localhost:8545/`
-* START\_BLOCK - the block number from which to begin extracting the events. Default: `-1`
-* START\_PRIMARY_KEY - the block primary key from which to begin extracting the events. Default: `-1`
-* BLOCK\_INTERVAL - the number of blocks for which to fetch the events at once. Default: `1000`
-* CONFIRMATIONS - **DESCRIBE**. Default: `3`
-* EXPORT\_TIMEOUT\_MLS - max time interval between successful data pushing to kafka to treat the service as healthy. Default: `1000 * 60 * 5, 5 minutes`
+* `PARITY_URL` - Parity node url. Default: `http://localhost:8545/`
+* `START_BLOCK` - the block number from which to begin extracting the events. Default: `-1`
+* `START_PRIMARY_KEY` - the block primary key from which to begin extracting the events. Default: `-1`
+* `BLOCK_INTERVAL` - the number of blocks for which to fetch the events at once. Default: `1000`
+* `CONFIRMATIONS` - **DESCRIBE**. Default: `3`
+* `EXPORT_TIMEOUT_MLS` - max time interval between successful data pushing to kafka to treat the service as healthy.
+Default: `1000 * 60 * 5, 5 minutes`
 
-
-#### Health checks
+### Health checks
 
 You can make health check GET requests to the service. The health check makes a request to Kafka to make sure the connection is not lost, try to request current block number of the blockchain and also checks time from the previous pushing data to kafka (or time of the service start if no data pushed yet):
 
@@ -58,7 +36,7 @@ curl http://localhost:3000/healthcheck
 If the health check passes you get response code 200 and response message `ok`.
 If the health check does not pass you get response code 500 and a message describing what failed.
 
-## Running the tests
+## Tests
 
 You can run the tests with:
 
@@ -68,7 +46,7 @@ $ docker run --rm -t erc20-transfers-exporter-test npm test
 
 ```
 
-## Custom contract events events
+## Custom contract events
 
 The following contracts have been checked manually for custom events (most of the events aren't filtered by contract, so any contract that issues them will also be watched):
 
