@@ -19,8 +19,10 @@ services:
       args:
         NODE_ENV: development
     volumes:
-      - ./:/app
-      - /app/node_modules
+      - .:/opt/node_app/app:delegated
+      - ./package.json:/opt/node_app/package.json
+      - ./package-lock.json:/opt/node_app/package-lock.json
+      - notused:/opt/node_app/app/node_modules
     environment:
       KAFKA_URL: kafka:9092
       ZOOKEEPER_URL: zookeeper:2181
@@ -31,4 +33,7 @@ services:
     ports:
       # port for checking health.
       - "127.0.0.1:3000:3000"
-    command: ./node_modules/.bin/nodemon --exec ./node_modules/.bin/micro index.js
+    command: npm start
+
+volumes:
+  notused:

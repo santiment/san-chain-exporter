@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha --reporter spec",
     "lint": "jslint '**/*.js'",
-    "start": "micro index.js"
+    "start": "micro"
   },
   "repository": {
     "type": "git",
@@ -32,7 +32,6 @@
     "mocha": "^4.0.1",
     "seneca-jsonrest-api": "^0.3.1",
     "test-listen": "^1.1.0",
-    "rewire": "4.0.1",
-    "nodemon": "^1.12.7"
+    "rewire": "4.0.1"
   }
 }
