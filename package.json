@@ -22,7 +22,8 @@
     "@santiment-network/san-exporter": "0.0.6",
     "micro": "^9.3.4",
     "web3": "1.0.0-beta.34",
-    "prom-client": "^11.2.1"
+    "prom-client": "^11.2.1",
+    "node-json-logger": "0.0.10"
   },
   "devDependencies": {
     "chai": "^4.1.2",
