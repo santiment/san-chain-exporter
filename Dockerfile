@@ -25,7 +25,7 @@ RUN npm install
 
 FROM node:9.11.1-alpine
 
-RUN apk --no-cache add libsasl openssl lz4-libs
+RUN apk --no-cache add libsasl openssl lz4-libs git
 
 WORKDIR /app
 
