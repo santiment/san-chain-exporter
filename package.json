@@ -6,7 +6,7 @@
   "scripts": {
     "test": "mocha --reporter spec",
     "lint": "jslint '**/*.js'",
-    "start": "micro index.js"
+    "start": "micro"
   },
   "repository": {
     "type": "git",
@@ -22,7 +22,8 @@
     "@santiment-network/san-exporter": "0.0.6",
     "micro": "^9.3.4",
     "web3": "1.0.0-beta.34",
-    "prom-client": "^11.2.1"
+    "prom-client": "^11.2.1",
+    "node-json-logger": "0.0.10"
   },
   "devDependencies": {
     "chai": "^4.1.2",
@@ -31,7 +32,6 @@
     "mocha": "^4.0.1",
     "seneca-jsonrest-api": "^0.3.1",
     "test-listen": "^1.1.0",
-    "rewire": "4.0.1",
-    "nodemon": "^1.12.7"
+    "rewire": "4.0.1"
   }
 }

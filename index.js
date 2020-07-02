@@ -9,6 +9,7 @@ const { getPastEvents } = require('./lib/fetch_events')
 const { Exporter } = require('@santiment-network/san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('./lib/metrics');
+const { logger } = require('./logger')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
@@ -17,7 +18,7 @@ const PRIMARY_KEY_MULTIPLIER = 10000
 const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5)     // 5 minutes
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
-console.info(`Connecting to parity node ${PARITY_NODE}`)
+logger.info(`Connecting to parity node ${PARITY_NODE}`)
 let web3 = new Web3(new Web3.providers.HttpProvider(PARITY_NODE))
 
 let lastProcessedPosition = {
@@ -33,7 +34,7 @@ async function work() {
 
   while (lastProcessedPosition.blockNumber < currentBlock) {
     const toBlock = Math.min(lastProcessedPosition.blockNumber + BLOCK_INTERVAL, currentBlock)
-    console.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
+    logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
     metrics.requestsCounter.inc();
     const startTime = new Date();
 
@@ -44,14 +45,14 @@ async function work() {
       stableSort(events, transactionOrder)
       const lastEvent = events[events.length -1]
       if (lastEvent.logIndex >= PRIMARY_KEY_MULTIPLIER) {
-        console.error(`An event with log index ${lastEvent.logIndex} is breaking the primaryKey generation logic at block ${lastEvent.blockNumber}`)
+        logger.error(`An event with log index ${lastEvent.logIndex} is breaking the primaryKey generation logic at block ${lastEvent.blockNumber}`)
       }
       for (let i = 0; i < events.length; i++) {
         const event = events[i]
         event.primaryKey = event.blockNumber * PRIMARY_KEY_MULTIPLIER + event.logIndex
       }
 
-      console.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
+      logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
 
       await exporter.sendDataWithKey(events, "primaryKey")
 
@@ -68,7 +69,7 @@ async function work() {
 async function fetchEvents() {
   await work()
     .then(() => {
-      console.log(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
+      logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
 
       // Look for new events every 30 sec
       setTimeout(fetchEvents, 30 * 1000)
@@ -80,10 +81,10 @@ async function initLastProcessedBlock() {
 
   if (lastPosition) {
     lastProcessedPosition = lastPosition
-    console.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
+    logger.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
   } else {
     await exporter.savePosition(lastProcessedPosition)
-    console.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
+    logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
   }
 }
 
