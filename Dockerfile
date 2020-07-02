@@ -1,4 +1,4 @@
-FROM node:9.11.1-alpine AS builder
+FROM node:10.14.1-alpine AS builder
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
@@ -23,7 +23,7 @@ COPY package.json package-lock.json* ./
 
 RUN npm install --no-optional && npm cache clean --force
 
-FROM node:9.11.1-alpine
+FROM node:10.14.1-alpine
 
 RUN apk --no-cache add libsasl openssl lz4-libs
 
