@@ -7,10 +7,8 @@ A small service that exports all ERC20 Transfer Events from the ethereum blockch
 You need to have access to a parity full node. By default in docker-compose `PARITY_URL` points to
 the staging instance.
 
-The easiest way to run the service is using `docker-compose`:
-
 ```bash
-$ docker-compose up --build
+$ ./bin/run.sh
 ```
 
 ## Configure
@@ -41,8 +39,7 @@ If the health check does not pass you get response code 500 and a message descri
 You can run the tests with:
 
 ```bash
-$ docker build --build-arg NODE_ENV=development -t erc20-transfers-exporter-test .
-$ docker run --rm -t erc20-transfers-exporter-test npm test
+$ ./bin/test.sh
 
 ```
 
