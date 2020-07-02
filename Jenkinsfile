@@ -21,11 +21,7 @@ slaveTemplates.dockerComposeTemplate { label ->
       def scmVars = checkout scm
 
       stage('Run tests') {
-        try {
-          sh "./bin/test.sh"
-        } finally {
-          sh "./bin/cleanup.sh"
-        }
+        sh "./bin/test.sh"
       }
 
       stage('Build image') {
@@ -36,7 +32,7 @@ slaveTemplates.dockerComposeTemplate { label ->
             sh "docker build \
               -t ${awsRegistry}/erc20-transfers-exporter:${env.BRANCH_NAME} \
               -t ${awsRegistry}/erc20-transfers-exporter:${scmVars.GIT_COMMIT} \
-              -f docker/production/Dockerfile ."
+              -f docker/Dockerfile ."
             sh "docker push ${awsRegistry}/erc20-transfers-exporter:${env.BRANCH_NAME}"
             sh "docker push ${awsRegistry}/erc20-transfers-exporter:${scmVars.GIT_COMMIT}"
           }

@@ -26,7 +26,7 @@ RUN npm cache clean --force
 
 FROM node:10.14.1-alpine
 
-RUN apk --no-cache add libsasl openssl lz4-libs
+RUN apk --no-cache add libsasl openssl lz4-libs netcat-openbsd
 
 WORKDIR /opt/node_app/app
 
