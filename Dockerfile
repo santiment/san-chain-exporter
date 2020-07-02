@@ -21,7 +21,8 @@ WORKDIR /opt/node_app
 
 COPY package.json package-lock.json* ./
 
-RUN npm install --no-optional && npm cache clean --force
+RUN npm ci
+RUN npm cache clean --force
 
 FROM node:10.14.1-alpine
 
