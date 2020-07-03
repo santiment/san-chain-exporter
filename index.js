@@ -6,15 +6,18 @@ const { send } = require('micro')
 const url = require('url')
 const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
-const { Exporter } = require('@santiment-network/san-exporter')
+const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
-const metrics = require('./lib/metrics');
+const metrics = require('san-exporter/metrics');
 const { logger } = require('./logger')
 
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
-// This multiplier is used to expand the space of the output primary keys. This allows for the event indexes to be added to the primary key.
+
+// This multiplier is used to expand the space of the output primary keys.
+//This allows for the event indexes to be added to the primary key.
 const PRIMARY_KEY_MULTIPLIER = 10000
+
 const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5)     // 5 minutes
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
@@ -25,21 +28,23 @@ let lastProcessedPosition = {
   blockNumber: parseInt(process.env.START_BLOCK || "-1"),
   primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
 }
-// To prevent healthcheck failing during initialization and processing first part of data, we set lastExportTime to current time.
-let lastExportTime = Date.now()
 
+// To prevent healthcheck failing during initialization and processing first part of data,
+// we set lastExportTime to current time.
+let lastExportTime = Date.now()
 
 async function work() {
   const currentBlock = await web3.eth.getBlockNumber() - CONFIRMATIONS
+  metrics.currentBlock.set(currentBlock)
 
   while (lastProcessedPosition.blockNumber < currentBlock) {
     const toBlock = Math.min(lastProcessedPosition.blockNumber + BLOCK_INTERVAL, currentBlock)
     logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
     metrics.requestsCounter.inc();
-    const startTime = new Date();
 
+    const requestStartTime = new Date();
     const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock);
-    metrics.requestsResponseTime.observe(new Date() - startTime);
+    metrics.requestsResponseTime.observe(new Date() - requestStartTime);
 
     if (events.length > 0) {
       stableSort(events, transactionOrder)
@@ -61,7 +66,7 @@ async function work() {
     }
 
     lastProcessedPosition.blockNumber = toBlock
-    metrics.currentLedger.set(lastProcessedPosition.blockNumber);
+    metrics.lastExportedBlock.set(lastProcessedPosition.blockNumber);
     await exporter.savePosition(lastProcessedPosition)
   }
 }
