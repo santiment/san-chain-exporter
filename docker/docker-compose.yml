@@ -1,9 +1,11 @@
-version: "2"
+version: "3.4"
 services:
   zookeeper:
     image: wurstmeister/zookeeper
     ports:
       - "2181:2181"
+    logging:
+      driver: none
   kafka:
     image: wurstmeister/kafka
     ports:
@@ -13,6 +15,8 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: none
   exporter:
     build:
       context: ../
@@ -22,11 +26,6 @@ services:
     depends_on:
       - zookeeper
       - kafka
-    volumes:
-      - ../:/opt/node_app/app:delegated
-      - ../package.json:/opt/node_app/package.json
-      - ../package-lock.json:/opt/node_app/package-lock.json
-      - notused:/opt/node_app/app/node_modules
     environment:
       KAFKA_URL: kafka:9092
       ZOOKEEPER_URL: zookeeper:2181
@@ -39,6 +38,3 @@ services:
       - "127.0.0.1:3000:3000"
     entrypoint: "/bin/sh"
     command: ["-c", "docker/wait_for_services.sh && npm start"]
-
-volumes:
-  notused:

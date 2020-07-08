@@ -1,1 +1,4 @@
 node_modules
+.git
+docker/docker-compose.yml
+docker/Dockerfile
