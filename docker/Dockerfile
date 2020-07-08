@@ -15,9 +15,7 @@ RUN apk --no-cache add \
       python \
       git
 
-RUN apk add --no-cache --virtual .build-deps gcc zlib-dev libc-dev bsd-compat-headers py-setuptools bash
-
-WORKDIR /opt/node_app
+WORKDIR /opt
 
 COPY package.json package-lock.json* ./
 
@@ -28,13 +26,13 @@ FROM node:10.14.1-alpine
 
 RUN apk --no-cache add libsasl openssl lz4-libs netcat-openbsd
 
-WORKDIR /opt/node_app/app
+WORKDIR /opt/app
 
-ENV PATH /opt/node_app/node_modules/.bin:$PATH
+ENV PATH /opt/node_modules/.bin:$PATH
 
-COPY --from=builder /opt/node_app/node_modules /opt/node_app/node_modules
+COPY . /opt/app
 
-COPY . .
+COPY --from=builder /opt/node_modules /opt/node_modules
 
 EXPOSE 3000
 
