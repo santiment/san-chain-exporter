@@ -176,7 +176,7 @@ fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock) {
 })
 
 describe('snxContractsSwapping', function() {
-  it("check fixContractAddresses on different logs", async function() {
+  it("checks fixContractAddresses on different logs", async function() {
     const decodeEvents = fetch_events.__get__('decodeEvents')
     const decodedEvents = await decodeEvents(web3,
         [rawEventNotSNX,
@@ -195,7 +195,7 @@ describe('snxContractsSwapping', function() {
     )
   })
 
-  it("fetches, parses events and fix contracts from the ethereum node", async function() {
+  it("fetches, parses events and fixes contracts from the ethereum node", async function() {
     const getPastEvents = fetch_events.__get__('getPastEvents')
     const result = await getPastEvents(web3, 0, 0)
     assert.deepEqual(
