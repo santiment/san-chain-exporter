@@ -19,7 +19,7 @@ const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
 const PRIMARY_KEY_MULTIPLIER = 10000
 const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5)     // 5 minutes
 // When run in this mode, only transfers for specific contracts would be fetched and contract address overwritten.
-const EXACT_CONTRACT_MODE = 0
+const EXACT_CONTRACT_MODE = parseInt(process.env.EXACT_CONTRACT_MODE || "0")
 
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
 logger.info(`Connecting to parity node ${PARITY_NODE}`)
