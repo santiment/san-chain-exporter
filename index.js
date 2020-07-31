@@ -6,6 +6,7 @@ const { send } = require('micro')
 const url = require('url')
 const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
+const { getPastEventsExactContracts } = require('./lib/fetch_events')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
@@ -43,7 +44,14 @@ async function work() {
     metrics.requestsCounter.inc();
 
     const requestStartTime = new Date();
-    const events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock, EXACT_CONTRACT_MODE);
+    let events = [];
+    if (EXACT_CONTRACT_MODE) {
+      events = await getPastEventsExactContracts(web3, lastProcessedPosition.blockNumber + 1, toBlock);
+    }
+    else {
+      events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock);
+    }
+
     metrics.requestsResponseTime.observe(new Date() - requestStartTime);
 
     if (events.length > 0) {
@@ -72,13 +80,10 @@ async function work() {
 }
 
 async function fetchEvents() {
-  await work()
-    .then(() => {
-      logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
-
-      // Look for new events every 30 sec
-      setTimeout(fetchEvents, 30 * 1000)
-    })
+  await work();
+  logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
+  // Look for new events every 30 sec
+  setTimeout(fetchEvents, 30 * 1000)
 }
 
 async function initLastProcessedBlock() {
