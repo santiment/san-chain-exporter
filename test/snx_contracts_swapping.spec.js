@@ -8,10 +8,10 @@ const web3 = new Web3()
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f'
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f'
-const SNXContractReplacer = 'SNX_CONTRACT'
+const SNXContractReplacer = 'snx_contract'
 const sUSDContractLegacy = '0x57ab1e02fee23774580c119740129eac7081e9d3'
 const sUSDContractNew = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
-const sUSDContractReplacer = 'SUSD_CONTRACT'
+const sUSDContractReplacer = 'susd_contract'
 
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
