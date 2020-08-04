@@ -1,3 +1,4 @@
+/*jshint esversion: 6 */
 const assert = require("assert")
 const rewire = require('rewire')
 const Web3 = require('web3')
@@ -7,8 +8,10 @@ const web3 = new Web3()
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f'
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f'
+const SNXContractReplacer = 'snx_contract'
 const sUSDContractLegacy = '0x57ab1e02fee23774580c119740129eac7081e9d3'
 const sUSDContractNew = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
+const sUSDContractReplacer = 'susd_contract'
 
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -120,7 +123,7 @@ const decodedEventNotSNX = {
 }
 
 const decodedEventSNXLegacy = {
-  "contract": SNXContractLegacy,
+  "contract": SNXContractReplacer,
   "blockNumber": 9785855,
   "timestamp": 0,
   "transactionHash": "0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030",
@@ -132,7 +135,7 @@ const decodedEventSNXLegacy = {
 }
 
 const decodedEventSNXNew = {
-  "contract": SNXContractLegacy,
+  "contract": SNXContractReplacer,
   "blockNumber": 10449853,
   "timestamp": 0,
   "transactionHash": "0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb",
@@ -144,7 +147,7 @@ const decodedEventSNXNew = {
 }
 
 const decodedEventSUSDLegacy = {
-  "contract": sUSDContractLegacy,
+  "contract": sUSDContractReplacer,
   "blockNumber": 9153186,
   "timestamp": 0,
   "transactionHash": "0x703945f9d518d02b47f7afdebe81532880d30d519081cce82f99fc6e1464156f",
@@ -156,7 +159,7 @@ const decodedEventSUSDLegacy = {
 }
 
 const decodedEventSUSDNew = {
-  "contract": sUSDContractLegacy,
+  "contract": sUSDContractReplacer,
   "blockNumber": 10450283,
   "timestamp": 0,
   "transactionHash": "0x4a7ba2f0053dfdcd7e6025592e9e8bb3f861d9f34042b9e064d28d18fde6c174",
@@ -171,8 +174,15 @@ fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
   return 0
 })
 
-fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock) {
-  return [rawEventNotSNX, rawEventSNXLegacy, rawEventSNXNew, rawEventSUSDLegacy, rawEventSUSDNew]
+fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock, contractAddresses) {
+  let result = []
+  for (const rawEvent of [rawEventNotSNX, rawEventSNXLegacy, rawEventSNXNew, rawEventSUSDLegacy, rawEventSUSDNew]) {
+
+    if (contractAddresses.includes(rawEvent.address)) {
+      result.push(rawEvent);
+    }
+  }
+  return result;
 })
 
 describe('snxContractsSwapping', function() {
@@ -186,9 +196,9 @@ describe('snxContractsSwapping', function() {
           rawEventSUSDNew
         ])
 
-    const fixContractAddresses = fetch_events.__get__('fixContractAddresses')
-    await fixContractAddresses(decodedEvents)
-
+    const fixContractAddresses = fetch_events.__get__('changeContractAddresses')
+    await fixContractAddresses(decodedEvents, [SNXContractLegacy, SNXContractNew], SNXContractReplacer)
+    await fixContractAddresses(decodedEvents, [sUSDContractLegacy, sUSDContractNew], sUSDContractReplacer)
     assert.deepEqual(
         decodedEvents,
         [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
@@ -196,11 +206,11 @@ describe('snxContractsSwapping', function() {
   })
 
   it("fetches, parses events and fixes contracts from the ethereum node", async function() {
-    const getPastEvents = fetch_events.__get__('getPastEvents')
-    const result = await getPastEvents(web3, 0, 0)
+    const getPastEventsExactContracts = fetch_events.__get__('getPastEventsExactContracts')
+    const result = await getPastEventsExactContracts(web3, 0, 0)
     assert.deepEqual(
         result,
-        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
+        [decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
     )
   })
 })
