@@ -133,7 +133,6 @@ describe('snxContractsSwapping', function() {
         ])
 
     const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
-    console.log(decodedEvents);
     await fixContractAddresses(decodedEvents)
 
     assert.deepEqual(
