@@ -1,4 +1,3 @@
-/* jslint es6 */
 "use strict";
 const pkg = require('./package.json');
 const Web3 = require('web3')
@@ -6,7 +5,7 @@ const { send } = require('micro')
 const url = require('url')
 const { stableSort } = require('./lib/util')
 const { getPastEvents } = require('./lib/fetch_events')
-const { getPastEventsExactContracts } = require('./lib/fetch_events')
+const { getPastEventsExactContracts } = require('./lib/contract_overwrite')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
