@@ -59,8 +59,51 @@
         {
             "address": "0x7afebbb46fdb47ed17b22ed075cde2447694fb9e",
             "multiplier": 1
+        },
+        {
+            "address": "0x967da4048cD07aB37855c090aAF366e4ce1b9F48",
+            "multiplier": 1
         }
     ],
     "new_address": "ocean_contract"
+},
+{
+    "old_contracts": [
+        {
+            "address": "0x8fB00FDeBb4E83f2C58b3bcD6732AC1B6A7b7221",
+            "multiplier": 1
+        },
+        {
+            "address": "0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a",
+            "multiplier": 1
+        }
+    ],
+    "new_address": "orn_contract"
+},
+{
+    "old_contracts": [
+        {
+            "address": "0xbd6467a31899590474ce1e84f70594c53d628e46",
+            "multiplier": 1
+        },
+        {
+            "address": "0xd9ec3ff1f8be459bb9369b4e79e9ebcf7141c093",
+            "multiplier": 1
+        }
+    ],
+    "new_address": "kai_contract"
+},
+{
+    "old_contracts": [
+        {
+            "address": "0xfc858154c0b2c4a3323046fb505811f110ebda57",
+            "multiplier": 1
+        },
+        {
+            "address": "0xa8c8CfB141A3bB59FEA1E2ea6B79b5ECBCD7b6ca",
+            "multiplier": 1
+        }
+    ],
+    "new_address": "noia_contract"
 }]
 
