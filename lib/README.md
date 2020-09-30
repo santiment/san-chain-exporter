@@ -1,4 +1,4 @@
-# A list of overwritten assets, ast described in 'daily metrics'
+# A list of overwritten assets, as described in 'daily metrics'.
 
 * synthetix-network-token/2019-01-01
 * augur/2019-01-01
