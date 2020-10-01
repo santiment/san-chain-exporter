@@ -8,4 +8,4 @@
 * kardiachain/2019-01-01
 * noia-network/2019-01-01
 * orion-protocol/2019-01-01
-
+* aleph-im/2019-01-01
