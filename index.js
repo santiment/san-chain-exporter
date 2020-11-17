@@ -66,7 +66,13 @@ async function work() {
 
       logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
 
-      await exporter.sendDataWithKey(events, "primaryKey")
+      try {
+        await exporter.sendDataWithKey(events, "primaryKey")
+      }
+      catch(exception) {
+        logger.error("Error storing data to Kafka:" + exception)
+        throw exception;
+      }
 
       lastProcessedPosition.primaryKey = lastEvent.primaryKey
       lastExportTime = Date.now()
