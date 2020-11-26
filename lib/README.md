@@ -9,3 +9,10 @@
 * noia-network/2019-01-01
 * orion-protocol/2019-01-01
 * aleph-im/2019-01-01
+* utrust/2019-01-01
+* fetch/2019-01-01
+* adx-net/2019-01-01
+* v-id/2019-01-0
+* morpheus-network/2019-01-01
+* aragon/2019-01-01
+* aergo/2019-01-01
