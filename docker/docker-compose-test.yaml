@@ -9,4 +9,4 @@ services:
     entrypoint: ["npm", "test"]
     #entrypoint: ["tail", "-f", "/dev/null"]
     volumes:
-      - "../test/contract_mapping/:/opt/app/lib/contract_mapping"
+      - "../test/contract_mapping/:/opt/app/lib/contract_mapping:ro"
