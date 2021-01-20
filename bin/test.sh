@@ -1,4 +1,4 @@
 #! /bin/sh
 
-docker-compose -f ./docker/docker-compose-test.yaml build && \
-docker-compose -f ./docker/docker-compose-test.yaml run test
+docker build --build-arg NODE_ENV=development -t erc20-transfers-exporter-test -f docker/Dockerfile .
+docker run  -v $(pwd)/test/contract_mapping:/opt/app/lib/contract_mapping/ -t erc20-transfers-exporter-test npm test 
