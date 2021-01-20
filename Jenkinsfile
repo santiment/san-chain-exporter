@@ -22,7 +22,7 @@ slaveTemplates.dockerComposeTemplate { label ->
       def imageName = "erc20-transfers-exporter"
 
       stage('Run tests') {
-        sh "find . -name \* -print"
+        sh "find .  -print"
         sh "./bin/test.sh"
       }
 
