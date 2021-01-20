@@ -10,19 +10,10 @@ const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./logger')
+const constants = require('./lib/constants')
 
-const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
-const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
-// This multiplier is used to expand the space of the output primary keys.
-//This allows for the event indexes to be added to the primary key.
-const PRIMARY_KEY_MULTIPLIER = 10000
-const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5)     // 5 minutes
-// When run in this mode, only transfers for specific contracts would be fetched and contract address overwritten.
-const EXACT_CONTRACT_MODE = parseInt(process.env.EXACT_CONTRACT_MODE || "0")
-
-const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
-logger.info(`Connecting to parity node ${PARITY_NODE}`)
-let web3 = new Web3(new Web3.providers.HttpProvider(PARITY_NODE))
+logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
+let web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
 
 let lastProcessedPosition = {
   blockNumber: parseInt(process.env.START_BLOCK || "-1"),
@@ -34,17 +25,17 @@ let lastProcessedPosition = {
 let lastExportTime = Date.now()
 
 async function work() {
-  const currentBlock = await web3.eth.getBlockNumber() - CONFIRMATIONS
+  const currentBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS
   metrics.currentBlock.set(currentBlock)
 
   while (lastProcessedPosition.blockNumber < currentBlock) {
-    const toBlock = Math.min(lastProcessedPosition.blockNumber + BLOCK_INTERVAL, currentBlock)
+    const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, currentBlock)
     logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
     metrics.requestsCounter.inc();
 
     const requestStartTime = new Date();
     let events = [];
-    if (EXACT_CONTRACT_MODE) {
+    if (constants.EXACT_CONTRACT_MODE) {
       events = await getPastEventsExactContracts(web3, lastProcessedPosition.blockNumber + 1, toBlock);
     }
     else {
@@ -56,12 +47,12 @@ async function work() {
     if (events.length > 0) {
       stableSort(events, transactionOrder)
       const lastEvent = events[events.length -1]
-      if (lastEvent.logIndex >= PRIMARY_KEY_MULTIPLIER) {
+      if (lastEvent.logIndex >= constants.PRIMARY_KEY_MULTIPLIER) {
         logger.error(`An event with log index ${lastEvent.logIndex} is breaking the primaryKey generation logic at block ${lastEvent.blockNumber}`)
       }
       for (let i = 0; i < events.length; i++) {
         const event = events[i]
-        event.primaryKey = event.blockNumber * PRIMARY_KEY_MULTIPLIER + event.logIndex
+        event.primaryKey = event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + event.logIndex
       }
 
       logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
@@ -136,9 +127,9 @@ const healthcheckKafka = () => {
 
 const healthcheckExportTimeout = () => {
   const timeFromLastExport = Date.now() - lastExportTime
-  const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS
+  const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
   if (isExportTimeoutExceeded) {
-    return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${EXPORT_TIMEOUT_MLS}ms.`)
+    return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${constants.EXPORT_TIMEOUT_MLS}ms.`)
   } else {
     return Promise.resolve()
   }
