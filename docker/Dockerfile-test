@@ -2,7 +2,7 @@ FROM node:10.14.1-alpine AS builder
 
 # This Dockerfile could have been omitted if mounting volumes was working in Jenkins.
 # We use this file just so we can copy inside the image the contract mapping json file
-# Used for testing purposes.
+# used for testing purposes.
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 

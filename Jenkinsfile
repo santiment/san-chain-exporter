@@ -2,27 +2,15 @@
 
 import net.santiment.utils.podTemplates
 
-properties([
-  buildDiscarder(
-    logRotator(
-      artifactDaysToKeepStr: '30',
-      artifactNumToKeepStr: '',
-      daysToKeepStr: '30',
-      numToKeepStr: ''
-    )
-  )
-])
-
 slaveTemplates = new podTemplates()
 
-slaveTemplates.dockerComposeTemplate { label ->
+slaveTemplates.dockerTemplate { label ->
   node(label) {
-    container('docker-compose') {
+    container('docker') {
       def scmVars = checkout scm
       def imageName = "erc20-transfers-exporter"
 
       stage('Run tests') {
-        sh "find .  -print"
         sh "./bin/test.sh"
       }
 

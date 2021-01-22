@@ -38,6 +38,7 @@ services:
       # port for checking health.
       - "127.0.0.1:3000:3000"
     volumes:
+      # Mount a contract mapping JSON file so we can test that functionality. The test file does not contain all contracts.
       - "../test/contract_mapping/:/opt/app/lib/contract_mapping:ro"
     entrypoint: "/bin/sh"
     command: ["-c", "docker/wait_for_services.sh && npm start"]
