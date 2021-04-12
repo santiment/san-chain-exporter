@@ -21,7 +21,7 @@ const rawEvents = [
     data: '0x000000000000000000000000000000000000000000000002b178b3e9acd86000',
     logIndex: 8,
     removed: false,
-    topics: 
+    topics:
      [ '0xb33527d2e0d30b7aece2c5e82927985866c1b75173d671c14f4457bf67aa6910',
        '0x000000000000000000000000fbfa258b9028c7d4fc52ce28031469214d10daeb' ],
     transactionHash: '0x62901c72c13cc56efe3180b1bc02b02c108ae0a68a76d594161c9a41d0ebcceb',
@@ -36,7 +36,7 @@ const rawEvents = [
     data: '0x00000000000000000000000000000000000000000034f086f3b33b6840000000',
     logIndex: 31,
     removed: false,
-    topics: 
+    topics:
      [ '0xf97a274face0b5517365ad396b1fdba6f68bd3135ef603e44272adba3af5a1e0',
        '0x00000000000000000000000000c5e04176d95a286fcce0e68c683ca0bfec8454' ],
     transactionHash: '0x72af0f55b97b033af3b6e6162463681730c6429d0bc9c6c6ae9ad595aa2fbc57',
@@ -51,7 +51,7 @@ const rawEvents = [
     data: '0x0000000000000000000000000000000000000000000d3c21bcecceda10000000',
     logIndex: 78,
     removed: false,
-    topics: 
+    topics:
      [ '0x2cfce4af01bcb9d6cf6c84ee1b7c491100b8695368264146a94d71e10a63083f',
        '0x00000000000000000000000000c5e04176d95a286fcce0e68c683ca0bfec8454' ],
     transactionHash: '0x20b2be5acb83856e56c64429b096c8d0852e1b810356c8fcea9d278aeee094a6',
@@ -66,7 +66,7 @@ const rawEvents = [
     data: '0x00000000000000000000000000000000000000000000000000000003c3b87e3b',
     logIndex: 0,
     removed: false,
-    topics: 
+    topics:
      [ '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
        '0x0000000000000000000000005e575279bf9f4acf0a130c186861454247394c06',
        '0x000000000000000000000000fd247ccdeb4229aea8f302993eaa80ab52050264' ],
@@ -82,7 +82,7 @@ const rawEvents = [
     data: '0x',
     logIndex: 38,
     removed: false,
-    topics: 
+    topics:
      [ '0x86cc1a29a55449d1229bb301da3d61fcd5490843635df9a79e5a4df4724773d2',
        '0x000000000000000000000000000000000000000000000000000000000000000a',
        '0x000000000000000000000000efc703e9bc7eab2950841eef50b6108e422ec7e9' ],
@@ -98,7 +98,7 @@ const rawEvents = [
     data: '0x0000000000000000000000000000000000000000000174b1ca8ab05a8c000000',
     logIndex: 39,
     removed: false,
-    topics: 
+    topics:
      [ '0x0f6798a560793a54c3bcfe86a93cde1e73087d944c0ea20544137d4121396885',
        '0x000000000000000000000000fbd95709188b3681fd4d07f25f8d64c3ffa5bf97' ],
     transactionHash: '0xc99489f18de3bf01e1d50d95d1c77073080dac832c4d93695c284423dece286d',
@@ -113,7 +113,7 @@ const rawEvents = [
     data: '0x0000000000000000000000000000000000000000000174b1ca8ab05a8c000000',
     logIndex: 40,
     removed: false,
-    topics: 
+    topics:
      [ '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
        '0x0000000000000000000000000000000000000000000000000000000000000000',
        '0x000000000000000000000000fbd95709188b3681fd4d07f25f8d64c3ffa5bf97' ],
@@ -129,7 +129,7 @@ const rawEvents = [
     data: '0x0000000000000000000000000000000000000000000006318c2cb172ac530000',
     logIndex: 11,
     removed: false,
-    topics: 
+    topics:
     [ '0xcc16f5dbb4873280815c1ee09dbd06736cffcc184412cf7a71a0fdb75d397ca5',
       '0x000000000000000000000000000000000000000000000000000000000000005d' ],
     transactionHash: '0x33c9e862c220c54cecff48d9eb452db8921fb012695a7c9c2f3d6521e8cec49d',
@@ -144,7 +144,7 @@ const rawEvents = [
     data: '0x0000000000000000000000000000000000000000000006318c2cb172ac530000',
     logIndex: 12,
     removed: false,
-    topics: 
+    topics:
     [ '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
       '0x000000000000000000000000000000000000000000000000000000000000005d',
       '0x0000000000000000000000000000000000000000000000000000000000000000' ],
@@ -333,8 +333,9 @@ describe('filterEvents', function() {
 
 describe('getPastEvents', function() {
   it("fetches and parses events from the ethereum node", async function() {
-    const getPastEvents = fetch_events.__get__('getPastEvents')
-    const result = await getPastEvents(web3, 0, 0)
+    const getPastEventsFunction = fetch_events.__get__('getPastEventsFunction')
+    const pastEventsFunction = await getPastEventsFunction(web3);
+    const result = await pastEventsFunction(0, 0)
     assert.deepEqual(
       result,
       filteredEvents

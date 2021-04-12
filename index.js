@@ -3,14 +3,14 @@ const pkg = require('./package.json');
 const Web3 = require('web3')
 const { send } = require('micro')
 const url = require('url')
-const { stableSort } = require('./lib/util')
-const { getPastEvents } = require('./lib/fetch_events')
-const { getPastEventsExactContracts } = require('./lib/contract_overwrite')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./logger')
 const constants = require('./lib/constants')
+const work = require('./lib/work')
+const { getPastEventsExactContractsFunction } = require('./contract_overwrite')
+const { getPastEventsFunction } = require('./fetch_events')
 
 logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
 let web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
@@ -24,62 +24,16 @@ let lastProcessedPosition = {
 // we set lastExportTime to current time.
 let lastExportTime = Date.now()
 
-async function work() {
-  const currentBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS
-  metrics.currentBlock.set(currentBlock)
-
-  while (lastProcessedPosition.blockNumber < currentBlock) {
-    const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, currentBlock)
-    logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
-    metrics.requestsCounter.inc();
-
-    const requestStartTime = new Date();
-    let events = [];
-    if (constants.EXACT_CONTRACT_MODE) {
-      events = await getPastEventsExactContracts(web3, lastProcessedPosition.blockNumber + 1, toBlock);
-    }
-    else {
-      events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock);
-    }
-
-    metrics.requestsResponseTime.observe(new Date() - requestStartTime);
-
-    if (events.length > 0) {
-      stableSort(events, transactionOrder)
-      const lastEvent = events[events.length -1]
-      if (lastEvent.logIndex >= constants.PRIMARY_KEY_MULTIPLIER) {
-        logger.error(`An event with log index ${lastEvent.logIndex} is breaking the primaryKey generation logic at block ${lastEvent.blockNumber}`)
-      }
-      for (let i = 0; i < events.length; i++) {
-        const event = events[i]
-        event.primaryKey = event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + event.logIndex
-      }
-
-      logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
-
-      try {
-        await exporter.sendDataWithKey(events, "primaryKey")
-      }
-      catch(exception) {
-        logger.error("Error storing data to Kafka:" + exception)
-        throw exception;
-      }
-
-      lastProcessedPosition.primaryKey = lastEvent.primaryKey
-      lastExportTime = Date.now()
-    }
-
-    lastProcessedPosition.blockNumber = toBlock
-    metrics.lastExportedBlock.set(lastProcessedPosition.blockNumber);
-    await exporter.savePosition(lastProcessedPosition)
-  }
-}
-
-async function fetchEvents() {
-  await work();
+async function work_loop(getEventsFunction) {
+  const ethNodeLastBlock = await web3.eth.getBlockNumber()
+  await work(exporter,
+             ethNodeLastBlock,
+             getEventsFunction,
+             metrics,
+             lastProcessedPosition);
   logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
   // Look for new events every 30 sec
-  setTimeout(fetchEvents, 30 * 1000)
+  setTimeout(work_loop, 30 * 1000)
 }
 
 async function initLastProcessedBlock() {
@@ -96,19 +50,13 @@ async function initLastProcessedBlock() {
 
 async function init() {
   await exporter.connect();
+  exporter.initTransactions();
   await initLastProcessedBlock();
   metrics.startCollection();
-  await fetchEvents();
-}
-
-function transactionOrder(a, b) {
-  const blockDif =  a.blockNumber - b.blockNumber
-  if (blockDif != 0) {
-    return blockDif
-  }
-  else {
-    return a.logIndex - b.logIndex
-  }
+  getEventsFunction = (constants.EXACT_CONTRACT_MODE) ?
+    getPastEventsExactContractsFunction(web3) :
+    getPastEventsFunction(web3, lastProcessedPosition.blockNumber + 1, toBlock);
+  work_loop(getEventsFunction);
 }
 
 init()

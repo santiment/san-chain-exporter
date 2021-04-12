@@ -123,7 +123,7 @@ fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock, c
   return result;
 })
 
-describe('snxContractsSwapping', function() {
+describe('usdcContractsSwapping', function() {
   it("checks fixContractAddresses on different logs", async function() {
     const decodeEvents = fetch_events.__get__('decodeEvents')
     const decodedEvents = await decodeEvents(web3,
@@ -135,7 +135,7 @@ describe('snxContractsSwapping', function() {
     const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
     await fixContractAddresses(decodedEvents)
 
-    assert.deepEqual(
+    assert.deepStrictEqual(
       decodedEvents,
         [decodedEventNotUSDC, decodedEventUSDCLegacy, decodedEventUSDCNew]
     )
@@ -143,11 +143,13 @@ describe('snxContractsSwapping', function() {
 
   it("fetches, parses events and fixes contracts from the ethereum node", async function() {
     // This is needed so that we use the rewired dependency
-    contract_overwrite.__set__('getPastEvents', fetch_events.__get__('getPastEvents'))
+    contract_overwrite.__set__('getPastEventsFunction', fetch_events.__get__('getPastEventsFunction'))
 
-    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContracts')
-    const result = await getPastEventsExactContracts(web3, 0, 0)
-    assert.deepEqual(
+    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContractsFunction');
+    const pastEventsExactContractsFunction = await getPastEventsExactContracts(web3);
+    const result = await pastEventsExactContractsFunction(0, 0);
+
+    assert.deepStrictEqual(
         result,
         [decodedEventUSDCLegacy, decodedEventUSDCNew]
     )

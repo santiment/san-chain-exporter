@@ -19,7 +19,7 @@ WORKDIR /opt
 
 COPY package.json package-lock.json* ./
 
-RUN npm ci
+RUN npm ci --production
 RUN npm cache clean --force
 
 FROM node:15.12.0-alpine
