@@ -25,12 +25,23 @@ let lastProcessedPosition = {
 let lastExportTime = Date.now()
 
 async function work_loop(getEventsFunction) {
-  const ethNodeLastBlock = await web3.eth.getBlockNumber()
-  await work(exporter,
-             ethNodeLastBlock,
-             getEventsFunction,
-             metrics,
-             lastProcessedPosition);
+  const lastConfirmedBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+  const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, lastConfirmedBlock)
+  logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
+
+  while (lastProcessedPosition.blockNumber < lastConfirmedBlock) {
+    metrics.currentBlock.set(lastConfirmedBlock);
+
+    const requestStartTime = new Date();
+    const events = await getEventsFunction(lastProcessedPosition.blockNumber + 1, toBlock);
+    metrics.requestsResponseTime.observe(new Date() - requestStartTime);
+
+    metrics.requestsCounter.inc();
+    await storeEvents(exporter, events, lastProcessedPosition);
+    lastExportTime = Date.now();
+    metrics.lastExportedBlock.set(lastProcessedPosition.blockNumber);
+    await exporter.savePosition(lastProcessedPosition);
+  }
   logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
   // Look for new events every 30 sec
   setTimeout(work_loop, 30 * 1000)
