@@ -200,7 +200,7 @@ describe('snxContractsSwapping', function() {
     const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
     await fixContractAddresses(decodedEvents)
 
-    assert.deepEqual(
+    assert.deepStrictEqual(
       decodedEvents,
         [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
     )

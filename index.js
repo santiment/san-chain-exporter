@@ -3,14 +3,14 @@ const pkg = require('./package.json');
 const Web3 = require('web3')
 const { send } = require('micro')
 const url = require('url')
-const { stableSort } = require('./lib/util')
-const { getPastEvents } = require('./lib/fetch_events')
-const { getPastEventsExactContracts } = require('./lib/contract_overwrite')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./logger')
 const constants = require('./lib/constants')
+const { storeEvents, extendEventsWithPrimaryKey } = require('./lib/store_events')
+const { getPastEventsExactContracts } = require('./lib/contract_overwrite')
+const { getPastEvents } = require('./lib/fetch_events')
 
 logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
 let web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
@@ -25,11 +25,12 @@ let lastProcessedPosition = {
 let lastExportTime = Date.now()
 
 async function work() {
-  const currentBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS
-  metrics.currentBlock.set(currentBlock)
+  const lastConfirmedBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+  metrics.currentBlock.set(lastConfirmedBlock);
 
-  while (lastProcessedPosition.blockNumber < currentBlock) {
-    const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, currentBlock)
+  while (lastProcessedPosition.blockNumber < lastConfirmedBlock) {
+    const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, lastConfirmedBlock)
+
     logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
     metrics.requestsCounter.inc();
 
@@ -45,41 +46,21 @@ async function work() {
     metrics.requestsResponseTime.observe(new Date() - requestStartTime);
 
     if (events.length > 0) {
-      stableSort(events, transactionOrder)
-      const lastEvent = events[events.length -1]
-      if (lastEvent.logIndex >= constants.PRIMARY_KEY_MULTIPLIER) {
-        logger.error(`An event with log index ${lastEvent.logIndex} is breaking the primaryKey generation logic at block ${lastEvent.blockNumber}`)
-      }
-      for (let i = 0; i < events.length; i++) {
-        const event = events[i]
-        event.primaryKey = event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + event.logIndex
-      }
-
+      extendEventsWithPrimaryKey(events)
       logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
-
-      try {
-        await exporter.sendDataWithKey(events, "primaryKey")
-      }
-      catch(exception) {
-        logger.error("Error storing data to Kafka:" + exception)
-        throw exception;
-      }
-
-      lastProcessedPosition.primaryKey = lastEvent.primaryKey
-      lastExportTime = Date.now()
+      await storeEvents(exporter, events)
+      lastProcessedPosition.primaryKey = events[events.length - 1].primaryKey
     }
+    lastExportTime = Date.now();
 
     lastProcessedPosition.blockNumber = toBlock
     metrics.lastExportedBlock.set(lastProcessedPosition.blockNumber);
     await exporter.savePosition(lastProcessedPosition)
   }
-}
 
-async function fetchEvents() {
-  await work();
   logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
   // Look for new events every 30 sec
-  setTimeout(fetchEvents, 30 * 1000)
+  setTimeout(work, 30 * 1000)
 }
 
 async function initLastProcessedBlock() {
@@ -96,19 +77,10 @@ async function initLastProcessedBlock() {
 
 async function init() {
   await exporter.connect();
+  exporter.initTransactions();
   await initLastProcessedBlock();
   metrics.startCollection();
-  await fetchEvents();
-}
-
-function transactionOrder(a, b) {
-  const blockDif =  a.blockNumber - b.blockNumber
-  if (blockDif != 0) {
-    return blockDif
-  }
-  else {
-    return a.logIndex - b.logIndex
-  }
+  work();
 }
 
 init()
