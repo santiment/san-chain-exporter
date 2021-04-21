@@ -143,13 +143,11 @@ describe('usdcContractsSwapping', function() {
 
   it("fetches, parses events and fixes contracts from the ethereum node", async function() {
     // This is needed so that we use the rewired dependency
-    contract_overwrite.__set__('getPastEventsFunction', fetch_events.__get__('getPastEventsFunction'))
+    contract_overwrite.__set__('getPastEvents', fetch_events.__get__('getPastEvents'))
 
-    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContractsFunction');
-    const pastEventsExactContractsFunction = await getPastEventsExactContracts(web3);
-    const result = await pastEventsExactContractsFunction(0, 0);
-
-    assert.deepStrictEqual(
+    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContracts')
+    const result = await getPastEventsExactContracts(web3, 0, 0)
+    assert.deepEqual(
         result,
         [decodedEventUSDCLegacy, decodedEventUSDCNew]
     )

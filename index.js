@@ -8,9 +8,9 @@ const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./logger')
 const constants = require('./lib/constants')
-const work = require('./lib/work')
-const { getPastEventsExactContractsFunction } = require('./contract_overwrite')
-const { getPastEventsFunction } = require('./fetch_events')
+const { storeEvents, extendEventsWithPrimaryKey } = require('./lib/store_events')
+const { getPastEventsExactContracts } = require('./lib/contract_overwrite')
+const { getPastEvents } = require('./lib/fetch_events')
 
 logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
 let web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
@@ -24,27 +24,43 @@ let lastProcessedPosition = {
 // we set lastExportTime to current time.
 let lastExportTime = Date.now()
 
-async function work_loop(getEventsFunction) {
+async function work() {
   const lastConfirmedBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-  const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, lastConfirmedBlock)
-  logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
+  metrics.currentBlock.set(lastConfirmedBlock);
 
   while (lastProcessedPosition.blockNumber < lastConfirmedBlock) {
-    metrics.currentBlock.set(lastConfirmedBlock);
+    const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, lastConfirmedBlock)
+
+    logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
+    metrics.requestsCounter.inc();
 
     const requestStartTime = new Date();
-    const events = await getEventsFunction(lastProcessedPosition.blockNumber + 1, toBlock);
+    let events = [];
+    if (constants.EXACT_CONTRACT_MODE) {
+      events = await getPastEventsExactContracts(web3, lastProcessedPosition.blockNumber + 1, toBlock);
+    }
+    else {
+      events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock);
+    }
+
     metrics.requestsResponseTime.observe(new Date() - requestStartTime);
 
-    metrics.requestsCounter.inc();
-    await storeEvents(exporter, events, lastProcessedPosition);
+    if (events.length > 0) {
+      extendEventsWithPrimaryKey(events)
+      logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
+      await storeEvents(exporter, events)
+      lastProcessedPosition.primaryKey = events[events.length - 1].primaryKey
+    }
     lastExportTime = Date.now();
+
+    lastProcessedPosition.blockNumber = toBlock
     metrics.lastExportedBlock.set(lastProcessedPosition.blockNumber);
-    await exporter.savePosition(lastProcessedPosition);
+    await exporter.savePosition(lastProcessedPosition)
   }
+
   logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
   // Look for new events every 30 sec
-  setTimeout(work_loop, 30 * 1000)
+  setTimeout(work, 30 * 1000)
 }
 
 async function initLastProcessedBlock() {
@@ -64,10 +80,7 @@ async function init() {
   exporter.initTransactions();
   await initLastProcessedBlock();
   metrics.startCollection();
-  getEventsFunction = (constants.EXACT_CONTRACT_MODE) ?
-    getPastEventsExactContractsFunction(web3) :
-    getPastEventsFunction(web3, lastProcessedPosition.blockNumber + 1, toBlock);
-  work_loop(getEventsFunction);
+  work();
 }
 
 init()

@@ -333,9 +333,8 @@ describe('filterEvents', function() {
 
 describe('getPastEvents', function() {
   it("fetches and parses events from the ethereum node", async function() {
-    const getPastEventsFunction = fetch_events.__get__('getPastEventsFunction')
-    const pastEventsFunction = await getPastEventsFunction(web3);
-    const result = await pastEventsFunction(0, 0)
+    const getPastEvents = fetch_events.__get__('getPastEvents')
+    const result = await getPastEvents(web3, 0, 0)
     assert.deepEqual(
       result,
       filteredEvents
