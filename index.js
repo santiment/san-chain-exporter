@@ -1,93 +1,92 @@
 "use strict";
 const pkg = require('./package.json');
-const Web3 = require('web3')
 const { send } = require('micro')
 const url = require('url')
 const { Exporter } = require('san-exporter')
 const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./logger')
-const constants = require('./lib/constants')
-const { storeEvents, extendEventsWithPrimaryKey } = require('./lib/store_events')
-const { getPastEventsExactContracts } = require('./lib/contract_overwrite')
-const { getPastEvents } = require('./lib/fetch_events')
-
-logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
-let web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+const { storeEvents } = require('./lib/store_events')
+const { ERC20Worker } = require('./blockchains/erc20/erc20_worker')
 
 let lastProcessedPosition = {
   blockNumber: parseInt(process.env.START_BLOCK || "-1"),
   primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
 }
 
-// To prevent healthcheck failing during initialization and processing first part of data,
-// we set lastExportTime to current time.
-let lastExportTime = Date.now()
+// To be set depending on which blockchain worker is configured on runtime
+let worker = null
 
-async function work() {
-  const lastConfirmedBlock = await web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-  metrics.currentBlock.set(lastConfirmedBlock);
+class Main {
+  constructor() {
+    worker = null
+  }
 
-  while (lastProcessedPosition.blockNumber < lastConfirmedBlock) {
-    const toBlock = Math.min(lastProcessedPosition.blockNumber + constants.BLOCK_INTERVAL, lastConfirmedBlock)
+  async init() {
+    this.worker = setWorker()
+    await exporter.connect()
+    exporter.initTransactions()
+    await initLastProcessedBlock()
+    metrics.startCollection()
+  }
 
-    logger.info(`Fetching transfer events for interval ${lastProcessedPosition.blockNumber}:${toBlock}`)
+  async initLastProcessedBlock() {
+    const lastPosition = await exporter.getLastPosition()
+
+    if (lastPosition) {
+      lastProcessedPosition = lastPosition
+      logger.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
+    } else {
+      await exporter.savePosition(lastProcessedPosition)
+      logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
+    }
+  }
+
+  async workLoop() {
+    const events = await this.worker.work()
+    metrics.currentBlock.set(this.worker.lastConfirmedBlock);
     metrics.requestsCounter.inc();
+    metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
+    metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
 
-    const requestStartTime = new Date();
-    let events = [];
-    if (constants.EXACT_CONTRACT_MODE) {
-      events = await getPastEventsExactContracts(web3, lastProcessedPosition.blockNumber + 1, toBlock);
-    }
-    else {
-      events = await getPastEvents(web3, lastProcessedPosition.blockNumber + 1, toBlock);
-    }
+    lastProcessedPosition.blockNumber = this.worker.lastExportedBlock
+    lastProcessedPosition.primaryKey = this.worker.lastPrimaryKey
 
-    metrics.requestsResponseTime.observe(new Date() - requestStartTime);
-
-    if (events.length > 0) {
-      extendEventsWithPrimaryKey(events)
-      logger.info(`Storing and setting primary keys ${events.length} messages for blocks ${lastProcessedPosition.blockNumber + 1}:${toBlock}`)
-      await storeEvents(exporter, events)
-      lastProcessedPosition.primaryKey = events[events.length - 1].primaryKey
-    }
-    lastExportTime = Date.now();
-
-    lastProcessedPosition.blockNumber = toBlock
-    metrics.lastExportedBlock.set(lastProcessedPosition.blockNumber);
+    await storeEvents(exporter, events)
     await exporter.savePosition(lastProcessedPosition)
+    logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
+
+    setTimeout(workLoop, this.worker.sleepTime)
   }
 
-  logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
-  // Look for new events every 30 sec
-  setTimeout(work, 30 * 1000)
-}
+  setWorker() {
+    if (this.worker != null) {
+      throw new Error("Worker is already set")
+    }
 
-async function initLastProcessedBlock() {
-  const lastPosition = await exporter.getLastPosition()
+    switch (process.env.BLOCKCHAIN) {
+      case "erc20":
+        this.worker = new ERC20Worker()
+        return worker
+      default:
+        throw new Error(`Blockchain set to ${process.env.BLOCKCHAIN} but no such worker is defined`)
+    }
 
-  if (lastPosition) {
-    lastProcessedPosition = lastPosition
-    logger.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
-  } else {
-    await exporter.savePosition(lastProcessedPosition)
-    logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
+  }
+
+  getWorker() {
+    if (this.worker == null) {
+      throw new Error("Worker not set")
+    }
+    return this.worker
   }
 }
 
-async function init() {
-  await exporter.connect();
-  exporter.initTransactions();
-  await initLastProcessedBlock();
-  metrics.startCollection();
-  work();
-}
+const main = Main()
+main.init().then(() => {
+  main.workLoop
+})
 
-init()
-
-const healthcheckParity = () => {
-  return web3.eth.getBlockNumber()
-}
 
 const healthcheckKafka = () => {
   if (exporter.producer.isConnected()) {
@@ -97,15 +96,6 @@ const healthcheckKafka = () => {
   }
 }
 
-const healthcheckExportTimeout = () => {
-  const timeFromLastExport = Date.now() - lastExportTime
-  const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
-  if (isExportTimeoutExceeded) {
-    return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${constants.EXPORT_TIMEOUT_MLS}ms.`)
-  } else {
-    return Promise.resolve()
-  }
-}
 
 module.exports = async (request, response) => {
   const req = url.parse(request.url, true);
@@ -113,8 +103,7 @@ module.exports = async (request, response) => {
   switch (req.pathname) {
     case '/healthcheck':
       return healthcheckKafka()
-          .then(() => healthcheckParity())
-          .then(() => healthcheckExportTimeout())
+          .then(() => main.getWorker().healthcheck())
           .then(() => send(response, 200, "ok"))
           .catch((err) => send(response, 500, err.toString()))
     case '/metrics':

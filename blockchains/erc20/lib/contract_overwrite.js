@@ -2,7 +2,7 @@
 
 const fs = require('fs')
 const { getPastEvents } = require('./fetch_events')
-const { logger } = require('../logger')
+const { logger } = require('../../../logger')
 var BigNumber = require('bignumber.js');
 const constants = require('./constants')
 
