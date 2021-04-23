@@ -22,7 +22,7 @@
     "bignumber.js": "^9.0.0",
     "micro": "^9.3.4",
     "prom-client": "^12.0.0",
-    "san-exporter": "santiment/san-exporter#supportTransactions",
+    "san-exporter": "santiment/san-exporter",
     "web3": "^1.2.11"
   },
   "devDependencies": {
