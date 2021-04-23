@@ -123,7 +123,7 @@ fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock, c
   return result;
 })
 
-describe('snxContractsSwapping', function() {
+describe('usdcContractsSwapping', function() {
   it("checks fixContractAddresses on different logs", async function() {
     const decodeEvents = fetch_events.__get__('decodeEvents')
     const decodedEvents = await decodeEvents(web3,
@@ -135,7 +135,7 @@ describe('snxContractsSwapping', function() {
     const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
     await fixContractAddresses(decodedEvents)
 
-    assert.deepEqual(
+    assert.deepStrictEqual(
       decodedEvents,
         [decodedEventNotUSDC, decodedEventUSDCLegacy, decodedEventUSDCNew]
     )

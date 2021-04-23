@@ -1,4 +1,4 @@
-FROM node:10.14.1-alpine AS builder
+FROM node:15.12.0-alpine AS builder
 
 # This Dockerfile could have been omitted if mounting volumes was working in Jenkins.
 # We use this file just so we can copy inside the image the contract mapping json file
@@ -22,12 +22,12 @@ WORKDIR /opt
 
 COPY package.json package-lock.json* ./
 
-RUN npm ci
+RUN npm ci --verbose
 RUN npm cache clean --force
 
-FROM node:10.14.1-alpine
+FROM node:15.12.0-alpine
 
-RUN apk --no-cache add libsasl openssl lz4-libs netcat-openbsd
+RUN apk --no-cache add libsasl openssl lz4-libs netcat-openbsd coreutils
 
 WORKDIR /opt/app
 

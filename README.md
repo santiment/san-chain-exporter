@@ -36,10 +36,14 @@ If the health check does not pass you get response code 500 and a message descri
 
 ## Tests
 
-You can run the tests with:
+You can run the unit tests with:
 
 ```bash
 $ ./bin/test.sh
+
+You can run the integration tests with:
+$ ./e2e/test.sh
+
 
 ```
 

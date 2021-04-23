@@ -26,8 +26,9 @@
     "web3": "^1.2.11"
   },
   "devDependencies": {
+    "@santiment-network/node-rdkafka": "2.10.10",
     "eslint": "^7.8.1",
-    "mocha": "^4.0.1",
+    "mocha": "^8.3.2",
     "rewire": "^5.0.0"
   }
 }
