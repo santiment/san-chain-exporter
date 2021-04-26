@@ -2,7 +2,7 @@ const assert = require("assert")
 const rewire = require('rewire')
 const Web3 = require('web3')
 
-const fetch_events = rewire("../lib/fetch_events")
+const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
 const web3 = new Web3()
 
 const blockTimestamps = {

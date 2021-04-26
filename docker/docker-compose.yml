@@ -1,0 +1,56 @@
+version: "3.4"
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    ports:
+      - "2181:2181"
+    logging:
+      driver: none
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+  kafka:
+    image: confluentinc/cp-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: none
+  exporter:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+      args:
+        NODE_ENV: development
+    depends_on:
+      - zookeeper
+      - kafka
+    environment:
+      KAFKA_URL: kafka:9092
+      ZOOKEEPER_URL: zookeeper:2181
+      PARITY_URL: http://parity.stage.san:30954
+      START_BLOCK: "5710092"
+      BLOCK_INTERVAL: "50"
+      EXPORT_TIMEOUT_MLS: 300000
+      EXACT_CONTRACT_MODE: "1"
+      # Should be substituted from run.sh script with different values.
+      BLOCKCHAIN: "erc20" 
+    ports:
+      # port for checking health.
+      - "127.0.0.1:3000:3000"
+    volumes:
+      # Mount a contract mapping JSON file so we can test that functionality. The test file does not contain all contracts.
+      - "../test/erc20/contract_mapping/:/opt/app/blockchains/erc20/lib/contract_mapping:ro"
+    entrypoint: "/bin/sh"
+    command: ["-c", "docker/wait_for_services.sh && npm start"]
+    #command: ["-c", "tail -f /dev/null"]

@@ -3,63 +3,66 @@ const pkg = require('./package.json');
 const { send } = require('micro')
 const url = require('url')
 const { Exporter } = require('san-exporter')
-const exporter = new Exporter(pkg.name)
 const metrics = require('san-exporter/metrics');
-const { logger } = require('./logger')
+const { logger } = require('./lib/logger')
 const { storeEvents } = require('./lib/store_events')
 const { ERC20Worker } = require('./blockchains/erc20/erc20_worker')
 
-let lastProcessedPosition = {
-  blockNumber: parseInt(process.env.START_BLOCK || "-1"),
-  primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
-}
-
-// To be set depending on which blockchain worker is configured on runtime
-let worker = null
-
 class Main {
   constructor() {
-    worker = null
+    // To be set depending on which blockchain worker is configured on runtime
+    this.worker = null
+    this.lastProcessedPosition = {
+      blockNumber: parseInt(process.env.START_BLOCK || "-1"),
+      primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
+    }
   }
 
   async init() {
-    this.worker = setWorker()
-    await exporter.connect()
-    exporter.initTransactions()
-    await initLastProcessedBlock()
+    this.exporter = new Exporter(pkg.name)
+    await this.exporter.connect()
+    this.exporter.initTransactions()
+    await this.initLastProcessedBlock()
+    await this.setWorker()
     metrics.startCollection()
   }
 
   async initLastProcessedBlock() {
-    const lastPosition = await exporter.getLastPosition()
+    const lastPosition = await this.exporter.getLastPosition()
 
     if (lastPosition) {
-      lastProcessedPosition = lastPosition
+      this.lastProcessedPosition = lastPosition
       logger.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
     } else {
-      await exporter.savePosition(lastProcessedPosition)
-      logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
+      await this.exporter.savePosition(this.lastProcessedPosition)
+      logger.info(`Initialized exporter with initial position ${JSON.stringify(this.lastProcessedPosition)}`)
     }
   }
 
   async workLoop() {
-    const events = await this.worker.work()
-    metrics.currentBlock.set(this.worker.lastConfirmedBlock);
-    metrics.requestsCounter.inc();
-    metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
-    metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
+    try {
+      const events = await this.worker.work()
+      metrics.currentBlock.set(this.worker.lastConfirmedBlock);
+      metrics.requestsCounter.inc();
+      metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
+      metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
 
-    lastProcessedPosition.blockNumber = this.worker.lastExportedBlock
-    lastProcessedPosition.primaryKey = this.worker.lastPrimaryKey
+      this.lastProcessedPosition.blockNumber = this.worker.lastExportedBlock
+      this.lastProcessedPosition.primaryKey = this.worker.lastPrimaryKey
 
-    await storeEvents(exporter, events)
-    await exporter.savePosition(lastProcessedPosition)
-    logger.info(`Progressed to position ${JSON.stringify(lastProcessedPosition)}`)
+      await storeEvents(this.exporter, events)
+      await this.exporter.savePosition(this.lastProcessedPosition)
+      logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}`)
 
-    setTimeout(workLoop, this.worker.sleepTime)
+      const _this = this
+      setTimeout(function() {_this.workLoop()}, _this.worker.sleepTimeMsec)
+    }
+    catch(ex) {
+      console.error("Error in exporter work loop: ", ex)
+    }
   }
 
-  setWorker() {
+  async setWorker() {
     if (this.worker != null) {
       throw new Error("Worker is already set")
     }
@@ -67,34 +70,37 @@ class Main {
     switch (process.env.BLOCKCHAIN) {
       case "erc20":
         this.worker = new ERC20Worker()
-        return worker
+        break
       default:
         throw new Error(`Blockchain set to ${process.env.BLOCKCHAIN} but no such worker is defined`)
     }
 
+    this.worker.lastExportedBlock = this.lastProcessedPosition.blockNumber
+    this.worker.lastPrimaryKey = this.lastProcessedPosition.primaryKey
+    await this.worker.init()
   }
 
-  getWorker() {
-    if (this.worker == null) {
-      throw new Error("Worker not set")
+  healthcheck() {
+    return healthcheckKafka()
+    .then(() => this.worker.healthcheck())
+  }
+
+  healthcheckKafka() {
+    if (this.exporter.producer.isConnected()) {
+      return Promise.resolve()
+    } else {
+      return Promise.reject("Kafka client is not connected to any brokers")
     }
-    return this.worker
   }
 }
 
-const main = Main()
+const main = new Main()
 main.init().then(() => {
-  main.workLoop
+  main.workLoop()
 })
-
-
-const healthcheckKafka = () => {
-  if (exporter.producer.isConnected()) {
-    return Promise.resolve()
-  } else {
-    return Promise.reject("Kafka client is not connected to any brokers")
-  }
-}
+.catch((ex) => {
+  console.error("Error initializing exporter: ", ex)
+})
 
 
 module.exports = async (request, response) => {
@@ -102,8 +108,7 @@ module.exports = async (request, response) => {
 
   switch (req.pathname) {
     case '/healthcheck':
-      return healthcheckKafka()
-          .then(() => main.getWorker().healthcheck())
+      return main.healthcheck()
           .then(() => send(response, 200, "ok"))
           .catch((err) => send(response, 500, err.toString()))
     case '/metrics':

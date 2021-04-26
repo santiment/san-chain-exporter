@@ -2,9 +2,10 @@
 
 const fs = require('fs')
 const { getPastEvents } = require('./fetch_events')
-const { logger } = require('../../../logger')
+const { logger } = require('../../../lib/logger')
 var BigNumber = require('bignumber.js');
 const constants = require('./constants')
+var parsedContracts = require(constants.CONTRACT_MAPPING_FILE_PATH)
 
 /**
  * For one token - all overwritten addresses along with the overwriting address.
@@ -25,7 +26,7 @@ class ContractOverwrite {
 
 class ContractEditor {
   constructor() {
-    const parsedContracts = JSON.parse(fs.readFileSync(constants.CONTRACT_MAPPING_FILE_PATH, {encoding: "utf8"}));
+    //const parsedContracts = JSON.parse(fs.readFileSync(constants.CONTRACT_MAPPING_FILE_PATH, {encoding: "utf8"}));
     this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract))
 
     logger.info(`Running in 'exact contracts mode', ${this.contractsOverwriteArray.length} contracts will be monitored.`)
