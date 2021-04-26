@@ -1,6 +1,5 @@
 "use strict";
 
-const fs = require('fs')
 const { getPastEvents } = require('./fetch_events')
 const { logger } = require('../../../lib/logger')
 var BigNumber = require('bignumber.js');
@@ -26,7 +25,6 @@ class ContractOverwrite {
 
 class ContractEditor {
   constructor() {
-    //const parsedContracts = JSON.parse(fs.readFileSync(constants.CONTRACT_MAPPING_FILE_PATH, {encoding: "utf8"}));
     this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract))
 
     logger.info(`Running in 'exact contracts mode', ${this.contractsOverwriteArray.length} contracts will be monitored.`)
