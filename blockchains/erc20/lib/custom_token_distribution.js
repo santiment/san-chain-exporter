@@ -2,7 +2,7 @@
 const fs = require('fs')
 const Web3 = require('web3')
 const web3 = new Web3()
-const path = require("path");
+const path = require("path")
 
 const MINT_ADDRESS = "mint"
 const BURN_ADDRESS = "burn"

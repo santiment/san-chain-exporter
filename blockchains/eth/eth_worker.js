@@ -2,9 +2,11 @@ const Web3 = require('web3')
 const jayson = require('jayson/promise');
 const { filterErrors } = require('blockchain-utils/eth')
 const constants = require('./lib/constants')
+const { logger } = require('../../lib/logger')
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack')
 const { addGenesisTransfers } = require('./lib/genesis_transfers')
 const { transactionOrder, stableSort } = require('./lib/util')
+const BaseWorker = require('../../lib/worker_base')
 
 
 class ETHWorker extends BaseWorker {
@@ -13,11 +15,11 @@ class ETHWorker extends BaseWorker {
 
     logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
-    this.parityClient = jayson.client.http(PARITY_URL);
+    this.parityClient = jayson.client.http(constants.PARITY_NODE);
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
-    return parityClient.request('trace_filter', [{
+    return this.parityClient.request('trace_filter', [{
       fromBlock: this.web3.utils.numberToHex(fromBlock),
       toBlock: this.web3.utils.numberToHex(toBlock)
     }]).then((data) => {
@@ -79,7 +81,7 @@ class ETHWorker extends BaseWorker {
     }
 
     if (trace["type"] != "call") {
-      console.warn("Unknown trace type: " + JSON.stringify(trace))
+      logger.warn("Unknown trace type: " + JSON.stringify(trace))
     }
 
     return {
@@ -99,7 +101,7 @@ class ETHWorker extends BaseWorker {
     const blockRequests = []
     for (let i = fromBlock; i <= toBlock; i++) {
       blockRequests.push(
-        parityClient.request(
+        this.parityClient.request(
           'eth_getBlockByNumber',
           [this.web3.utils.numberToHex(i), true],
           undefined,
@@ -108,7 +110,7 @@ class ETHWorker extends BaseWorker {
       )
     }
 
-    const responses = await parityClient.request(blockRequests);
+    const responses = await this.parityClient.request(blockRequests);
     const result = new Map()
     responses.forEach((response, index) => result.set(fromBlock + index, response.result))
     return result
@@ -118,8 +120,8 @@ class ETHWorker extends BaseWorker {
     const responses = []
 
     blocks.forEach((block, blockNumber) => {
-      const req = parityClient.request('parity_getBlockReceipts', [this.web3.utils.numberToHex(blockNumber)], undefined, false)
-      responses.push(parityClient.request([req]))
+      const req = this.parityClient.request('parity_getBlockReceipts', [this.web3.utils.numberToHex(blockNumber)], undefined, false)
+      responses.push(this.parityClient.request([req]))
     })
 
     const finishedRequests = await Promise.all(responses)
@@ -142,11 +144,11 @@ class ETHWorker extends BaseWorker {
 
   async getPastEvents(fromBlock, toBlock) {
     const web3 = this.web3
-    console.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`)
+    logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`)
 
     const [traces, blocks] = await Promise.all([
-      fetchEthInternalTrx(fromBlock, toBlock),
-      fetchBlocks(fromBlock, toBlock)
+      this.fetchEthInternalTrx(fromBlock, toBlock),
+      this.fetchBlocks(fromBlock, toBlock)
     ])
 
     let result = []
@@ -155,7 +157,7 @@ class ETHWorker extends BaseWorker {
       result.push(decodeTransferTrace(traces[i], blocks))
     }
 
-    console.log(`Fetching receipts of ${fromBlock}:${toBlock}`)
+    logger.log(`Fetching receipts of ${fromBlock}:${toBlock}`)
     const receipts = await fetchReceipts(blocks)
 
     blocks.forEach((block) => {
@@ -174,12 +176,12 @@ class ETHWorker extends BaseWorker {
     })
 
     if (fromBlock == 0) {
-      console.log("Adding the GENESIS transfers")
+      logger.log("Adding the GENESIS transfers")
       result = addGenesisTransfers(web3, result)
     }
 
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
-      console.log("Adding the DAO hack transfers")
+      logger.log("Adding the DAO hack transfers")
       result = injectDAOHackTransfers(result)
     }
 

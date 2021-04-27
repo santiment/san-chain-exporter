@@ -44,7 +44,7 @@ services:
       EXPORT_TIMEOUT_MLS: 300000
       EXACT_CONTRACT_MODE: "1"
       # Should be substituted from run.sh script with different values.
-      BLOCKCHAIN: "erc20" 
+      BLOCKCHAIN: ${BLOCKCHAIN}
     ports:
       # port for checking health.
       - "127.0.0.1:3000:3000"

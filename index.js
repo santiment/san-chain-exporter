@@ -7,6 +7,7 @@ const metrics = require('san-exporter/metrics');
 const { logger } = require('./lib/logger')
 const { storeEvents } = require('./lib/store_events')
 const { ERC20Worker } = require('./blockchains/erc20/erc20_worker')
+const { ETHWorker } = require('./blockchains/eth/eth_worker')
 
 class Main {
   constructor() {
@@ -19,7 +20,7 @@ class Main {
   }
 
   async init() {
-    this.exporter = new Exporter(pkg.name)
+    this.exporter = new Exporter(pkg.name, true)
     await this.exporter.connect()
     this.exporter.initTransactions()
     await this.initLastProcessedBlock()
@@ -71,6 +72,9 @@ class Main {
       case "erc20":
         this.worker = new ERC20Worker()
         break
+      case "eth":
+          this.worker = new ETHWorker()
+          break
       default:
         throw new Error(`Blockchain set to ${process.env.BLOCKCHAIN} but no such worker is defined`)
     }
