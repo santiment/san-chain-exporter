@@ -5,7 +5,8 @@ const constants = require('./lib/constants')
 const { logger } = require('../../lib/logger')
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack')
 const { addGenesisTransfers } = require('./lib/genesis_transfers')
-const { transactionOrder, stableSort } = require('./lib/util')
+const { transactionOrder, stableSort, computeGasExpense,
+  computeGasExpenseBase36 } = require('./lib/util')
 const BaseWorker = require('../../lib/worker_base')
 
 
@@ -142,8 +143,24 @@ class ETHWorker extends BaseWorker {
     return result
   }
 
+  decodeTransactionsInBlock(block, receipts) {
+    const result = []
+    block.transactions.forEach((transaction) =>
+      result.push({
+        from: transaction.from,
+        to: block.miner,
+        value: computeGasExpense(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
+        valueExactBase36: computeGasExpenseBase36(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
+        blockNumber: this.web3.utils.hexToNumber(transaction.blockNumber),
+        timestamp: this.web3.utils.hexToNumber(block.timestamp),
+        transactionHash: transaction.hash,
+        type: "fee"
+      })
+    )
+    return result
+  }
+
   async getPastEvents(fromBlock, toBlock) {
-    const web3 = this.web3
     logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`)
 
     const [traces, blocks] = await Promise.all([
@@ -151,37 +168,27 @@ class ETHWorker extends BaseWorker {
       this.fetchBlocks(fromBlock, toBlock)
     ])
 
-    let result = []
+    const result = []
 
     for (let i = 0; i < traces.length; i++) {
-      result.push(decodeTransferTrace(traces[i], blocks))
+      result.push(this.decodeTransferTrace(traces[i], blocks))
     }
 
-    logger.log(`Fetching receipts of ${fromBlock}:${toBlock}`)
-    const receipts = await fetchReceipts(blocks)
+    logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`)
+    const receipts = await this.fetchReceipts(blocks)
 
     blocks.forEach((block) => {
-      block.transactions.forEach((transaction) =>
-        result.push({
-          from: transaction.from,
-          to: block.miner,
-          value: parseFloat(web3.utils.hexToNumberString(transaction.gasPrice)) * parseFloat(web3.utils.hexToNumberString(receipts[transaction.hash].gasUsed)),
-          valueExactBase36: web3.utils.toBN(transaction.gasPrice).mul(web3.utils.toBN(receipts[transaction.hash].gasUsed)).toString(36),
-          blockNumber: web3.utils.hexToNumber(transaction.blockNumber),
-          timestamp: web3.utils.hexToNumber(block.timestamp),
-          transactionHash: transaction.hash,
-          type: "fee"
-        })
-      )
+      const decoded_transactions = this.decodeTransactionsInBlock(block, receipts)
+      result.push(...decoded_transactions)
     })
 
     if (fromBlock == 0) {
-      logger.log("Adding the GENESIS transfers")
-      result = addGenesisTransfers(web3, result)
+      logger.info("Adding the GENESIS transfers")
+      result = addGenesisTransfers(this.web3, result)
     }
 
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
-      logger.log("Adding the DAO hack transfers")
+      logger.info("Adding the DAO hack transfers")
       result = injectDAOHackTransfers(result)
     }
 
