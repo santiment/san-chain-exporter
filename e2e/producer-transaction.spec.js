@@ -27,17 +27,16 @@ class TestConsumer {
     });
 
     // Copying the member variables so that they are seen in the closures
-    var consumer = this.consumer;
-    var result = this.result;
-    var num_received = this.num_received;
+    const consumer = this.consumer;
+    const result = this.result;
+    let num_received = this.num_received;
 
-    this.consumer.setDefaultConsumeTimeout(10000);
+    this.consumer.setDefaultConsumeTimeout(1000);
 
-    this.dataReadPromise = new Promise((resolve, reject) => {
+    this.dataReadPromise = new Promise((resolve) => {
       consumer.on('data', function(m) {
         num_received++;
         result.push(m);
-
         if (num_received == num_expected) {
           resolve(result);
         }
@@ -59,7 +58,7 @@ class TestConsumer {
       })
       consumer.on('warning', function (err) {
         console.log("Warning: ", err);
-      });;
+      });
     });
 
     this.consumer.connect();
@@ -72,18 +71,24 @@ class TestConsumer {
   async waitData() {
     await this.dataReadPromise;
   }
+
+  disconnect(done) {
+    this.consumer.disconnect(done)
+  }
 }
 
 
 describe('Producer transactions', function() {
-  var exporter;
+  let exporter
+  let testConsumer
+  let num_messages_test = 3
 
   // This is done only to create the test topic.
   before( function(done) {
     this.timeout(5000);
     exporter = new Exporter('erc20-producer-transactions-test', true)
     exporter.connect().then(function () {
-      exporter.subscribeDeliveryReports(function (err, report) {
+      exporter.subscribeDeliveryReports(function (err) {
         if(err) {
           throw err;
         }
@@ -111,18 +116,24 @@ describe('Producer transactions', function() {
     this.timeout(5000);
 
     exporter = new Exporter('erc20-producer-transactions-test', true)
-    exporter.connect().then(() => done());
+    exporter.connect().then(() => {
+      testConsumer = new TestConsumer(exporter.topic_name, num_messages_test)
+      done()
+    });
   });
 
   afterEach(function(done) {
-    exporter.disconnect(done);
+    this.timeout(10000);
+    exporter.disconnect(() => {
+      testConsumer.disconnect(function() {
+        done()
+      })
+    });
   });
 
   it('should get 100% deliverability if transaction is commited', async function() {
-    var num_messages_test = 10;
-    this.timeout(5000);
+    this.timeout(10000);
 
-    var testConsumer = new TestConsumer(exporter.topic_name, num_messages_test);
     await testConsumer.waitSubscribed();
 
     exporter.initTransactions();
@@ -132,7 +143,7 @@ describe('Producer transactions', function() {
     // This should not really be needed, because we have received the 'subscribed' event in the
     // consumer but there is something I am missing.
     setTimeout( function () {
-      for (i = 0; i < num_messages_test; i++) {
+      for (let i = 0; i < num_messages_test; i++) {
         exporter.sendDataWithKey({
           timestamp: 10000000,
           iso_date: new Date().toISOString(),
@@ -146,8 +157,8 @@ describe('Producer transactions', function() {
   });
 
   it("using the 'storeEvents' function should begin and commit a transaction", async function() {
-    num_messages_test = 10;
-    this.timeout(5000);
+    // We need the huge timeout because starting and closing a transaction takes around 1 sec
+    this.timeout(10000);
     exporter.initTransactions();
 
     const testEvent = {
@@ -162,15 +173,16 @@ describe('Producer transactions', function() {
       "valueExactBase36": "1pbnb4"
     }
 
-    var testConsumer = new TestConsumer(exporter.topic_name, num_messages_test);
+
     await testConsumer.waitSubscribed();
 
-    setTimeout(function () {
-      for (i = 0; i <= num_messages_test; i++) {
-        storeEvents(exporter, [testEvent]);
+    setTimeout(async function () {
+      for (let i = 0; i < num_messages_test; i++) {
+        await storeEvents(exporter, [testEvent]);
       }
-    }, 2000);
+    }, 1000);
 
     await testConsumer.waitData();
   });
+
 });
