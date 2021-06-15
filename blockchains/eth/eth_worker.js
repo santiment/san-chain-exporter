@@ -21,8 +21,8 @@ class ETHWorker extends BaseWorker {
 
   fetchEthInternalTrx(fromBlock, toBlock) {
     return this.parityClient.request('trace_filter', [{
-      fromBlock: this.web3.utils.numberToHex(fromBlock),
-      toBlock: this.web3.utils.numberToHex(toBlock)
+      fromBlock: this.parseNumberToHex(fromBlock),
+      toBlock: this.parseNumberToHex(toBlock)
     }]).then((data) => {
       const traces = filterErrors(data["result"])
 
@@ -35,17 +35,32 @@ class ETHWorker extends BaseWorker {
     })
   }
 
+  parseValueExactBase36(field) {
+    return this.web3.utils.toBN(field).toString(36)
+  }
+
+  parseHexToNumberString(field) {
+    return this.web3.utils.hexToNumberString(field)
+  }
+
+  parseHexToNumber(field) {
+    return this.web3.utils.hexToNumber(field)
+  }
+
+  parseNumberToHex(field) {
+    return this.web3.utils.numberToHex(field)
+  }
+
   decodeTransferTrace(trace, blocks) {
-    const web3 = this.web3
-    const timestamp = web3.utils.hexToNumber(blocks.get(trace["blockNumber"]).timestamp)
+    const timestamp = this.parseHexToNumber(blocks.get(trace["blockNumber"]).timestamp)
 
     // Block & uncle rewards
     if (trace["type"] == "reward") {
       return {
         from: `mining_${trace["action"]["rewardType"]}`,
         to: trace["action"]["author"],
-        value: parseFloat(web3.utils.hexToNumberString(trace["action"]["value"])),
-        valueExactBase36: web3.utils.toBN(trace["action"]["value"]).toString(36),
+        value: parseFloat(this.parseHexToNumberString(trace["action"]["value"])),
+        valueExactBase36: this.parseValueExactBase36(trace["action"]["value"]),
         blockNumber: trace["blockNumber"],
         timestamp: timestamp,
         type: trace["type"]
@@ -57,12 +72,12 @@ class ETHWorker extends BaseWorker {
       return {
         from: trace["action"]["from"],
         to: trace["result"]["address"],
-        value: parseFloat(web3.utils.hexToNumberString(trace["action"]["value"])),
-        valueExactBase36: web3.utils.toBN(trace["action"]["value"]).toString(36),
+        value: parseFloat(this.parseHexToNumberString(trace["action"]["value"])),
+        valueExactBase36: this.parseValueExactBase36(trace["action"]["value"]),
         blockNumber: trace["blockNumber"],
         timestamp: timestamp,
         transactionHash: trace["transactionHash"],
-        transactionPosition: web3.utils.hexToNumber(trace["transactionPosition"]),
+        transactionPosition: this.parseHexToNumberString(trace["transactionPosition"]),
         type: trace["type"]
       }
     }
@@ -71,12 +86,12 @@ class ETHWorker extends BaseWorker {
       return {
         from: trace["action"]["address"],
         to: trace["action"]["refundAddress"],
-        value: parseFloat(web3.utils.hexToNumberString(trace["action"]["balance"])),
-        valueExactBase36: web3.utils.toBN(trace["action"]["balance"]).toString(36),
+        value: parseFloat(this.parseHexToNumberString(trace["action"]["balance"])),
+        valueExactBase36: this.parseValueExactBase36(trace["action"]["balance"]),
         blockNumber: trace["blockNumber"],
         timestamp: timestamp,
         transactionHash: trace["transactionHash"],
-        transactionPosition: web3.utils.hexToNumber(trace["transactionPosition"]),
+        transactionPosition: this.parseHexToNumber(trace["transactionPosition"]),
         type: trace["type"]
       }
     }
@@ -88,12 +103,12 @@ class ETHWorker extends BaseWorker {
     return {
       from: trace["action"]["from"],
       to: trace["action"]["to"],
-      value: parseFloat(web3.utils.hexToNumberString(trace["action"]["value"])),
-      valueExactBase36: web3.utils.toBN(trace["action"]["value"]).toString(36),
+      value: parseFloat(this.parseHexToNumberString(trace["action"]["value"])),
+      valueExactBase36: this.parseValueExactBase36(trace["action"]["value"]),
       blockNumber: trace["blockNumber"],
       timestamp: timestamp,
       transactionHash: trace["transactionHash"],
-      transactionPosition: web3.utils.hexToNumber(trace["transactionPosition"]),
+      transactionPosition: this.parseHexToNumber(trace["transactionPosition"]),
       type: trace["type"]
     }
   }
@@ -104,7 +119,7 @@ class ETHWorker extends BaseWorker {
       blockRequests.push(
         this.parityClient.request(
           'eth_getBlockByNumber',
-          [this.web3.utils.numberToHex(i), true],
+          [this.parseNumberToHex(i), true],
           undefined,
           false
         )
@@ -121,7 +136,7 @@ class ETHWorker extends BaseWorker {
     const responses = []
 
     blocks.forEach((block, blockNumber) => {
-      const req = this.parityClient.request('parity_getBlockReceipts', [this.web3.utils.numberToHex(blockNumber)], undefined, false)
+      const req = this.parityClient.request('parity_getBlockReceipts', [this.parseNumberToHex(blockNumber)], undefined, false)
       responses.push(this.parityClient.request([req]))
     })
 
@@ -151,8 +166,8 @@ class ETHWorker extends BaseWorker {
         to: block.miner,
         value: computeGasExpense(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
         valueExactBase36: computeGasExpenseBase36(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
-        blockNumber: this.web3.utils.hexToNumber(transaction.blockNumber),
-        timestamp: this.web3.utils.hexToNumber(block.timestamp),
+        blockNumber: this.parseHexToNumber(transaction.blockNumber),
+        timestamp: this.parseHexToNumber(block.timestamp),
         transactionHash: transaction.hash,
         type: "fee"
       })
@@ -184,12 +199,12 @@ class ETHWorker extends BaseWorker {
 
     if (fromBlock == 0) {
       logger.info("Adding the GENESIS transfers")
-      result = addGenesisTransfers(this.web3, result)
+      result.push(...addGenesisTransfers(this.web3, result))
     }
 
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info("Adding the DAO hack transfers")
-      result = injectDAOHackTransfers(result)
+      result.push(...injectDAOHackTransfers(result))
     }
 
     return result
@@ -251,7 +266,7 @@ class ETHWorker extends BaseWorker {
 
   healthcheck() {
     return this.web3.eth.getBlockNumber()
-    .then(healthcheckExportTimeout())
+    .then(this.healthcheckExportTimeout())
   }
 
 }

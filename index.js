@@ -6,8 +6,9 @@ const { Exporter } = require('san-exporter')
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./lib/logger')
 const { storeEvents } = require('./lib/store_events')
-const { ERC20Worker } = require('./blockchains/erc20/erc20_worker')
-const { ETHWorker } = require('./blockchains/eth/eth_worker')
+const {ERC20Worker} = require('./blockchains/erc20/erc20_worker')
+const {ETHWorker} = require('./blockchains/eth/eth_worker')
+const WORKERS = { ERC20Worker, ETHWorker }
 
 class Main {
   constructor() {
@@ -68,16 +69,7 @@ class Main {
       throw new Error("Worker is already set")
     }
 
-    switch (process.env.BLOCKCHAIN) {
-      case "erc20":
-        this.worker = new ERC20Worker()
-        break
-      case "eth":
-          this.worker = new ETHWorker()
-          break
-      default:
-        throw new Error(`Blockchain set to ${process.env.BLOCKCHAIN} but no such worker is defined`)
-    }
+    this.worker = new WORKERS[process.env.BLOCKCHAIN];
 
     this.worker.lastExportedBlock = this.lastProcessedPosition.blockNumber
     this.worker.lastPrimaryKey = this.lastProcessedPosition.primaryKey
@@ -85,7 +77,7 @@ class Main {
   }
 
   healthcheck() {
-    return healthcheckKafka()
+    return this.healthcheckKafka()
     .then(() => this.worker.healthcheck())
   }
 
