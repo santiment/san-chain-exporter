@@ -6,9 +6,8 @@ const { Exporter } = require('san-exporter')
 const metrics = require('san-exporter/metrics');
 const { logger } = require('./lib/logger')
 const { storeEvents } = require('./lib/store_events')
-const {ERC20Worker} = require('./blockchains/erc20/erc20_worker')
-const {ETHWorker} = require('./blockchains/eth/eth_worker')
-const WORKERS = { ERC20Worker, ETHWorker }
+// Dynamically initialize just the needed blockchain worker
+const worker = require(`./blockchains/${process.env.BLOCKCHAIN}/${process.env.BLOCKCHAIN}_worker`)
 
 class Main {
   constructor() {
@@ -69,7 +68,7 @@ class Main {
       throw new Error("Worker is already set")
     }
 
-    this.worker = new WORKERS[process.env.BLOCKCHAIN];
+    this.worker = new worker.worker();
 
     this.worker.lastExportedBlock = this.lastProcessedPosition.blockNumber
     this.worker.lastPrimaryKey = this.lastProcessedPosition.primaryKey

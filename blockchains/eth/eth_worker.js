@@ -272,5 +272,5 @@ class ETHWorker extends BaseWorker {
 }
 
 module.exports = {
-  ETHWorker
+  worker: ETHWorker
 }

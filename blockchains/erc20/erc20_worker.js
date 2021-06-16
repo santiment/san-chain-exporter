@@ -74,10 +74,10 @@ class ERC20Worker extends BaseWorker {
 
   healthcheck() {
     return this.web3.eth.getBlockNumber()
-    .then(healthcheckExportTimeout())
+    .then(this.healthcheckExportTimeout())
   }
 }
 
 module.exports = {
-  ERC20Worker
+  worker: ERC20Worker
 }
