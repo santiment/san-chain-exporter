@@ -116,7 +116,10 @@ module.exports = async (request, response) => {
           .then(() => healthcheckParity())
           .then(() => healthcheckExportTimeout())
           .then(() => send(response, 200, "ok"))
-          .catch((err) => send(response, 500, err.toString()))
+          .catch((err) => {
+            logger.error(err.toString())
+            send(response, 500, err.toString())
+          })
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
       return send(response, 200, metrics.register.metrics());
