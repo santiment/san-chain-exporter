@@ -112,10 +112,20 @@ module.exports = async (request, response) => {
 
   switch (req.pathname) {
     case '/healthcheck':
+      logger.info("Healthcheck triggered. ")
       return healthcheckKafka()
-          .then(() => healthcheckParity())
-          .then(() => healthcheckExportTimeout())
-          .then(() => send(response, 200, "ok"))
+          .then(() => {
+            logger.info("Healthcheck Kafka OK. ")
+            healthcheckParity()
+          })
+          .then(() => {
+            logger.info("Healthcheck Parity OK. ")
+            healthcheckExportTimeout()
+          })
+          .then(() => {
+            logger.info("Healthcheck Exporter OK. ")
+            send(response, 200, "ok")
+          })
           .catch((err) => {
             logger.error(err.toString())
             send(response, 500, err.toString())
