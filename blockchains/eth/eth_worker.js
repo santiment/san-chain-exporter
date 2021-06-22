@@ -51,6 +51,26 @@ class ETHWorker extends BaseWorker {
     return this.web3.utils.numberToHex(field)
   }
 
+  parseValue(trace) {
+    return parseFloat(this.parseHexToNumberString(trace["action"]["value"]))
+  }
+
+  parseValueBase36(trace) {
+    return this.parseValueExactBase36(trace["action"]["value"])
+  }
+
+  parseTransactionPosition(trace) {
+    return this.parseHexToNumberString(trace["transactionPosition"])
+  }
+
+  parseBalance(trace) {
+    return parseFloat(this.parseHexToNumberString(trace["action"]["balance"]))
+  }
+
+  parseBalanceBase36(trace) {
+    return this.parseValueExactBase36(trace["action"]["balance"])
+  }
+
   decodeTransferTrace(trace, blocks) {
     const timestamp = this.parseHexToNumber(blocks.get(trace["blockNumber"]).timestamp)
 
@@ -59,8 +79,8 @@ class ETHWorker extends BaseWorker {
       return {
         from: `mining_${trace["action"]["rewardType"]}`,
         to: trace["action"]["author"],
-        value: parseFloat(this.parseHexToNumberString(trace["action"]["value"])),
-        valueExactBase36: this.parseValueExactBase36(trace["action"]["value"]),
+        value: this.parseValue(trace),
+        valueExactBase36: this.parseValueBase36(trace),
         blockNumber: trace["blockNumber"],
         timestamp: timestamp,
         type: trace["type"]
@@ -72,12 +92,12 @@ class ETHWorker extends BaseWorker {
       return {
         from: trace["action"]["from"],
         to: trace["result"]["address"],
-        value: parseFloat(this.parseHexToNumberString(trace["action"]["value"])),
-        valueExactBase36: this.parseValueExactBase36(trace["action"]["value"]),
+        value: this.parseValue(trace),
+        valueExactBase36: this.parseValueBase36(trace),
         blockNumber: trace["blockNumber"],
         timestamp: timestamp,
         transactionHash: trace["transactionHash"],
-        transactionPosition: this.parseHexToNumberString(trace["transactionPosition"]),
+        transactionPosition: this.parseTransactionPosition(trace),
         type: trace["type"]
       }
     }
@@ -86,12 +106,12 @@ class ETHWorker extends BaseWorker {
       return {
         from: trace["action"]["address"],
         to: trace["action"]["refundAddress"],
-        value: parseFloat(this.parseHexToNumberString(trace["action"]["balance"])),
-        valueExactBase36: this.parseValueExactBase36(trace["action"]["balance"]),
+        value: this.parseBalance(trace),
+        valueExactBase36: this.parseBalanceBase36(trace),
         blockNumber: trace["blockNumber"],
         timestamp: timestamp,
         transactionHash: trace["transactionHash"],
-        transactionPosition: this.parseHexToNumber(trace["transactionPosition"]),
+        transactionPosition: this.parseTransactionPosition(trace),
         type: trace["type"]
       }
     }
@@ -103,12 +123,12 @@ class ETHWorker extends BaseWorker {
     return {
       from: trace["action"]["from"],
       to: trace["action"]["to"],
-      value: parseFloat(this.parseHexToNumberString(trace["action"]["value"])),
-      valueExactBase36: this.parseValueExactBase36(trace["action"]["value"]),
+      value: this.parseValue(trace),
+      valueExactBase36: this.parseValueBase36(trace),
       blockNumber: trace["blockNumber"],
       timestamp: timestamp,
       transactionHash: trace["transactionHash"],
-      transactionPosition: this.parseHexToNumber(trace["transactionPosition"]),
+      transactionPosition: this.parseTransactionPosition(trace),
       type: trace["type"]
     }
   }
