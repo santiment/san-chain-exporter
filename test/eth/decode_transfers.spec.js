@@ -14,8 +14,8 @@ describe('genesis transfers', function() {
     web3Wrapper = new Web3Wrapper(web3)
   });
 
-  it("suicide action", function() {
-      const suicide_trace_string =  `{
+  it("parses trace of type suicide", function() {
+      const suicide_trace =  {
       "action": {
         "address": "0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb",
         "balance": "0x2386f26fc100000",
@@ -29,12 +29,12 @@ describe('genesis transfers', function() {
       "transactionHash": "0xd715da4f846e41be86ea87dc97b186cafea3b50c95d5d9d889ec522b248b207f",
       "transactionPosition": 0,
       "type": "suicide"
-     }`
-    const suicide_trace = JSON.parse (suicide_trace_string)
+     }
+
     const timestamp = 1000000
     const result = decodeTransferTrace(suicide_trace, timestamp, web3Wrapper)
 
-    const result_expected_string = `{
+    const result_expected = {
       "from": "0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb",
       "to": "0x245133ea0fb1b77fab5886d7ffb8046dfeff3858",
       "value": 160000000000000000,
@@ -44,15 +44,14 @@ describe('genesis transfers', function() {
       "transactionHash": "0xd715da4f846e41be86ea87dc97b186cafea3b50c95d5d9d889ec522b248b207f",
       "transactionPosition": 0,
       "type": "suicide"
-    }`
-    const result_expected = JSON.parse (result_expected_string)
+    }
 
     assert.deepStrictEqual(result, result_expected)
 
   });
 
-  it("call action", function() {
-    const call_trace_string = `{
+  it("parses trace of type call", function() {
+    const call_trace= {
       "action": {
         "callType": "call",
         "from": "0x48f2e6e5d0872da169c7f5823d5a2d5ea5f2b5e7",
@@ -72,14 +71,13 @@ describe('genesis transfers', function() {
       "transactionHash": "0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c",
       "transactionPosition": 0,
       "type": "call"
-    }`
+    }
 
-    const call_trace = JSON.parse (call_trace_string)
     const timestamp = 1450433505
 
     const result = decodeTransferTrace(call_trace, timestamp, web3Wrapper)
 
-    const result_expected_string = `{
+    const result_expected = {
       "from": "0x48f2e6e5d0872da169c7f5823d5a2d5ea5f2b5e7",
       "to": "0x7de5aba7de728950c92c57d08e20d4077161f12f",
       "value": 1,
@@ -89,14 +87,13 @@ describe('genesis transfers', function() {
       "transactionHash": "0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c",
       "transactionPosition": 0,
       "type": "call"
-    }`
-    const result_expected = JSON.parse (result_expected_string)
+    }
 
     assert.deepStrictEqual(result, result_expected)
   });
 
-  it("reward action", function() {
-    const reward_trace_string = `{
+  it("parses trace of type reward", function() {
+    const reward_trace = {
       "action": {
          "author": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
          "rewardType": "block",
@@ -110,13 +107,12 @@ describe('genesis transfers', function() {
       "transactionHash": null,
       "transactionPosition": null,
       "type": "reward"
-    }`
+    }
 
-    const reward_trace = JSON.parse (reward_trace_string)
     const timestamp = 1450433505
 
     const result = decodeTransferTrace(reward_trace, timestamp, web3Wrapper)
-    const result_expected_string = `{
+    const result_expected = {
       "from": "mining_block",
       "to": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
       "value": 5000000000000000000,
@@ -124,15 +120,13 @@ describe('genesis transfers', function() {
       "blockNumber": 710093,
       "timestamp": 1450433505,
       "type": "reward"
-    }`
-
-    const result_expected = JSON.parse (result_expected_string)
+    }
 
     assert.deepStrictEqual(result, result_expected)
   })
 
-  it("create action", function() {
-    const create_trace_string = `{
+  it("parses trace of type create", function() {
+    const create_trace = {
      "action": {
      "from": "0x245133ea0fb1b77fab5886d7ffb8046dfeff3858",
      "gas": "0x5355d",
@@ -151,14 +145,12 @@ describe('genesis transfers', function() {
       "transactionHash": "0x6d39df3c46f19e8ef5e8bb3b81a063a29cb352675a00d66f0dc2117a1799add1",
       "transactionPosition": 0,
       "type": "create"
-    }`
+    }
 
-    const create_trace = JSON.parse (create_trace_string)
     const timestamp = 1450435908
-
     const result = decodeTransferTrace(create_trace, timestamp, web3Wrapper)
 
-    const result_expected_string = `{
+    const result_expected = {
       "from": "0x245133ea0fb1b77fab5886d7ffb8046dfeff3858",
       "to": "0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb",
       "value": 1500000000000000000,
@@ -168,11 +160,8 @@ describe('genesis transfers', function() {
       "transactionHash": "0x6d39df3c46f19e8ef5e8bb3b81a063a29cb352675a00d66f0dc2117a1799add1",
       "transactionPosition": 0,
       "type": "create"
-    }`
-
-    const result_expected = JSON.parse (result_expected_string)
+    }
 
     assert.deepStrictEqual(result, result_expected)
   })
-
 });
