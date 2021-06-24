@@ -8,6 +8,8 @@ const { addGenesisTransfers } = require('./lib/genesis_transfers')
 const { transactionOrder, stableSort, computeGasExpense,
   computeGasExpenseBase36 } = require('./lib/util')
 const BaseWorker = require('../../lib/worker_base')
+const Web3Wrapper = require('./lib/web3_wrapper')
+const {decodeTransferTrace} = require('./lib/decode_transfers')
 
 
 class ETHWorker extends BaseWorker {
@@ -16,13 +18,14 @@ class ETHWorker extends BaseWorker {
 
     logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+    this.web3Wrapper = new Web3Wrapper(this.web3)
     this.parityClient = jayson.client.http(constants.PARITY_NODE);
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
     return this.parityClient.request('trace_filter', [{
-      fromBlock: this.parseNumberToHex(fromBlock),
-      toBlock: this.parseNumberToHex(toBlock)
+      fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
+      toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
     }]).then((data) => {
       const traces = filterErrors(data["result"])
 
@@ -35,103 +38,9 @@ class ETHWorker extends BaseWorker {
     })
   }
 
-  parseValueExactBase36(field) {
-    return this.web3.utils.toBN(field).toString(36)
-  }
 
-  parseHexToNumberString(field) {
-    return this.web3.utils.hexToNumberString(field)
-  }
 
-  parseHexToNumber(field) {
-    return this.web3.utils.hexToNumber(field)
-  }
 
-  parseNumberToHex(field) {
-    return this.web3.utils.numberToHex(field)
-  }
-
-  parseValue(trace) {
-    return parseFloat(this.parseHexToNumberString(trace["action"]["value"]))
-  }
-
-  parseValueBase36(trace) {
-    return this.parseValueExactBase36(trace["action"]["value"])
-  }
-
-  parseTransactionPosition(trace) {
-    return this.parseHexToNumberString(trace["transactionPosition"])
-  }
-
-  parseBalance(trace) {
-    return parseFloat(this.parseHexToNumberString(trace["action"]["balance"]))
-  }
-
-  parseBalanceBase36(trace) {
-    return this.parseValueExactBase36(trace["action"]["balance"])
-  }
-
-  decodeTransferTrace(trace, blocks) {
-    const timestamp = this.parseHexToNumber(blocks.get(trace["blockNumber"]).timestamp)
-
-    // Block & uncle rewards
-    if (trace["type"] == "reward") {
-      return {
-        from: `mining_${trace["action"]["rewardType"]}`,
-        to: trace["action"]["author"],
-        value: this.parseValue(trace),
-        valueExactBase36: this.parseValueBase36(trace),
-        blockNumber: trace["blockNumber"],
-        timestamp: timestamp,
-        type: trace["type"]
-      }
-    }
-
-    // Contract creation
-    if (trace["type"] == "create") {
-      return {
-        from: trace["action"]["from"],
-        to: trace["result"]["address"],
-        value: this.parseValue(trace),
-        valueExactBase36: this.parseValueBase36(trace),
-        blockNumber: trace["blockNumber"],
-        timestamp: timestamp,
-        transactionHash: trace["transactionHash"],
-        transactionPosition: this.parseTransactionPosition(trace),
-        type: trace["type"]
-      }
-    }
-
-    if (trace["type"] == "suicide") {
-      return {
-        from: trace["action"]["address"],
-        to: trace["action"]["refundAddress"],
-        value: this.parseBalance(trace),
-        valueExactBase36: this.parseBalanceBase36(trace),
-        blockNumber: trace["blockNumber"],
-        timestamp: timestamp,
-        transactionHash: trace["transactionHash"],
-        transactionPosition: this.parseTransactionPosition(trace),
-        type: trace["type"]
-      }
-    }
-
-    if (trace["type"] != "call") {
-      logger.warn("Unknown trace type: " + JSON.stringify(trace))
-    }
-
-    return {
-      from: trace["action"]["from"],
-      to: trace["action"]["to"],
-      value: this.parseValue(trace),
-      valueExactBase36: this.parseValueBase36(trace),
-      blockNumber: trace["blockNumber"],
-      timestamp: timestamp,
-      transactionHash: trace["transactionHash"],
-      transactionPosition: this.parseTransactionPosition(trace),
-      type: trace["type"]
-    }
-  }
 
   async fetchBlocks(fromBlock, toBlock) {
     const blockRequests = []
@@ -139,7 +48,7 @@ class ETHWorker extends BaseWorker {
       blockRequests.push(
         this.parityClient.request(
           'eth_getBlockByNumber',
-          [this.parseNumberToHex(i), true],
+          [this.web3Wrapper.parseNumberToHex(i), true],
           undefined,
           false
         )
@@ -156,7 +65,7 @@ class ETHWorker extends BaseWorker {
     const responses = []
 
     blocks.forEach((block, blockNumber) => {
-      const req = this.parityClient.request('parity_getBlockReceipts', [this.parseNumberToHex(blockNumber)], undefined, false)
+      const req = this.parityClient.request('parity_getBlockReceipts', [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
       responses.push(this.parityClient.request([req]))
     })
 
@@ -186,8 +95,8 @@ class ETHWorker extends BaseWorker {
         to: block.miner,
         value: computeGasExpense(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
         valueExactBase36: computeGasExpenseBase36(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
-        blockNumber: this.parseHexToNumber(transaction.blockNumber),
-        timestamp: this.parseHexToNumber(block.timestamp),
+        blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
+        timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
         transactionHash: transaction.hash,
         type: "fee"
       })
@@ -206,7 +115,8 @@ class ETHWorker extends BaseWorker {
     const result = []
 
     for (let i = 0; i < traces.length; i++) {
-      result.push(this.decodeTransferTrace(traces[i], blocks))
+      const block_timestamp = blocks.get(traces[i]["blockNumber"]).timestamp
+      result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper))
     }
 
     logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`)
