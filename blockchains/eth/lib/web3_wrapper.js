@@ -21,24 +21,24 @@ class Web3Wrapper {
         return this.web3.utils.numberToHex(field)
     }
 
-    parseValue(trace) {
-        return parseFloat(this.parseHexToNumberString(trace["action"]["value"]))
+    parseValue(field) {
+        return parseFloat(this.parseHexToNumberString(field))
     }
 
-    parseValueBase36(trace) {
-        return this.parseValueExactBase36(trace["action"]["value"])
+    parseValueBase36(field) {
+        return this.parseValueExactBase36(field)
     }
 
-    parseTransactionPosition(trace) {
-        return this.parseHexToNumberString(trace["transactionPosition"])
+    parseTransactionPosition(field) {
+        return this.parseHexToNumberString(field)
     }
 
-    parseBalance(trace) {
-        return parseFloat(this.parseHexToNumberString(trace["action"]["balance"]))
+    parseBalance(field) {
+        return parseFloat(this.parseHexToNumberString(field))
     }
 
-    parseBalanceBase36(trace) {
-        return this.parseValueExactBase36(trace["action"]["balance"])
+    parseBalanceBase36(field) {
+        return this.parseValueExactBase36(field)
     }
 }
 
