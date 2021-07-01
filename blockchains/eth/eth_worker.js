@@ -115,7 +115,7 @@ class ETHWorker extends BaseWorker {
     const result = []
 
     for (let i = 0; i < traces.length; i++) {
-      const block_timestamp = blocks.get(traces[i]["blockNumber"]).timestamp
+      const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocks.get(traces[i]["blockNumber"]))
       result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper))
     }
 

@@ -1,4 +1,4 @@
-const assert = require("assert");
+const assert = require("assert")
 const { decodeTransferTrace } = require("../../blockchains/eth/lib/decode_transfers")
 const Web3 = require('web3')
 const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper')
@@ -27,7 +27,7 @@ describe('genesis transfers', function() {
       "subtraces": 0,
       "traceAddress": [ 0 ],
       "transactionHash": "0xd715da4f846e41be86ea87dc97b186cafea3b50c95d5d9d889ec522b248b207f",
-      "transactionPosition": 0,
+      "transactionPosition": 10,
       "type": "suicide"
      }
 
@@ -42,7 +42,7 @@ describe('genesis transfers', function() {
       "blockNumber": 711983,
       "timestamp": 1000000,
       "transactionHash": "0xd715da4f846e41be86ea87dc97b186cafea3b50c95d5d9d889ec522b248b207f",
-      "transactionPosition": 0,
+      "transactionPosition": 10,
       "type": "suicide"
     }
 
@@ -69,7 +69,7 @@ describe('genesis transfers', function() {
       "subtraces": 0,
       "traceAddress": [],
       "transactionHash": "0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c",
-      "transactionPosition": 0,
+      "transactionPosition": 10,
       "type": "call"
     }
 
@@ -85,7 +85,7 @@ describe('genesis transfers', function() {
       "blockNumber": 710093,
       "timestamp": 1450433505,
       "transactionHash": "0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c",
-      "transactionPosition": 0,
+      "transactionPosition": 10,
       "type": "call"
     }
 
@@ -143,7 +143,7 @@ describe('genesis transfers', function() {
       "subtraces": 0,
       "traceAddress": [],
       "transactionHash": "0x6d39df3c46f19e8ef5e8bb3b81a063a29cb352675a00d66f0dc2117a1799add1",
-      "transactionPosition": 0,
+      "transactionPosition": 11,
       "type": "create"
     }
 
@@ -158,7 +158,7 @@ describe('genesis transfers', function() {
       "blockNumber": 710221,
       "timestamp": 1450435908,
       "transactionHash": "0x6d39df3c46f19e8ef5e8bb3b81a063a29cb352675a00d66f0dc2117a1799add1",
-      "transactionPosition": 0,
+      "transactionPosition": 11,
       "type": "create"
     }
 

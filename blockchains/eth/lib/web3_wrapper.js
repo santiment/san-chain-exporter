@@ -30,7 +30,7 @@ class Web3Wrapper {
     }
 
     parseTransactionPosition(field) {
-        return this.parseHexToNumberString(field)
+        return this.parseHexToNumber(field)
     }
 
     parseBalance(field) {
@@ -39,6 +39,10 @@ class Web3Wrapper {
 
     parseBalanceBase36(field) {
         return this.parseValueExactBase36(field)
+    }
+
+    decodeTimestampFromBlock(block) {
+        return this.parseHexToNumber(block.timestamp)
     }
 }
 
