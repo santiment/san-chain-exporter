@@ -4,7 +4,7 @@ const { filterErrors } = require('blockchain-utils/eth')
 const constants = require('./lib/constants')
 const { logger } = require('../../lib/logger')
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack')
-const { addGenesisTransfers } = require('./lib/genesis_transfers')
+const { getGenesisTransfers } = require('./lib/genesis_transfers')
 const { transactionOrder, stableSort, computeGasExpense,
   computeGasExpenseBase36 } = require('./lib/util')
 const BaseWorker = require('../../lib/worker_base')
@@ -38,10 +38,6 @@ class ETHWorker extends BaseWorker {
     })
   }
 
-
-
-
-
   async fetchBlocks(fromBlock, toBlock) {
     const blockRequests = []
     for (let i = fromBlock; i <= toBlock; i++) {
@@ -61,13 +57,13 @@ class ETHWorker extends BaseWorker {
     return result
   }
 
-  async fetchReceipts(blocks) {
+  async fetchReceipts(blockNumbers) {
     const responses = []
 
-    blocks.forEach((block, blockNumber) => {
+    for (const blockNumber of blockNumbers) {
       const req = this.parityClient.request('parity_getBlockReceipts', [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
       responses.push(this.parityClient.request([req]))
-    })
+    }
 
     const finishedRequests = await Promise.all(responses)
     const result = {}
@@ -104,37 +100,54 @@ class ETHWorker extends BaseWorker {
     return result
   }
 
-  async getPastEvents(fromBlock, toBlock) {
+  async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
     logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`)
-
     const [traces, blocks] = await Promise.all([
       this.fetchEthInternalTrx(fromBlock, toBlock),
       this.fetchBlocks(fromBlock, toBlock)
     ])
+    logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`)
+    const receipts = await this.fetchReceipts(blocks.keys())
 
+    return [traces, blocks, receipts]
+  }
+
+  async getPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
+    let events = []
+    if (fromBlock == 0) {
+      logger.info("Adding the GENESIS transfers")
+      events.push(... getGenesisTransfers(this.web3))
+    }
+
+    events.push(... await this.getPastTransferEvents(traces, blocks))
+    events.push(... await this.getPastTransactionEvents(blocks.values(), receipts))
+    if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
+      logger.info("Adding the DAO hack transfers")
+      events = injectDAOHackTransfers(events)
+    }
+
+    return events
+  }
+
+
+  async getPastTransferEvents(traces, blocksMap) {
     const result = []
 
     for (let i = 0; i < traces.length; i++) {
-      const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocks.get(traces[i]["blockNumber"]))
+      console.log("Fetching for block number: ", traces[i]["blockNumber"])
+      const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocksMap.get(traces[i]["blockNumber"]))
       result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper))
     }
 
-    logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`)
-    const receipts = await this.fetchReceipts(blocks)
+    return result
+  }
 
-    blocks.forEach((block) => {
+  async getPastTransactionEvents(blocks, receipts) {
+    const result = []
+
+    for (const block of blocks) {
       const decoded_transactions = this.decodeTransactionsInBlock(block, receipts)
       result.push(...decoded_transactions)
-    })
-
-    if (fromBlock == 0) {
-      logger.info("Adding the GENESIS transfers")
-      result.push(...addGenesisTransfers(this.web3, result))
-    }
-
-    if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
-      logger.info("Adding the DAO hack transfers")
-      result.push(...injectDAOHackTransfers(result))
     }
 
     return result
@@ -163,7 +176,9 @@ class ETHWorker extends BaseWorker {
     logger.info(`Fetching transfer events for interval ${this.lastExportedBlock}:${toBlock}`)
     this.lastRequestStartTime = new Date();
 
-    const events = await this.getPastEvents(this.lastExportedBlock + 1, toBlock)
+    const fromBlock = this.lastExportedBlock + 1
+    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(fromBlock, toBlock)
+    const events = this.getPastEvents(fromBlock, toBlock, traces, blocks, receipts)
 
     if (events.length > 0) {
       stableSort(events, transactionOrder)

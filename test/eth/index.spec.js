@@ -1,27 +1,24 @@
 const assert = require("assert");
-const { addGenesisTransfers } = require("../../blockchains/eth/lib/genesis_transfers")
+const { getGenesisTransfers } = require("../../blockchains/eth/lib/genesis_transfers")
 const Web3 = require('web3')
 const web3 = new Web3()
 
 describe('genesis transfers', function() {
   it("adds all genesis transfers", function() {
-    const transfers = []
-    addGenesisTransfers(web3, transfers)
+    const transfers = getGenesisTransfers(web3)
 
     assert.equal(transfers.length, 8894);
   });
 
   it("adds the reward transfer", function() {
-    const transfers = []
-    addGenesisTransfers(web3, transfers)
+    const transfers = getGenesisTransfers(web3)
 
     const reward = transfers.find((t) => t.type == "reward")
     assert.equal(reward.value, "5000000000000000000")
   });
 
   it("adds the correct amount of ETH in circulation", function() {
-    const transfers = []
-    addGenesisTransfers(web3, transfers)
+    const transfers = getGenesisTransfers(web3, transfers)
 
     const totalEth = transfers.reduce((a, t) => a + parseFloat(t.value) / 1e18, 0.0)
 
@@ -29,8 +26,7 @@ describe('genesis transfers', function() {
   });
 
   it("adds genesis addresses in the corrent format", function() {
-    const transfers = []
-    addGenesisTransfers(web3, transfers)
+    const transfers = getGenesisTransfers(web3, transfers)
 
     const transfer = transfers.find((t) => t.to == "0x17961d633bcf20a7b029a7d94b7df4da2ec5427f")
 

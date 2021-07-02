@@ -8,12 +8,13 @@ const GENESIS_TRANSFERS = fs.readFileSync(path.resolve(__dirname) + "/ethereum_g
 
 const GENESIS_TIMESTAMP = 1438269973
 
-exports.addGenesisTransfers = function(web3, transfers) {
+exports.getGenesisTransfers = function(web3) {
+  const result = []
   GENESIS_TRANSFERS.forEach((transfer) => {
     const [id, from, to, amount] = transfer
     const wei = web3.utils.toWei(amount, 'ether')
 
-    transfers.push({
+    result.push({
       from: "GENESIS",
       to: to,
       value: wei,
@@ -25,7 +26,7 @@ exports.addGenesisTransfers = function(web3, transfers) {
     })
   })
 
-  transfers.push({
+  result.push({
     from: "mining_block",
     to: "0x0000000000000000000000000000000000000000",
     value: "5000000000000000000",
@@ -35,5 +36,5 @@ exports.addGenesisTransfers = function(web3, transfers) {
     type: "reward"
   })
 
-  return transfers
+  return result
 }

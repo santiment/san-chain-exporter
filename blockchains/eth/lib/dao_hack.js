@@ -276,7 +276,7 @@ const DAO_HACK_FORK_TRANSACTION_ID = 'DAO_HACK_HARD_FORK'
 function daoAddressToTransfer(daoHackAddress) {
   let { address, balance } = daoHackAddress
 
-  balanceFloat = parseFloat(web3.utils.hexToNumberString(balance))
+  const balanceFloat = parseFloat(web3.utils.hexToNumberString("0x"+balance))
 
   return {
     from: address,
@@ -291,14 +291,18 @@ function daoAddressToTransfer(daoHackAddress) {
   }
 }
 
-exports.DAO_HACK_FORK_BLOCK = DAO_HACK_FORK_BLOCK
+function injectDAOHackTransfers(transfers) {
+   const insertIndex = transfers.findIndex((transfer) => transfer.blockNumber == DAO_HACK_FORK_BLOCK)
+   const transfersToInsert = DAO_HACK_ADDRESSES.map(daoAddressToTransfer)
 
-exports.injectDAOHackTransfers = function(transfers) {
-  const insertIndex = transfers.findIndex((transfer) => transfer.blockNumber == DAO_HACK_FORK_BLOCK)
-  const transfersToInsert = DAO_HACK_ADDRESSES.map(daoAddressToTransfer)
+   return transfers.slice(0, insertIndex).concat(
+       transfersToInsert,
+       transfers.slice(insertIndex)
+   )
+}
 
-  return transfers.slice(0, insertIndex).concat(
-    transfersToInsert,
-    transfers.slice(insertIndex)
-  )
+module.exports = {
+   DAO_HACK_FORK_BLOCK,
+   DAO_HACK_ADDRESSES,
+   injectDAOHackTransfers
 }
