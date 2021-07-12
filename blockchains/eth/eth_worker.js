@@ -134,7 +134,6 @@ class ETHWorker extends BaseWorker {
     const result = []
 
     for (let i = 0; i < traces.length; i++) {
-      console.log("Fetching for block number: ", traces[i]["blockNumber"])
       const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocksMap.get(traces[i]["blockNumber"]))
       result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper))
     }
@@ -178,7 +177,7 @@ class ETHWorker extends BaseWorker {
 
     const fromBlock = this.lastExportedBlock + 1
     const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(fromBlock, toBlock)
-    const events = this.getPastEvents(fromBlock, toBlock, traces, blocks, receipts)
+    const events = await this.getPastEvents(fromBlock, toBlock, traces, blocks, receipts)
 
     if (events.length > 0) {
       stableSort(events, transactionOrder)

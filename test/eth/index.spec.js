@@ -18,7 +18,7 @@ describe('genesis transfers', function() {
   });
 
   it("adds the correct amount of ETH in circulation", function() {
-    const transfers = getGenesisTransfers(web3, transfers)
+    const transfers = getGenesisTransfers(web3)
 
     const totalEth = transfers.reduce((a, t) => a + parseFloat(t.value) / 1e18, 0.0)
 
@@ -26,7 +26,7 @@ describe('genesis transfers', function() {
   });
 
   it("adds genesis addresses in the corrent format", function() {
-    const transfers = getGenesisTransfers(web3, transfers)
+    const transfers = getGenesisTransfers(web3)
 
     const transfer = transfers.find((t) => t.to == "0x17961d633bcf20a7b029a7d94b7df4da2ec5427f")
 
