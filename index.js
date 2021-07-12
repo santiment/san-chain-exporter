@@ -1,5 +1,5 @@
 "use strict";
-const pkg = require('./package.json');
+const pkg = require('./package.json')
 const { send } = require('micro')
 const url = require('url')
 const { Exporter } = require('san-exporter')
@@ -8,6 +8,7 @@ const { logger } = require('./lib/logger')
 const { storeEvents } = require('./lib/store_events')
 // Dynamically initialize just the needed blockchain worker
 const worker = require(`./blockchains/${process.env.BLOCKCHAIN}/${process.env.BLOCKCHAIN}_worker`)
+const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name
 
 class Main {
   constructor() {
@@ -20,7 +21,7 @@ class Main {
   }
 
   async init() {
-    this.exporter = new Exporter(pkg.name, true)
+    this.exporter = new Exporter(EXPORTER_NAME, true)
     await this.exporter.connect()
     this.exporter.initTransactions()
     await this.initLastProcessedBlock()
