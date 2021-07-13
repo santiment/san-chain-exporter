@@ -108,7 +108,10 @@ module.exports = async (request, response) => {
     case '/healthcheck':
       return main.healthcheck()
           .then(() => send(response, 200, "ok"))
-          .catch((err) => send(response, 500, err.toString()))
+          .catch((err) => {
+            logger.error(`Healthcheck failed: ${err.toString()}`)
+            send(response, 500, err.toString())
+          })
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
       return send(response, 200, metrics.register.metrics());
