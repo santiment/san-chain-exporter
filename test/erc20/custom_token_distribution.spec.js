@@ -1,5 +1,5 @@
 const assert = require("assert")
-const { addCustomTokenDistribution } = require("../lib/custom_token_distribution")
+const { addCustomTokenDistribution } = require("../../blockchains/erc20/lib/custom_token_distribution")
 
 const sanPresaleTransfers = [
   { contract: '0x7c5a0ce9267ed19b22f8cae653f198e3e8daf098',

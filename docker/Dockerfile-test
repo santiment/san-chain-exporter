@@ -37,7 +37,7 @@ ENV EXACT_CONTRACT_MODE "1"
 COPY . /opt/app
 
 COPY --from=builder /opt/node_modules /opt/node_modules
-COPY test/contract_mapping/ /opt/app/lib/contract_mapping/
+COPY test/erc20/contract_mapping/ /opt/app/blockchains/erc20/lib/contract_mapping/
 EXPOSE 3000
 
 CMD npm test

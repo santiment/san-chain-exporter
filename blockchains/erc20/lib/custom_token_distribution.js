@@ -2,6 +2,7 @@
 const fs = require('fs')
 const Web3 = require('web3')
 const web3 = new Web3()
+const path = require("path")
 
 const MINT_ADDRESS = "mint"
 const BURN_ADDRESS = "burn"
@@ -14,7 +15,7 @@ const customTransfersData = [
         blockNumber: 4011221,
         timestamp: 1499846591,
         contract: "0x7c5a0ce9267ed19b22f8cae653f198e3e8daf098",
-        file: "lib/san_presale.csv",
+        file: "san_presale.csv",
         transactionHashPrefix: "SAN_PRESALE"
     }
 ]
@@ -34,7 +35,7 @@ function getLastRealLogIndexForBlock(transfers, blockNumber) {
 }
 
 function addTransfers(transfers, transfersData) {
-    let addressBalances = fs.readFileSync(transfersData.file, {encoding: "utf8"})
+    let addressBalances = fs.readFileSync(path.resolve(__dirname) + "/" + transfersData.file, {encoding: "utf8"})
         .split("\n")
         .filter((line) => line != 0)
         .map((line) => line.split(",").map((element) => element.trim()))

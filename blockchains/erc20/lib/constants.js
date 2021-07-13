@@ -7,7 +7,8 @@ const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 
 // When run in this mode, only transfers for specific contracts would be fetched and contract address overwritten.
 const EXACT_CONTRACT_MODE = parseInt(process.env.EXACT_CONTRACT_MODE || "0")
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/"
-const CONTRACT_MAPPING_FILE_PATH = "./lib/contract_mapping/contract_mapping.json"
+const CONTRACT_MAPPING_FILE_PATH = "./contract_mapping/contract_mapping.json"
+const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || "30")
 
 module.exports = {
     BLOCK_INTERVAL,
@@ -16,5 +17,6 @@ module.exports = {
     EXPORT_TIMEOUT_MLS,
     EXACT_CONTRACT_MODE,
     PARITY_NODE,
-    CONTRACT_MAPPING_FILE_PATH
+    CONTRACT_MAPPING_FILE_PATH,
+    LOOP_INTERVAL_CURRENT_MODE_SEC
 }

@@ -1,5 +1,5 @@
 const assert = require("assert")
-const { decodeAddress } = require("../lib/util")
+const { decodeAddress } = require("../../blockchains/erc20/lib/util")
 
 describe('decodeAddress', function() {
   it("decodes the addresses in the events correctly", async function() {
