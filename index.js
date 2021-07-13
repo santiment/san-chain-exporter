@@ -52,7 +52,9 @@ class Main {
       this.lastProcessedPosition.blockNumber = this.worker.lastExportedBlock
       this.lastProcessedPosition.primaryKey = this.worker.lastPrimaryKey
 
-      await storeEvents(this.exporter, events)
+      if (events.length > 0) {
+        await storeEvents(this.exporter, events)
+      }
       await this.exporter.savePosition(this.lastProcessedPosition)
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}`)
 
