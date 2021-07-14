@@ -33,7 +33,7 @@ class ERC20Worker extends BaseWorker {
       const newConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS
       if (newConfirmedBlock == this.lastConfirmedBlock) {
         // The Node has not progressed
-        return
+        return []
       }
       this.lastConfirmedBlock = newConfirmedBlock
     }
