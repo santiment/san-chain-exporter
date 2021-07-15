@@ -301,7 +301,44 @@ const filteredEvents = [
     valueExactBase36: '4rgm1aauy6roni8' }
 ]
 
-fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock) {
+const decodedEvent0 = {
+  "contract": "0xeb9951021698b42e4399f9cbb6267aa35f82d59d",
+  "blockNumber": 5010901,
+  "timestamp": 1517479091,
+  "transactionHash": "0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3",
+  "logIndex": 0,
+  "from": "mint",
+  "to": "0x97623428a891542df710be9589093c9f3d2b60d3",
+  "value": 500000000000000000000,
+  "valueExactBase36": "2xirk7k6w3mt4w"
+}
+
+const decodedEvent1 = {
+  "contract": "0xeb9951021698b42e4399f9cbb6267aa35f82d59d",
+  "blockNumber": 5010901,
+  "timestamp": 1517479091,
+  "transactionHash": "0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3",
+  "logIndex": 1,
+  "to": "0x97623428a891542df710be9589093c9f3d2b60d3",
+  "from": "0x0000000000000000000000000000000000000000",
+  "value": 500000000000000000000,
+  "valueExactBase36": "2xirk7k6w3mt4w"
+}
+
+const decodedEvent2 = {
+  "contract": "0xeb9951021698b42e4399f9cbb6267aa35f82d59d",
+    "blockNumber": 5010901,
+    "timestamp": 1517479091,
+    "transactionHash": "0xaab6e97a908f937ffba0690e6ad07053c6a4e822bab08342602204861f66b4b8",
+    "logIndex": 3,
+    "from": "mint",
+    "to": "0xc94698ffa0e74a35707eef8d6f847130c2008df3",
+    "value": 1e+21,
+    "valueExactBase36": "5v1j4f4ds79m9s"
+}
+
+
+fetch_events.__set__("getRawEvents", async function () {
   return rawEvents
 })
 
@@ -339,5 +376,57 @@ describe('getPastEvents', function() {
       result,
       filteredEvents
     )
+  })
+})
+
+describe('getEventsByTransactionTest', function () {
+  const getEventsByTransaction = fetch_events.__get__('getEventsByTransaction')
+
+  it("Test that two events for the same transaction would be grouped together", async function() {
+    const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent1])
+
+    let countElements = 0
+    for (let curTransactionEvents of iterPerTransaction) {
+      if (0 == countElements) {
+        assert.deepStrictEqual(curTransactionEvents, [decodedEvent0, decodedEvent1])
+      }
+      ++countElements
+    }
+
+    assert.strictEqual(1, countElements)
+  })
+
+  it("Test that two events for different transactions would be separated together", async function() {
+    const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent2])
+
+    let countElements = 0
+    for (let curTransactionEvents of iterPerTransaction) {
+      if (0 == countElements) {
+        assert.deepStrictEqual(curTransactionEvents, [decodedEvent0])
+      }
+      else if (1 == countElements) {
+        assert.deepStrictEqual(curTransactionEvents, [decodedEvent2])
+      }
+      ++countElements
+    }
+
+    assert.strictEqual(2, countElements)
+  })
+
+  it("Test that both grouping events and separating works ", async function() {
+    const iterPerTransaction = getEventsByTransaction([decodedEvent2, decodedEvent0, decodedEvent1])
+
+    let countElements = 0
+    for (let curTransactionEvents of iterPerTransaction) {
+      if (0 == countElements) {
+        assert.deepStrictEqual(curTransactionEvents, [decodedEvent2])
+      }
+      else if (1 == countElements) {
+        assert.deepStrictEqual(curTransactionEvents, [decodedEvent0, decodedEvent1])
+      }
+      ++countElements
+    }
+
+    assert.strictEqual(2, countElements)
   })
 })
