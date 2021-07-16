@@ -384,49 +384,27 @@ describe('getEventsByTransactionTest', function () {
 
   it("Test that two events for the same transaction would be grouped together", async function() {
     const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent1])
+    const result = Array.from(iterPerTransaction)
 
-    let countElements = 0
-    for (let curTransactionEvents of iterPerTransaction) {
-      if (0 == countElements) {
-        assert.deepStrictEqual(curTransactionEvents, [decodedEvent0, decodedEvent1])
-      }
-      ++countElements
-    }
-
-    assert.strictEqual(1, countElements)
+    assert.strictEqual(1, result.length)
+    assert.deepStrictEqual(result[0], [decodedEvent0, decodedEvent1])
   })
 
   it("Test that two events for different transactions would be separated together", async function() {
     const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent2])
+    const result = Array.from(iterPerTransaction)
 
-    let countElements = 0
-    for (let curTransactionEvents of iterPerTransaction) {
-      if (0 == countElements) {
-        assert.deepStrictEqual(curTransactionEvents, [decodedEvent0])
-      }
-      else if (1 == countElements) {
-        assert.deepStrictEqual(curTransactionEvents, [decodedEvent2])
-      }
-      ++countElements
-    }
-
-    assert.strictEqual(2, countElements)
+    assert.strictEqual(2, result.length)
+    assert.deepStrictEqual(result[0], [decodedEvent0])
+    assert.deepStrictEqual(result[1], [decodedEvent2])
   })
 
   it("Test that both grouping events and separating works ", async function() {
     const iterPerTransaction = getEventsByTransaction([decodedEvent2, decodedEvent0, decodedEvent1])
+    const result = Array.from(iterPerTransaction)
 
-    let countElements = 0
-    for (let curTransactionEvents of iterPerTransaction) {
-      if (0 == countElements) {
-        assert.deepStrictEqual(curTransactionEvents, [decodedEvent2])
-      }
-      else if (1 == countElements) {
-        assert.deepStrictEqual(curTransactionEvents, [decodedEvent0, decodedEvent1])
-      }
-      ++countElements
-    }
-
-    assert.strictEqual(2, countElements)
+    assert.strictEqual(2, result.length)
+    assert.deepStrictEqual(result[0], [decodedEvent2])
+    assert.deepStrictEqual(result[1], [decodedEvent0, decodedEvent1])
   })
 })
