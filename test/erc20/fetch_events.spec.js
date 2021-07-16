@@ -382,7 +382,7 @@ describe('getPastEvents', function() {
 describe('getEventsByTransactionTest', function () {
   const getEventsByTransaction = fetch_events.__get__('getEventsByTransaction')
 
-  it("Test that two events for the same transaction would be grouped together", async function() {
+  it("groups together two events for the same transaction", async function() {
     const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent1])
     const result = Array.from(iterPerTransaction)
 
@@ -390,7 +390,7 @@ describe('getEventsByTransactionTest', function () {
     assert.deepStrictEqual(result[0], [decodedEvent0, decodedEvent1])
   })
 
-  it("Test that two events for different transactions would be separated together", async function() {
+  it("separates two events from different transactions", async function() {
     const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent2])
     const result = Array.from(iterPerTransaction)
 
@@ -399,7 +399,7 @@ describe('getEventsByTransactionTest', function () {
     assert.deepStrictEqual(result[1], [decodedEvent2])
   })
 
-  it("Test that both grouping events and separating works ", async function() {
+  it("ensures grouping and separation of events works properly", async function() {
     const iterPerTransaction = getEventsByTransaction([decodedEvent2, decodedEvent0, decodedEvent1])
     const result = Array.from(iterPerTransaction)
 
