@@ -245,7 +245,10 @@ function filterEvents(events) {
 // returns an array of arrays - all events in one transaction are grouped together
 // assumes that all events in one transaction are next to one another in the log
 function* getEventsByTransaction(events) {
-  let curTransactionHash = null
+  if (0 == events.length) {
+    return
+  }
+  let curTransactionHash = events[0].transactionHash
   let curTransactionEvents = []
   for (let i = 0;i < events.length; i++) {
     let event = events[i]

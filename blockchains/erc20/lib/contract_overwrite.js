@@ -29,7 +29,6 @@ class ContractEditor {
 
     logger.info(`Running in 'exact contracts mode', ${this.contractsOverwriteArray.length} contracts will be monitored.`)
     logger.info("Overwritten contracts are:")
-    console.log(JSON.stringify(parsedContracts, null, 4))
   }
 
   editAddressAndAmount(events, contractOverwrite) {
