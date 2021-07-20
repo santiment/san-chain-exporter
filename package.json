@@ -1,5 +1,5 @@
 {
-  "name": "erc20-transfers-exporter",
+  "name": "san-node-exporter",
   "version": "0.1.2",
   "description": "Exporter of all transfer events from the ERC20 tokens",
   "main": "index.js",

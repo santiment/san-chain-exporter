@@ -8,7 +8,7 @@ slaveTemplates.dockerTemplate { label ->
   node(label) {
     container('docker') {
       def scmVars = checkout scm
-      def imageName = "erc20-transfers-exporter"
+      def imageName = "san-node-exporter"
 
       stage('Run tests') {
         sh "./bin/test.sh"
