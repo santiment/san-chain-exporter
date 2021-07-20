@@ -24,8 +24,10 @@
     "jayson": "^3.5.2",
     "micro": "^9.3.4",
     "prom-client": "^12.0.0",
-    "san-exporter": "santiment/san-exporter",
-    "web3": "^1.2.11"
+    "web3": "^1.2.11",
+    "node-json-logger": "^0.0.17",
+    "@santiment-network/node-rdkafka": "2.10.10",
+    "node-zookeeper-client-async": "^1.0.0"
   },
   "devDependencies": {
     "@santiment-network/node-rdkafka": "2.10.10",
