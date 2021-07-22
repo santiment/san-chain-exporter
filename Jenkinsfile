@@ -8,7 +8,7 @@ slaveTemplates.dockerTemplate { label ->
   node(label) {
     container('docker') {
       def scmVars = checkout scm
-      def imageName = "san-node-exporter"
+      def imageName = "san-chain-exporter"
 
       stage('Run tests') {
         sh "./bin/test.sh"
