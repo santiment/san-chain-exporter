@@ -43,10 +43,11 @@ class Main {
 
   async workLoop() {
     try {
+      const lastRequestStartTime = new Date();
       const events = await this.worker.work()
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
       metrics.requestsCounter.inc();
-      metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
+      metrics.requestsResponseTime.observe(new Date() - lastRequestStartTime);
       metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
 
       this.lastProcessedPosition.blockNumber = this.worker.lastExportedBlock

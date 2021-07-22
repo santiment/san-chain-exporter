@@ -44,7 +44,6 @@ class ERC20Worker extends BaseWorker {
 
     const toBlock = Math.min(this.lastExportedBlock + constants.BLOCK_INTERVAL, this.lastConfirmedBlock)
     logger.info(`Fetching transfer events for interval ${this.lastExportedBlock}:${toBlock}`)
-    this.lastRequestStartTime = new Date();
 
     let events = [];
     if (constants.EXACT_CONTRACT_MODE) {

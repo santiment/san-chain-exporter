@@ -172,7 +172,6 @@ class ETHWorker extends BaseWorker {
     }
 
     const toBlock = Math.min(this.lastExportedBlock + constants.BLOCK_INTERVAL, this.lastConfirmedBlock)
-    this.lastRequestStartTime = new Date();
     const fromBlock = this.lastExportedBlock + 1
 
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
