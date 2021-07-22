@@ -44,8 +44,9 @@ services:
       EXPORT_TIMEOUT_MLS: 300000
       EXACT_CONTRACT_MODE: "1"
       # Should be substituted from run.sh script with different values.
-      BLOCKCHAIN: ${BLOCKCHAIN:-ERC20Worker}
+      BLOCKCHAIN: ${BLOCKCHAIN:-erc20}
       KAFKA_TOPIC: "erc20_exporter_test_topic"
+      CARDANO_GRAPHQL_URL: http://localhost:3100/graphql
     ports:
       # port for checking health.
       - "127.0.0.1:3000:3000"

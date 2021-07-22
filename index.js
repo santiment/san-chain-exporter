@@ -2,8 +2,8 @@
 const pkg = require('./package.json')
 const { send } = require('micro')
 const url = require('url')
-const { Exporter } = require('san-exporter')
-const metrics = require('san-exporter/metrics');
+const { Exporter } = require('./lib/kafka_storage')
+const metrics = require('./lib/metrics')
 const { logger } = require('./lib/logger')
 const { storeEvents } = require('./lib/store_events')
 // Dynamically initialize just the needed blockchain worker
