@@ -1,6 +1,6 @@
 /* jslint es6 */
 "use strict";
-const rp = require('request-promise-native')
+const got = require('got');
 const uuidv1 = require('uuid/v1')
 const { logger } = require('../../lib/logger')
 const BaseWorker = require("../../lib/worker_base");
@@ -8,30 +8,25 @@ const constants = require("./lib/constants");
 
 
 const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || "http://localhost:3100/graphql"
-const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
+const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
 
 class CardanoWorker extends BaseWorker {
   constructor() {
     super()
 
-    this.request = rp.defaults({
-      method: 'POST',
-      uri: CARDANO_GRAPHQL_URL,
-      timeout: DEFAULT_TIMEOUT,
-      time: true,
-      gzip: true,
-      json: true
-    })
+
   }
 
   async sendRequest(query) {
-    return await this.request({
-      body: {
-        jsonrpc: '2.0',
-        id: uuidv1(),
-        query: query
-      }
-    })
+      return await got.post(CARDANO_GRAPHQL_URL, {
+        json: {
+          jsonrpc: '2.0',
+          id: uuidv1(),
+          query: query
+        },
+        responseType: 'json',
+        timeout: DEFAULT_TIMEOUT_MSEC
+      }).json()
   }
 
   async getCurrentBlock() {
@@ -80,7 +75,6 @@ class CardanoWorker extends BaseWorker {
       throw new Error(`Error getting transactions for current block number ${blockNumber}`)
     }
 
-    console.log(JSON.stringify(response.data.transactions))
     return response.data.transactions;
   }
 
@@ -126,6 +120,20 @@ class CardanoWorker extends BaseWorker {
     this.lastPrimaryKey += transactions.length
 
     return transactions
+  }
+
+  healthcheckExportTimeout() {
+    const timeFromLastExport = Date.now() - this.lastExportTime
+    const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
+    if (isExportTimeoutExceeded) {
+      return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${constants.EXPORT_TIMEOUT_MLS}ms.`)
+    } else {
+      return Promise.resolve()
+    }
+  }
+
+  healthcheck() {
+    return this.healthcheckExportTimeout()
   }
 }
 
