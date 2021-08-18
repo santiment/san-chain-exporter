@@ -4,7 +4,7 @@ const { logger } = require('../../lib/logger')
 const constants = require('./lib/constants')
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key')
 let contract_overwrite = null
-if (constants.EXACT_CONTRACT_MODE) {
+if (constants.CONTRACT_MODE != "vanilla") {
   contract_overwrite = require('./lib/contract_overwrite')
 }
 const { getPastEvents } = require('./lib/fetch_events')
@@ -47,11 +47,14 @@ class ERC20Worker extends BaseWorker {
     this.lastRequestStartTime = new Date();
 
     let events = [];
-    if (constants.EXACT_CONTRACT_MODE) {
-      events = await contract_overwrite.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock);
+    if ("extract_exact_overwrite" == constants.CONTRACT_MODE) {
+      events = await contract_overwrite.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock)
     }
     else {
-      events = await getPastEvents(this.web3, this.lastExportedBlock + 1, toBlock);
+      events = await getPastEvents(this.web3, this.lastExportedBlock + 1, toBlock)
+      if ("extract_all_append" == constants.CONTRACT_MODE) {
+        events = contract_overwrite.appendExactContracts(events)
+      }
     }
 
     if (events.length > 0) {
