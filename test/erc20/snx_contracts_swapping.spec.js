@@ -4,7 +4,7 @@ const rewire = require('rewire')
 const Web3 = require('web3')
 
 const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
-const contract_overwrite = rewire("../../blockchains/erc20/lib/contract_overwrite")
+const {contractEditor} = require("../../blockchains/erc20/lib/contract_overwrite")
 const web3 = new Web3()
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f'
@@ -175,17 +175,6 @@ fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
   return 0
 })
 
-fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock, contractAddresses) {
-  let result = []
-  for (const rawEvent of [rawEventNotSNX, rawEventSNXLegacy, rawEventSNXNew, rawEventSUSDLegacy, rawEventSUSDNew]) {
-
-    if (contractAddresses.includes(rawEvent.address)) {
-      result.push(rawEvent);
-    }
-  }
-  return result;
-})
-
 describe('snxContractsSwapping', function() {
   it("checks fixContractAddresses on different logs", async function() {
     const decodeEvents = fetch_events.__get__('decodeEvents')
@@ -197,24 +186,11 @@ describe('snxContractsSwapping', function() {
           rawEventSUSDNew
         ])
 
-    const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
-    await fixContractAddresses(decodedEvents)
+    await contractEditor.changeContractAddresses(decodedEvents)
 
     assert.deepStrictEqual(
       decodedEvents,
         [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
-    )
-  })
-
-  it("fetches, parses events and fixes contracts from the ethereum node", async function() {
-    // This is needed so that we use the rewired dependency
-    contract_overwrite.__set__('getPastEvents', fetch_events.__get__('getPastEvents'))
-
-    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContracts')
-    const result = await getPastEventsExactContracts(web3, 0, 0)
-    assert.deepEqual(
-        result,
-        [decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
     )
   })
 })

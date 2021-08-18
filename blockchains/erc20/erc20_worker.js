@@ -3,9 +3,9 @@ const Web3 = require('web3')
 const { logger } = require('../../lib/logger')
 const constants = require('./lib/constants')
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key')
-let contract_overwrite = null
+let contractEditor = null
 if (constants.CONTRACT_MODE != "vanilla") {
-  contract_overwrite = require('./lib/contract_overwrite')
+  contractEditor = require('./lib/contract_overwrite')
 }
 const { getPastEvents } = require('./lib/fetch_events')
 const BaseWorker = require('../../lib/worker_base')
@@ -48,12 +48,13 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     if ("extract_exact_overwrite" == constants.CONTRACT_MODE) {
-      events = await contract_overwrite.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock)
+      events = await contractEditor.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock)
+      contractEditor.changeContractAddresses(events)
     }
     else {
       events = await getPastEvents(this.web3, this.lastExportedBlock + 1, toBlock)
       if ("extract_all_append" == constants.CONTRACT_MODE) {
-        events = contract_overwrite.appendExactContracts(events)
+        events = contractEditor.appendExactContracts(events)
       }
     }
 

@@ -56,15 +56,20 @@ class ContractEditor {
 
     for (const contractOverwrite of this.contractsOverwriteArray) {
       const events = await getPastEvents(web3, fromBlock, toBlock, contractOverwrite.oldAddresses)
-      for(let event of events) {
-        if (this.isContractMatchesExactList(event, contractOverwrite)) {
-          this.editAddressAndAmount(event, contractOverwrite)
-        }
-        resultsAggregation.push(event)
-      }
+      resultsAggregation.concat(events)
     }
 
     return resultsAggregation
+  }
+
+  changeContractAddresses(events) {
+    for(let event of events) {
+      for (const contractOverwrite of this.contractsOverwriteArray) {
+        if (this.isContractMatchesExactList(event, contractOverwrite)) {
+          this.editAddressAndAmount(event, contractOverwrite)
+        }
+      }
+    }
   }
 
   appendExactContracts(events) {
@@ -89,19 +94,7 @@ class ContractEditor {
 const contractEditor = constants.CONTRACT_MODE != "vanilla" ? new ContractEditor() : null
 
 
-/** Exposed only for test purposes */
-async function changeContractAddresses(events) {
-  for (let event of events) {
-    for (const contractOverwrite of contractEditor.contractsOverwriteArray) {
-      if (event.contract in contractOverwrite.mapAddressToMultiplier) {
-        contractEditor.editAddressAndAmount([event], contractOverwrite);
-      }
-    }
-  }
-}
-
 
 module.exports = {
-  contractEditor,
-  changeContractAddresses
+  contractEditor
 }

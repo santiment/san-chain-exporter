@@ -4,7 +4,7 @@ const rewire = require('rewire')
 const Web3 = require('web3')
 
 const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
-const contract_overwrite = rewire("../../blockchains/erc20/lib/contract_overwrite")
+const {contractEditor} = require("../../blockchains/erc20/lib/contract_overwrite")
 const web3 = new Web3()
 
 const USDCContractLegacy = '0x2c5dcd12141c56fbea08e95f54f12c8b22d492eb'
@@ -108,7 +108,7 @@ const decodedEventUSDCNew = {
   "valueExactBase36": "alzj4rdbzkcq9s"
 }
 
-fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
+fetch_events.__set__("getBlockTimestamp", async function () {
   return 0
 })
 
@@ -132,24 +132,11 @@ describe('usdcContractsSwapping', function() {
           rawEventUSDCNew
         ])
 
-    const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
-    await fixContractAddresses(decodedEvents)
+    contractEditor.changeContractAddresses(decodedEvents)
 
     assert.deepStrictEqual(
       decodedEvents,
         [decodedEventNotUSDC, decodedEventUSDCLegacy, decodedEventUSDCNew]
-    )
-  })
-
-  it("fetches, parses events and fixes contracts from the ethereum node", async function() {
-    // This is needed so that we use the rewired dependency
-    contract_overwrite.__set__('getPastEvents', fetch_events.__get__('getPastEvents'))
-
-    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContracts')
-    const result = await getPastEventsExactContracts(web3, 0, 0)
-    assert.deepEqual(
-        result,
-        [decodedEventUSDCLegacy, decodedEventUSDCNew]
     )
   })
 })
