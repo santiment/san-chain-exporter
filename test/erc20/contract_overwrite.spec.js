@@ -71,46 +71,6 @@ const rawEventSNXNew = {
   id: 'log_b1dfdac6'
 }
 
-const rawEventSUSDLegacy = {
-  address: sUSDContractLegacy,
-  blockHash: '0x786ba1a27c47213b5ff2f954d36017c40ea32130a7c4d04711fa9ed44dbdbf6c',
-  blockNumber: 9153186,
-  data: '0x000000000000000000000000000000000000000000000001384232e1bf071e4c',
-  logIndex: 58,
-  removed: false,
-  topics: [
-    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-    '0x000000000000000000000000e4221d3907bb0f2a9498d5193bc99d1cf693183d',
-    '0x000000000000000000000000787f7461546452c1423022e532b2422c22ca3393'
-  ],
-  transactionHash: '0x703945f9d518d02b47f7afdebe81532880d30d519081cce82f99fc6e1464156f',
-  transactionIndex: 69,
-  transactionLogIndex: '0x0',
-  type: 'mined',
-  id: 'log_bf353493'
-
-}
-
-const rawEventSUSDNew = {
-  address: sUSDContractNew,
-  blockHash: '0xc3b918836ab21bb9e1ac435d080861bc63c0024674bb13c07a4c1c8b0be0752d',
-  blockNumber: 10450283,
-  data: '0x0000000000000000000000000000000000000000000000000000000000000007',
-  logIndex: 108,
-  removed: false,
-  topics: [
-    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-    '0x0000000000000000000000009f6aef5abe4f5963f3c0919814f0e691a1d6de6d',
-    '0x000000000000000000000000c00ac4de5bbe235135e67ba58bde41d4d863f6b8'
-  ],
-  transactionHash: '0x4a7ba2f0053dfdcd7e6025592e9e8bb3f861d9f34042b9e064d28d18fde6c174',
-  transactionIndex: 116,
-  transactionLogIndex: '0x0',
-  type: 'mined',
-  id: 'log_5c12b168'
-
-}
-
 const decodedEventNotSNX = {
   "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
   "blockNumber": 10449812,
@@ -124,7 +84,7 @@ const decodedEventNotSNX = {
 }
 
 const decodedEventSNXLegacy = {
-  "contract": SNXContractReplacer,
+  "contract": SNXContractLegacy,
   "blockNumber": 9785855,
   "timestamp": 0,
   "transactionHash": "0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030",
@@ -135,8 +95,11 @@ const decodedEventSNXLegacy = {
   "valueExactBase36": "lv51o1db8270g"
 }
 
+const correctedEventSNXLegacy = JSON.parse(JSON.stringify(decodedEventSNXLegacy))
+correctedEventSNXLegacy.contract = SNXContractReplacer
+
 const decodedEventSNXNew = {
-  "contract": SNXContractReplacer,
+  "contract": SNXContractNew,
   "blockNumber": 10449853,
   "timestamp": 0,
   "transactionHash": "0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb",
@@ -147,50 +110,52 @@ const decodedEventSNXNew = {
   "valueExactBase36": "alzj4rdbzkcq9s"
 }
 
-const decodedEventSUSDLegacy = {
-  "contract": sUSDContractReplacer,
-  "blockNumber": 9153186,
-  "timestamp": 0,
-  "transactionHash": "0x703945f9d518d02b47f7afdebe81532880d30d519081cce82f99fc6e1464156f",
-  "logIndex": 58,
-  "to": "0x787f7461546452c1423022e532b2422c22ca3393",
-  "from": "0xe4221d3907bb0f2a9498d5193bc99d1cf693183d",
-  "value": 22500602633450365000,
-  "valueExactBase36": "4qy5xyexo6c0c"
-}
-
-const decodedEventSUSDNew = {
-  "contract": sUSDContractReplacer,
-  "blockNumber": 10450283,
-  "timestamp": 0,
-  "transactionHash": "0x4a7ba2f0053dfdcd7e6025592e9e8bb3f861d9f34042b9e064d28d18fde6c174",
-  "logIndex": 108,
-  "to": "0xc00ac4de5bbe235135e67ba58bde41d4d863f6b8",
-  "from": "0x9f6aef5abe4f5963f3c0919814f0e691a1d6de6d",
-  "value": 7,
-  "valueExactBase36": "7"
-}
+const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew))
+correctedEventSNXNew.contract = SNXContractReplacer
 
 fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
   return 0
 })
 
-describe('snxContractsSwapping', function() {
-  it("checks fixContractAddresses on different logs", async function() {
+describe('contract manipulations', function() {
+  it("decode contract addresses", async function() {
     const decodeEvents = fetch_events.__get__('decodeEvents')
     const decodedEvents = await decodeEvents(web3,
         [rawEventNotSNX,
           rawEventSNXLegacy,
-          rawEventSNXNew,
-          rawEventSUSDLegacy,
-          rawEventSUSDNew
+          rawEventSNXNew
         ])
-
-    await contractEditor.changeContractAddresses(decodedEvents)
 
     assert.deepStrictEqual(
       decodedEvents,
-        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew, decodedEventSUSDLegacy, decodedEventSUSDNew]
+        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
+    )
+  })
+
+  it("change contract addresses", async function() {
+    const editedEvents = contractEditor.changeContractAddresses([
+      decodedEventNotSNX,
+      decodedEventSNXLegacy,
+      decodedEventSNXNew
+    ],
+        true)
+
+    assert.deepStrictEqual(
+        editedEvents,
+        [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
+    )
+  })
+
+  it("append events with changed contract addresses", async function() {
+    const editedEvents = contractEditor.changeContractAddresses(
+        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew],
+        true,
+        true
+    )
+
+    assert.deepStrictEqual(
+        editedEvents,
+        [decodedEventNotSNX, decodedEventSNXLegacy, correctedEventSNXLegacy, decodedEventSNXNew, correctedEventSNXNew]
     )
   })
 })

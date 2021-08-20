@@ -62,33 +62,30 @@ class ContractEditor {
     return resultsAggregation
   }
 
-  changeContractAddresses(events) {
+  changeContractAddresses(events,
+                          deepCopy = false,
+                          keepOriginal = false) {
+    const result = []
+
     for(let event of events) {
       for (const contractOverwrite of this.contractsOverwriteArray) {
         if (this.isContractMatchesExactList(event, contractOverwrite)) {
+          if (keepOriginal) {
+            const clone = JSON.parse(JSON.stringify(event))
+            result.push(clone)
+          }
+          if (deepCopy) {
+            event = JSON.parse(JSON.stringify(event))
+          }
           this.editAddressAndAmount(event, contractOverwrite)
+          break
         }
       }
-    }
-  }
-
-  appendExactContracts(events) {
-    let resultsAggregation = []
-
-    for (const contractOverwrite of this.contractsOverwriteArray) {
-      for(let event of events) {
-        resultsAggregation.push(event)
-        if (this.isContractMatchesExactList(event, contractOverwrite)) {
-          const clone = JSON.parse(JSON.stringify(event))
-          this.editAddressAndAmount(clone, contractOverwrite)
-          resultsAggregation.push(clone)
-        }
-      }
+      result.push(event)
     }
 
-    return resultsAggregation
+    return result
   }
-
 }
 
 const contractEditor = constants.CONTRACT_MODE != "vanilla" ? new ContractEditor() : null
