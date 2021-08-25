@@ -13,8 +13,6 @@ const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
 class CardanoWorker extends BaseWorker {
   constructor() {
     super()
-
-
   }
 
   async sendRequest(query) {

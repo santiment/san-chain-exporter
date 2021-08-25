@@ -121,7 +121,6 @@ describe('workLoopTest', function() {
       return JSON.parse(JSON.stringify(transactions))
     }
     cardanoWorker.getCurrentBlock = async function () {
-      console.log("Going in overwritten getCurrentBlock")
       return BLOCKCHAIN_HEAD_BLOCK
     }
     await cardanoWorker.init()
@@ -129,7 +128,6 @@ describe('workLoopTest', function() {
 
   it("test no sleep is set on catch-up", async function() {
     await cardanoWorker.work()
-    console.log("Last exported block is: ", cardanoWorker.lastExportedBlock)
     assert.strictEqual(cardanoWorker.sleepTimeMsec, 0 )
   })
 
