@@ -32,7 +32,7 @@ RUN apk --no-cache add libsasl openssl lz4-libs netcat-openbsd coreutils
 WORKDIR /opt/app
 
 ENV PATH /opt/node_modules/.bin:$PATH
-ENV EXACT_CONTRACT_MODE "1"
+ENV CONTRACT_MODE "extract_exact_overwrite"
 
 COPY . /opt/app
 

@@ -4,16 +4,17 @@ const rewire = require('rewire')
 const Web3 = require('web3')
 
 const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
-const contract_overwrite = rewire("../../blockchains/erc20/lib/contract_overwrite")
+const {contractEditor} = require("../../blockchains/erc20/lib/contract_overwrite")
 const web3 = new Web3()
 
-const USDCContractLegacy = '0x2c5dcd12141c56fbea08e95f54f12c8b22d492eb'
-const LEGACY_USDC_DECIMAL_MULTIPLIER = Math.pow(10, -12)
-const USDCContractNew = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
-const USDCContractReplacer = 'usdc_contract'
+const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f'
+const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f'
+const SNXContractReplacer = 'snx_contract'
+const sUSDContractLegacy = '0x57ab1e02fee23774580c119740129eac7081e9d3'
+const sUSDContractNew = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
+const sUSDContractReplacer = 'susd_contract'
 
-
-const rawEventNotUSDC = {
+const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
   blockHash: '0x5df3aa774b85a9513d261cc5bd778725e3e0d0944da747dc2f245fecf1e58b63',
   blockNumber: 10449812,
@@ -32,8 +33,8 @@ const rawEventNotUSDC = {
   id: 'log_5bc3b124'
 }
 
-const rawEventUSDCLegacy = {
-  address: USDCContractLegacy,
+const rawEventSNXLegacy = {
+  address: SNXContractLegacy,
   blockHash: '0x81c2b371f402764a916d34f8f6ef8c9d60123b1b3e67d2ceabfa45fdc55c45cb',
   blockNumber: 9785855,
   data: '0x0000000000000000000000000000000000000000000000059dcdf2014551b400',
@@ -51,9 +52,8 @@ const rawEventUSDCLegacy = {
   id: 'log_d2b36f7f'
 }
 
-
-const rawEventUSDCNew = {
-  address: USDCContractNew,
+const rawEventSNXNew = {
+  address: SNXContractNew,
   blockHash: '0x22f94f61168af2e451d9e6e55dda66eb2546c117becaf717a6564278cc0532aa',
   blockNumber: 10449853,
   data: '0x0000000000000000000000000000000000000000000000621ecbc23581080000',
@@ -71,8 +71,7 @@ const rawEventUSDCNew = {
   id: 'log_b1dfdac6'
 }
 
-
-const decodedEventNotUSDC = {
+const decodedEventNotSNX = {
   "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
   "blockNumber": 10449812,
   "timestamp": 0,
@@ -84,20 +83,23 @@ const decodedEventNotUSDC = {
   "valueExactBase36": "1pbnb4"
 }
 
-const decodedEventUSDCLegacy = {
-  "contract": USDCContractReplacer,
+const decodedEventSNXLegacy = {
+  "contract": SNXContractLegacy,
   "blockNumber": 9785855,
   "timestamp": 0,
   "transactionHash": "0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030",
   "logIndex": 70,
   "to": "0xe5379a734c4e6d505634ddefc3f9d0ff8d7bb171",
   "from": "0x20312e96b1a0568ac31c6630844a962383cc66c2",
-  "value": Math.floor(103604731090000000000 * LEGACY_USDC_DECIMAL_MULTIPLIER),
-  "valueExactBase36": "1polx7"
+  "value": 103604731090000000000,
+  "valueExactBase36": "lv51o1db8270g"
 }
 
-const decodedEventUSDCNew = {
-  "contract": USDCContractReplacer,
+const correctedEventSNXLegacy = JSON.parse(JSON.stringify(decodedEventSNXLegacy))
+correctedEventSNXLegacy.contract = SNXContractReplacer
+
+const decodedEventSNXNew = {
+  "contract": SNXContractNew,
   "blockNumber": 10449853,
   "timestamp": 0,
   "transactionHash": "0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb",
@@ -108,48 +110,52 @@ const decodedEventUSDCNew = {
   "valueExactBase36": "alzj4rdbzkcq9s"
 }
 
+const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew))
+correctedEventSNXNew.contract = SNXContractReplacer
+
 fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
   return 0
 })
 
-fetch_events.__set__("getRawEvents", async function (web3, fromBlock, toBlock, contractAddresses) {
-  let result = []
-  for (const rawEvent of [rawEventNotUSDC, rawEventUSDCLegacy, rawEventUSDCNew]) {
-
-    if (contractAddresses.includes(rawEvent.address)) {
-      result.push(rawEvent);
-    }
-  }
-  return result;
-})
-
-describe('usdcContractsSwapping', function() {
-  it("checks fixContractAddresses on different logs", async function() {
+describe('contract manipulations', function() {
+  it("decode contract addresses", async function() {
     const decodeEvents = fetch_events.__get__('decodeEvents')
     const decodedEvents = await decodeEvents(web3,
-        [rawEventNotUSDC,
-          rawEventUSDCLegacy,
-          rawEventUSDCNew
+        [rawEventNotSNX,
+          rawEventSNXLegacy,
+          rawEventSNXNew
         ])
-
-    const fixContractAddresses = contract_overwrite.__get__('changeContractAddresses')
-    await fixContractAddresses(decodedEvents)
 
     assert.deepStrictEqual(
       decodedEvents,
-        [decodedEventNotUSDC, decodedEventUSDCLegacy, decodedEventUSDCNew]
+        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
     )
   })
 
-  it("fetches, parses events and fixes contracts from the ethereum node", async function() {
-    // This is needed so that we use the rewired dependency
-    contract_overwrite.__set__('getPastEvents', fetch_events.__get__('getPastEvents'))
+  it("change contract addresses", async function() {
+    const editedEvents = contractEditor.changeContractAddresses([
+      decodedEventNotSNX,
+      decodedEventSNXLegacy,
+      decodedEventSNXNew
+    ],
+        true)
 
-    const getPastEventsExactContracts = contract_overwrite.__get__('getPastEventsExactContracts')
-    const result = await getPastEventsExactContracts(web3, 0, 0)
-    assert.deepEqual(
-        result,
-        [decodedEventUSDCLegacy, decodedEventUSDCNew]
+    assert.deepStrictEqual(
+        editedEvents,
+        [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
+    )
+  })
+
+  it("append events with changed contract addresses", async function() {
+    const editedEvents = contractEditor.changeContractAddresses(
+        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew],
+        true,
+        true
+    )
+
+    assert.deepStrictEqual(
+        editedEvents,
+        [decodedEventNotSNX, decodedEventSNXLegacy, correctedEventSNXLegacy, decodedEventSNXNew, correctedEventSNXNew]
     )
   })
 })
