@@ -42,7 +42,7 @@ services:
       START_BLOCK: "5710092"
       BLOCK_INTERVAL: "50"
       EXPORT_TIMEOUT_MLS: 300000
-      EXACT_CONTRACT_MODE: "1"
+      CONTRACT_MODE: "extract_exact_overwrite"
       # Should be substituted from run.sh script with different values.
       BLOCKCHAIN: ${BLOCKCHAIN:-erc20}
       KAFKA_TOPIC: "erc20_exporter_test_topic"
