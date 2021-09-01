@@ -9,7 +9,7 @@ describe('Test worker', function() {
     let feeResultWithPrimaryKey = null
     let callResultWithPrimaryKey = null
 
-    beforeEach(async function() {
+    beforeEach(function() {
         feeResult = {
             from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
             to: '0x829bd824b016326a401d083b33d092293333a830',
