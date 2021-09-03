@@ -1,4 +1,4 @@
-FROM node:15.12.0-alpine AS builder
+FROM node:16.5-buster-slim AS builder
 
 # This Dockerfile could have been omitted if mounting volumes was working in Jenkins.
 # We use this file just so we can copy inside the image the contract mapping json file
@@ -6,17 +6,14 @@ FROM node:15.12.0-alpine AS builder
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
-RUN apk --no-cache add \
-      bash \
+RUN apt-get update; \
+    apt-get install -y bash \
       g++ \
       ca-certificates \
-      lz4-dev \
       musl-dev \
-      cyrus-sasl-dev \
-      openssl-dev \
       make \
-      python \
-      git
+      git \
+      python3
 
 WORKDIR /opt
 
@@ -25,9 +22,10 @@ COPY package.json package-lock.json* ./
 RUN npm ci --verbose
 RUN npm cache clean --force
 
-FROM node:15.12.0-alpine
+FROM node:16.5-buster-slim
 
-RUN apk --no-cache add libsasl openssl lz4-libs netcat-openbsd coreutils
+RUN apt-get update; \
+    apt-get install -y openssl netcat-openbsd
 
 WORKDIR /opt/app
 
