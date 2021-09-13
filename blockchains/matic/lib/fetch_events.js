@@ -1,10 +1,7 @@
 "use strict";
-const { getBlockTimestamp, decodeEventBasicInfo, decodeEvents } = require('../../erc20/lib/fetch_events')
+const { decodeEventBasicInfo, decodeEvents } = require('../../erc20/lib/fetch_events')
 const { decodeAddress } = require('../../erc20/lib/util')
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-const MINT_ADDRESS = "mint"
-const BURN_ADDRESS = "burn"
 const MATIC_ADDRESS = "0x0000000000000000000000000000000000001010"
 
 
