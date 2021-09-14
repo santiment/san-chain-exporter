@@ -173,7 +173,7 @@ async function decodeWETHWithdrawalEvent(web3, event, blockTimestamps) {
 }
 
 // hashes generated with https://emn178.github.io/online-tools/keccak_256.html
-const decodeFunctions = {
+const decodeFunctionsMap = {
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef": decodeTransferEvent, //Transfer(address,address,uint256)
   "0xcc16f5dbb4873280815c1ee09dbd06736cffcc184412cf7a71a0fdb75d397ca5": decodeBurnEvent, //Burn(address,uint256)
   "0x0f6798a560793a54c3bcfe86a93cde1e73087d944c0ea20544137d4121396885": decodeMintEvent, //Mint(address,uint256)
@@ -214,7 +214,7 @@ async function getRawEvents(web3, fromBlock, toBlock, contractAddress) {
   return await web3.eth.getPastLogs(queryObject);
 }
 
-async function decodeEvents(web3, events) {
+async function decodeEvents(web3, events, decodeFunctions=decodeFunctionsMap) {
   const blockTimestamps = {}
   const result = []
   for (let i = 0; i < events.length; i++) {
@@ -314,5 +314,8 @@ function filterTransactionEvents(eventsInTransaction) {
 
 
 module.exports = {
-  getPastEvents
+  getPastEvents,
+  decodeEvents,
+  getBlockTimestamp,
+  decodeEventBasicInfo
 }
