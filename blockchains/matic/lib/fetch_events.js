@@ -1,9 +1,25 @@
 "use strict";
-const { decodeEventBasicInfo, decodeEvents } = require('../../erc20/lib/fetch_events')
+const { getBlockTimestamp, decodeEvents } = require('../../erc20/lib/fetch_events')
 const { decodeAddress } = require('../../erc20/lib/util')
 
 const MATIC_ADDRESS = "0x0000000000000000000000000000000000001010"
 
+
+async function decodeEventBasicInfo(web3, event, blockTimestamps) {
+  let timestamp
+  if (!blockTimestamps[event["blockNumber"]]) {
+    timestamp = blockTimestamps[event["blockNumber"]] = await getBlockTimestamp(web3, event["blockNumber"])
+  } else {
+    timestamp = blockTimestamps[event["blockNumber"]]
+  }
+
+  return {
+    blockNumber: parseInt(web3.utils.hexToNumberString(event["blockNumber"])),
+    timestamp: timestamp,
+    transactionHash: event["transactionHash"],
+    logIndex: parseInt(web3.utils.hexToNumberString(event["logIndex"]))
+  }
+}
 
 /**Transfer(address,address,uint256)
  * Used by all Polygon ERC20 tokens
