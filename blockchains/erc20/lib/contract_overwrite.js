@@ -28,7 +28,7 @@ class ContractEditor {
     this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract))
 
     logger.info(`Running in 'exact contracts mode', ${this.contractsOverwriteArray.length} contracts will be monitored.`)
-    logger.info("Overwritten contracts are:")
+    logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`)
   }
 
   isContractMatchesExactList(event, contractOverwrite) {
@@ -56,7 +56,7 @@ class ContractEditor {
 
     for (const contractOverwrite of this.contractsOverwriteArray) {
       const events = await getPastEvents(web3, fromBlock, toBlock, contractOverwrite.oldAddresses)
-      resultsAggregation.concat(events)
+      resultsAggregation = resultsAggregation.concat(events)
     }
 
     return resultsAggregation
