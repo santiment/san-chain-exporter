@@ -5,14 +5,12 @@ const Web3 = require('web3')
 
 const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
 const {contractEditor} = require("../../blockchains/erc20/lib/contract_overwrite")
+const contract_overwrite = rewire("../../blockchains/erc20/lib/contract_overwrite")
 const web3 = new Web3()
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f'
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f'
 const SNXContractReplacer = 'snx_contract'
-const sUSDContractLegacy = '0x57ab1e02fee23774580c119740129eac7081e9d3'
-const sUSDContractNew = '0x57ab1ec28d129707052df4df418d58a2d46d5f51'
-const sUSDContractReplacer = 'susd_contract'
 
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -158,4 +156,18 @@ describe('contract manipulations', function() {
         [decodedEventNotSNX, decodedEventSNXLegacy, correctedEventSNXLegacy, decodedEventSNXNew, correctedEventSNXNew]
     )
   })
+
+  it("test getPastEventsExactContracts correctly concatenates events", async function() {
+    contract_overwrite.__set__("getPastEvents", function () {
+      return ["a", "b", "c"]
+    })
+    contract_overwrite.contractEditor.contractsOverwriteArray = ["contract1", "contract2"]
+
+    let result = await contract_overwrite.contractEditor.getPastEventsExactContracts()
+    assert.deepStrictEqual(
+      result,
+      ["a", "b", "c", "a", "b", "c"]
+  )
+  })
+
 })
