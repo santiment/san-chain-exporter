@@ -115,7 +115,7 @@ module.exports = async (request, response) => {
           })
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
-      return send(response, 200, metrics.register.metrics());
+      return send(response, 200, await metrics.register.metrics())
     default:
       return send(response, 404, 'Not found');
   }
