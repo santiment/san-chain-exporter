@@ -62,26 +62,39 @@ class ContractEditor {
     return resultsAggregation
   }
 
-  changeContractAddresses(events,
-                          deepCopy = false,
-                          keepOriginal = false) {
+  /**
+   *
+   * @param events A list of events to go over and check contract address. Events needing contract change will
+   * have the change applied.
+   */
+  changeContractAddresses(events) {
+    for(let event of events) {
+      for (const contractOverwrite of this.contractsOverwriteArray) {
+        if (this.isContractMatchesExactList(event, contractOverwrite)) {
+          this.editAddressAndAmount(event, contractOverwrite)
+          break
+        }
+      }
+    }
+  }
+
+  /**
+   *
+   * @param events A list of events to go over and check contract address.
+   * @returns A deep copy of the events which have had change applied.
+   */
+   extractChangedContractAddresses(events) {
     const result = []
 
     for(let event of events) {
       for (const contractOverwrite of this.contractsOverwriteArray) {
         if (this.isContractMatchesExactList(event, contractOverwrite)) {
-          if (keepOriginal) {
-            const clone = JSON.parse(JSON.stringify(event))
-            result.push(clone)
-          }
-          if (deepCopy) {
-            event = JSON.parse(JSON.stringify(event))
-          }
+          event = JSON.parse(JSON.stringify(event))
           this.editAddressAndAmount(event, contractOverwrite)
+          result.push(event)
           break
         }
       }
-      result.push(event)
     }
 
     return result
