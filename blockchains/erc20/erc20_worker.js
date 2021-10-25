@@ -46,6 +46,7 @@ class ERC20Worker extends BaseWorker {
     logger.info(`Fetching transfer events for interval ${this.lastExportedBlock}:${toBlock}`)
 
     let events = [];
+    let overwritten_events = []
     if ("extract_exact_overwrite" == constants.CONTRACT_MODE) {
       events = await contractEditor.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock)
       events = contractEditor.changeContractAddresses(events)
@@ -53,12 +54,12 @@ class ERC20Worker extends BaseWorker {
     else {
       events = await getPastEvents(this.web3, this.lastExportedBlock + 1, toBlock)
       if ("extract_all_append" == constants.CONTRACT_MODE) {
-        events = contractEditor.changeContractAddresses(events, false, true)
+        overwritten_events = contractEditor.extractChangedContractAddresses(events)
       }
     }
 
     if (events.length > 0) {
-      extendEventsWithPrimaryKey(events)
+      extendEventsWithPrimaryKey(events, overwritten_events)
       logger.info(`Setting primary keys ${events.length} messages for blocks ${this.lastExportedBlock + 1}:${toBlock}`)
       this.lastPrimaryKey = events[events.length - 1].primaryKey
     }

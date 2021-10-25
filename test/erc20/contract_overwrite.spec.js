@@ -130,31 +130,33 @@ describe('contract manipulations', function() {
     )
   })
 
-  it("change contract addresses", async function() {
-    const editedEvents = contractEditor.changeContractAddresses([
-      decodedEventNotSNX,
-      decodedEventSNXLegacy,
-      decodedEventSNXNew
-    ],
-        true)
+  it("change contract addresses deep copy", async function() {
+    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
+    const editedEvents = contractEditor.extractChangedContractAddresses(inputEvents)
 
     assert.deepStrictEqual(
         editedEvents,
+        [correctedEventSNXLegacy, correctedEventSNXNew]
+    )
+  })
+
+  it("change contract addresses shallow copy", async function() {
+    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
+    contractEditor.changeContractAddresses(inputEvents)
+
+    assert.deepStrictEqual(
+        inputEvents,
         [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
     )
   })
 
-  it("append events with changed contract addresses", async function() {
-    const editedEvents = contractEditor.changeContractAddresses(
-        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew],
-        true,
-        true
-    )
+  it("input events are not modified on contract edit and deep copy", async function() {
+    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
+    const inputEventsCopy = JSON.stringify(inputEvents)
+    contractEditor.extractChangedContractAddresses(inputEvents)
 
-    assert.deepStrictEqual(
-        editedEvents,
-        [decodedEventNotSNX, decodedEventSNXLegacy, correctedEventSNXLegacy, decodedEventSNXNew, correctedEventSNXNew]
-    )
+    // Test that input has not been modified in any way. We use JSON.stringify again to build same JSON structure.
+    assert.deepStrictEqual(JSON.stringify(inputEvents), inputEventsCopy)
   })
 
   it("test getPastEventsExactContracts correctly concatenates events", async function() {
