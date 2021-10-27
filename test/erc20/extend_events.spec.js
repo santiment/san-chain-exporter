@@ -97,3 +97,6 @@ describe('assignPrimaryKeys', function() {
   })
 })
 
+module.exports = {
+  setExpectedEventPrimaryKey
+}
