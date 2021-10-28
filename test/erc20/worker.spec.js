@@ -37,7 +37,7 @@ describe('Test ERC20 worker', function() {
     });
 
 
-    it("test events returned 'vanilla' mode", async function () {
+    it("test the events returned when in 'vanilla' mode", async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__("constants", {CONTRACT_MODE: "vanilla"})
         erc20_worker.__set__("getPastEvents", async function () {
@@ -52,7 +52,7 @@ describe('Test ERC20 worker', function() {
         assert.deepStrictEqual(result, [originalEventWithPrimaryKey])
     })
 
-    it("test events returned 'extract_exact_overwrite' mode", async function () {
+    it("test the events returned when in 'extract_exact_overwrite' mode", async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__("constants", {CONTRACT_MODE: "extract_exact_overwrite"})
         contract_overwrite.__set__("constants", {CONTRACT_MODE: "extract_exact_overwrite"})
@@ -71,7 +71,7 @@ describe('Test ERC20 worker', function() {
         assert.deepStrictEqual(result, [correctedEventWithPrimaryKey])
     })
 
-    it("test events returned 'extract_all_append' mode", async function () {
+    it("test the events returned when in 'extract_all_append' mode", async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__("constants", {CONTRACT_MODE: "extract_all_append"})
         contract_overwrite.__set__("constants", {CONTRACT_MODE: "extract_all_append"})
