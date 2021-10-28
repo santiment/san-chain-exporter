@@ -49,7 +49,7 @@ class ERC20Worker extends BaseWorker {
     let overwritten_events = []
     if ("extract_exact_overwrite" == constants.CONTRACT_MODE) {
       events = await contractEditor.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock)
-      events = contractEditor.changeContractAddresses(events)
+      contractEditor.changeContractAddresses(events)
     }
     else {
       events = await getPastEvents(this.web3, this.lastExportedBlock + 1, toBlock)
@@ -66,7 +66,7 @@ class ERC20Worker extends BaseWorker {
 
     this.lastExportTime = Date.now()
     this.lastExportedBlock = toBlock
-    return events;
+    return events.concat(overwritten_events)
   }
 
   healthcheckExportTimeout() {
