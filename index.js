@@ -65,6 +65,7 @@ class Main {
     }
     catch(ex) {
       console.error("Error in exporter work loop: ", ex)
+      throw ex
     }
   }
 
