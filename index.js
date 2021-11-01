@@ -9,6 +9,7 @@ const { storeEvents } = require('./lib/store_events')
 // Dynamically initialize just the needed blockchain worker
 const worker = require(`./blockchains/${process.env.BLOCKCHAIN}/${process.env.BLOCKCHAIN}_worker`)
 const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name
+const constants = require('./lib/constants')
 
 class Main {
   constructor() {
@@ -79,17 +80,29 @@ class Main {
     await this.worker.init()
   }
 
-  healthcheck() {
-    return this.healthcheckKafka()
-    .then(() => this.worker.healthcheck())
-  }
-
   healthcheckKafka() {
     if (this.exporter.producer.isConnected()) {
       return Promise.resolve()
     } else {
       return Promise.reject("Kafka client is not connected to any brokers")
     }
+  }
+
+  healthcheckExportTimeout() {
+    const timeFromLastExport = Date.now() - worker.lastExportTime
+    const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
+    if (isExportTimeoutExceeded) {
+      const errorMessage = `Time from the last export ${timeFromLastExport}ms exceeded limit ` +
+        `${constants.EXPORT_TIMEOUT_MLS}ms.`
+      return Promise.reject(errorMessage)
+    } else {
+      return Promise.resolve()
+    }
+  }
+
+  healthcheck() {
+    return this.healthcheckKafka()
+    .then(() => this.healthcheckExportTimeout())
   }
 }
 

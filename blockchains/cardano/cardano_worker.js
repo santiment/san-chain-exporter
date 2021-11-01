@@ -50,22 +50,22 @@ class CardanoWorker extends BaseWorker {
         blockIndex
         fee
         hash
-  
+
         block {
           number
           epochNo
         }
-  
+
         inputs {
           address
           value
         }
-    
+
         outputs {
           address
           value
         }
-  
+
       }
     }`)
 
@@ -118,20 +118,6 @@ class CardanoWorker extends BaseWorker {
     this.lastPrimaryKey += transactions.length
 
     return transactions
-  }
-
-  healthcheckExportTimeout() {
-    const timeFromLastExport = Date.now() - this.lastExportTime
-    const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
-    if (isExportTimeoutExceeded) {
-      return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${constants.EXPORT_TIMEOUT_MLS}ms.`)
-    } else {
-      return Promise.resolve()
-    }
-  }
-
-  healthcheck() {
-    return this.healthcheckExportTimeout()
   }
 }
 
