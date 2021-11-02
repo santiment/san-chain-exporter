@@ -8,7 +8,8 @@ if (constants.CONTRACT_MODE != "vanilla") {
   contractEditor = require('./lib/contract_overwrite').contractEditor
 }
 const { getPastEvents } = require('./lib/fetch_events')
-const BaseWorker = require('../../lib/worker_base')
+const BaseWorker = require('../../lib/worker_base');
+const { stableSort } = require('./lib/util');
 
 
 class ERC20Worker extends BaseWorker {
@@ -66,7 +67,16 @@ class ERC20Worker extends BaseWorker {
 
     this.lastExportTime = Date.now()
     this.lastExportedBlock = toBlock
-    return events.concat(overwritten_events)
+    const resultEvents = events.concat(overwritten_events)
+
+    // If overwritten events have been generated, they need to be merged into the original events
+    if (overwritten_events.length > 0) {
+      stableSort(resultEvents, function primaryKeyOrder(a, b) {
+        return a.primaryKey - b.primaryKey
+      })
+    }
+
+    return resultEvents
   }
 }
 
