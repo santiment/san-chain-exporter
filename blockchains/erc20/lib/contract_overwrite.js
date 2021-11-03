@@ -27,7 +27,8 @@ class ContractEditor {
   constructor() {
     this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract))
 
-    logger.info(`Running in 'exact contracts mode', ${this.contractsOverwriteArray.length} contracts will be monitored.`)
+    logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
+     `${this.contractsOverwriteArray.length} contracts will be monitored.`)
     logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`)
   }
 
