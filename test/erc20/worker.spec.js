@@ -33,7 +33,7 @@ describe('Test ERC20 worker', function() {
             "blockNumber": 10449854,
             "timestamp": 0,
             "transactionHash": "0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb",
-            "logIndex": 158,
+            "logIndex": 200,
             "to": "0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be",
             "from": "0xea5f6f8167a60f671cc02b074b6ac581153472c9",
             "value": 1.81e+21,
