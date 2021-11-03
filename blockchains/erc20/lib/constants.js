@@ -3,7 +3,6 @@ const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
 // This multiplier is used to expand the space of the output primary keys.
 //This allows for the event indexes to be added to the primary key.
 const PRIMARY_KEY_MULTIPLIER = 10000
-const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5)     // 5 minutes
 // We support three modes of operation
 // "vanilla" - extract events as seen on the blockchain
 // "extract_exact_overwrite" - extract only specified list of contracts, overwrite contract names
@@ -26,7 +25,6 @@ module.exports = {
     BLOCK_INTERVAL,
     CONFIRMATIONS,
     PRIMARY_KEY_MULTIPLIER,
-    EXPORT_TIMEOUT_MLS,
     CONTRACT_MODE,
     PARITY_NODE,
     CONTRACT_MAPPING_FILE_PATH,

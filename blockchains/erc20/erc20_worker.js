@@ -68,21 +68,6 @@ class ERC20Worker extends BaseWorker {
     this.lastExportedBlock = toBlock
     return events.concat(overwritten_events)
   }
-
-  healthcheckExportTimeout() {
-    const timeFromLastExport = Date.now() - this.lastExportTime
-    const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
-    if (isExportTimeoutExceeded) {
-      return Promise.reject(`Time from the last export ${timeFromLastExport}ms exceeded limit  ${constants.EXPORT_TIMEOUT_MLS}ms.`)
-    } else {
-      return Promise.resolve()
-    }
-  }
-
-  healthcheck() {
-    return this.web3.eth.getBlockNumber()
-    .then(this.healthcheckExportTimeout())
-  }
 }
 
 module.exports = {
