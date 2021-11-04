@@ -90,7 +90,7 @@ class Main {
   }
 
   healthcheckExportTimeout() {
-    const timeFromLastExport = Date.now() - worker.lastExportTime
+    const timeFromLastExport = Date.now() - this.worker.lastExportTime
     const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
     console.log(`timeFromLastExport is ${timeFromLastExport}, timeout is ${constants.EXPORT_TIMEOUT_MLS} `)
     if (isExportTimeoutExceeded) {
