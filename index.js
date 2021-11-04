@@ -92,6 +92,7 @@ class Main {
   healthcheckExportTimeout() {
     const timeFromLastExport = Date.now() - worker.lastExportTime
     const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
+    console.log(`timeFromLastExport is ${timeFromLastExport}, timeout is ${constants.EXPORT_TIMEOUT_MLS} `)
     if (isExportTimeoutExceeded) {
       const errorMessage = `Time from the last export ${timeFromLastExport}ms exceeded limit ` +
         `${constants.EXPORT_TIMEOUT_MLS}ms.`
