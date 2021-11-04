@@ -14,7 +14,7 @@ function transactionOrder(a, b) {
   }
 }
 
-function extendEventsWithPrimaryKey(events, overwritten_events) {
+function extendEventsWithPrimaryKey(events, overwritten_events = []) {
   stableSort(events, transactionOrder)
   const lastEvent = events[events.length -1]
   if (lastEvent.logIndex + overwritten_events.length >= constants.PRIMARY_KEY_MULTIPLIER) {
