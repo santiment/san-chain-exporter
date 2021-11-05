@@ -67,6 +67,8 @@ function addTransfers(transfers, transfersData) {
             return
         }
 
+        ++logIndexReached
+
         transfers.push({
             contract: transfersData.contract,
             blockNumber: transfersData.blockNumber,
@@ -78,7 +80,6 @@ function addTransfers(transfers, transfersData) {
             value: amount,
             valueExactBase36: web3.utils.toBN(amount).toString(36)
         })
-        ++logIndexReached
     })
 }
 
