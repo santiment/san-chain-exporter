@@ -5,11 +5,11 @@ const constants = require('./lib/constants')
 const { logger } = require('../../lib/logger')
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack')
 const { getGenesisTransfers } = require('./lib/genesis_transfers')
-const { transactionOrder, stableSort, computeGasExpense,
-  computeGasExpenseBase36 } = require('./lib/util')
+const { transactionOrder, stableSort } = require('./lib/util')
 const BaseWorker = require('../../lib/worker_base')
 const Web3Wrapper = require('./lib/web3_wrapper')
 const {decodeTransferTrace} = require('./lib/decode_transfers')
+const {FeesDecoder} = require('./lib/fees_decoder')
 
 
 class ETHWorker extends BaseWorker {
@@ -19,7 +19,8 @@ class ETHWorker extends BaseWorker {
     logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
     this.web3Wrapper = new Web3Wrapper(this.web3)
-    this.parityClient = jayson.client.http(constants.PARITY_NODE);
+    this.parityClient = jayson.client.http(constants.PARITY_NODE)
+    this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper)
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
@@ -83,22 +84,7 @@ class ETHWorker extends BaseWorker {
     return result
   }
 
-  decodeTransactionsInBlock(block, receipts) {
-    const result = []
-    block.transactions.forEach((transaction) =>
-      result.push({
-        from: transaction.from,
-        to: block.miner,
-        value: computeGasExpense(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
-        valueExactBase36: computeGasExpenseBase36(this.web3, transaction.gasPrice, receipts[transaction.hash].gasUsed),
-        blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
-        timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
-        transactionHash: transaction.hash,
-        type: "fee"
-      })
-    )
-    return result
-  }
+
 
   async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
     logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`)
@@ -145,7 +131,7 @@ class ETHWorker extends BaseWorker {
     const result = []
 
     for (const block of blocks) {
-      const decoded_transactions = this.decodeTransactionsInBlock(block, receipts)
+      const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, receipts)
       result.push(...decoded_transactions)
     }
 

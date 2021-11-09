@@ -18,9 +18,8 @@ function stableSort(array, sortFunc) {
   array.forEach(x => delete x._position)
 }
 
-function computeGasExpense (web3, gasPrice, gasUsed) {
-  return parseFloat(web3.utils.hexToNumberString(gasPrice)) *
-    parseFloat(web3.utils.hexToNumberString(gasUsed))
+function computeGasExpense (web3Wrapper, gasPrice, gasUsed) {
+  return web3Wrapper.parseValue(gasPrice) * web3Wrapper.parseValue(gasUsed)
 }
 
 function computeGasExpenseBase36 (web3, gasPrice, gasUsed) {
