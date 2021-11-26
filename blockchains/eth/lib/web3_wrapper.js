@@ -5,8 +5,8 @@ class Web3Wrapper {
         this.web3 = web3
     }
 
-    parseValueExactBase36(field) {
-        return this.web3.utils.toBN(field).toString(36)
+    parseValueToBN(field) {
+        return this.web3.utils.toBN(field)
     }
 
     parseHexToNumberString(field) {
@@ -26,7 +26,7 @@ class Web3Wrapper {
     }
 
     parseValueBase36(field) {
-        return this.parseValueExactBase36(field)
+        return this.parseValueToBN(field).toString(36)
     }
 
     parseTransactionPosition(field) {
@@ -38,7 +38,7 @@ class Web3Wrapper {
     }
 
     parseBalanceBase36(field) {
-        return this.parseValueExactBase36(field)
+        return this.parseValueBase36(field)
     }
 
     decodeTimestampFromBlock(block) {
