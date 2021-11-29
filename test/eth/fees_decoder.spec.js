@@ -265,39 +265,6 @@ describe('Fees decoder test', function() {
       assert.deepStrictEqual(postLondonFees, expected)
     })
 
-    /**
-     * Test that the miner fee paid would be reduced due to maxFeePerGas.
-     */
-    it("test fees post London maxFeePerGas", async function () {
-      const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(
-        block_json_post_london_fee_reduced_by_maxFeePerGas,
-        turnReceiptsToMap(receipts_json_post_london_with_priority))
-
-      const expected =  [{
-          blockNumber: 13447057,
-          from: "0x8ae57a027c63fca8070d1bf38622321de8004c67",
-          timestamp: 1634631172,
-          to: "burn",
-          transactionHash: "0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98",
-          type: "fee_burnt",
-          value: 3653345337731778,
-          valueExactBase36: "zz03ofi5du"
-        },
-        {
-          from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
-          to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-          value: 954662268222,
-          valueExactBase36: "c6kd9kji",
-          blockNumber: 13447057,
-          timestamp: 1634631172,
-          transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-          type: 'fee'
-        }
-      ]
-
-      assert.deepStrictEqual(postLondonFees, expected)
-    })
-
     it("test old type fees post London", async function () {
       const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_old_tx_type,
         turnReceiptsToMap(receipts_json_post_london_old_tx_type))
