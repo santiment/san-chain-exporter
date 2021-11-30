@@ -19,11 +19,11 @@ function stableSort(array, sortFunc) {
 }
 
 function computeGasExpense (web3Wrapper, gasPrice, gasUsed) {
-  return web3Wrapper.parseValue(gasPrice) * web3Wrapper.parseValue(gasUsed)
+  return web3Wrapper.parseValueToBN(gasPrice) * web3Wrapper.parseValueToBN(gasUsed)
 }
 
-function computeGasExpenseBase36 (web3, gasPrice, gasUsed) {
-  return web3.utils.toBN(gasPrice).mul(web3.utils.toBN(gasUsed)).toString(36)
+function computeGasExpenseBase36 (web3Wrapper, gasPrice, gasUsed) {
+  return web3Wrapper.parseValueToBN(gasPrice).mul(web3Wrapper.parseValueToBN(gasUsed)).toString(36)
 }
 
 module.exports = {
