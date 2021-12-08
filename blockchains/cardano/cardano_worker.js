@@ -3,8 +3,9 @@
 const got = require('got');
 const uuidv1 = require('uuid/v1')
 const { logger } = require('../../lib/logger')
-const BaseWorker = require("../../lib/worker_base");
-const constants = require("./lib/constants");
+const BaseWorker = require("../../lib/worker_base")
+const constants = require("./lib/constants")
+const util = require("./lib/util")
 
 
 const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || "http://localhost:3100/graphql"
@@ -54,6 +55,7 @@ class CardanoWorker extends BaseWorker {
         block {
           number
           epochNo
+          transactionsCount
         }
 
         inputs {
@@ -101,13 +103,14 @@ class CardanoWorker extends BaseWorker {
 
     const fromBlock = this.lastExportedBlock + 1
 
-    logger.info(`Fetching transactions for block ${fromBlock}`)
-
-    const transactions = await this.getTransactions(fromBlock);
+    let transactions = await this.getTransactions(fromBlock);
 
     if (transactions.length == 0) {
-      return
+      return []
     }
+
+    transactions = util.discardNotCompletedBlock(transactions)
+    util.verifyAllBlocksComplete(transactions)
 
     for (let i = 0; i < transactions.length; i++) {
       transactions[i].primaryKey = this.lastPrimaryKey + i + 1
