@@ -1,4 +1,6 @@
-  /**
+const { logger } = require('../../../lib/logger')
+
+/**
    * It is expected that transactions for the last included in the batch block are not complete.
    * We discard the non completed block and would re-try it on next iteration.
    */
@@ -15,6 +17,7 @@
           Block number is ${lastBlockNumber} it has ${transactions[0].block.transactionsCount} but only
           ${transactions.length - 1} were extracted.`)
       }
+      logger.debug("Removing ", transactions.length - index, " transactions from partial block ", lastBlockNumber)
       return transactions.slice(0, index + 1)
     }
 

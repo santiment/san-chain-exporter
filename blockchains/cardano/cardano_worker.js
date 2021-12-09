@@ -2,7 +2,6 @@
 "use strict";
 const got = require('got');
 const uuidv1 = require('uuid/v1')
-const { logger } = require('../../lib/logger')
 const BaseWorker = require("../../lib/worker_base")
 const constants = require("./lib/constants")
 const util = require("./lib/util")
