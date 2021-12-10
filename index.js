@@ -74,11 +74,11 @@ class Main {
       throw new Error("Worker is already set")
     }
 
-    this.worker = new worker.worker();
+    this.worker = new worker.worker()
 
     this.worker.lastExportedBlock = this.lastProcessedPosition.blockNumber
     this.worker.lastPrimaryKey = this.lastProcessedPosition.primaryKey
-    await this.worker.init()
+    await this.worker.init(this.exporter)
   }
 
   healthcheckKafka() {
