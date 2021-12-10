@@ -34,7 +34,7 @@ describe('Test Timestamps manger', function() {
         const timestampsManager = new TimestampsManager()
         await timestampsManager.init(new ExporterMock(true))
 
-        assert.deepStrictEqual(timestampsManager.increaseTimestampIfNeed(999), 1001)
+        assert.deepStrictEqual(timestampsManager.increaseTimestampIfNeed(101, 999), 1001)
     })
 
     it("test existing block does not reach node", async function () {
@@ -44,7 +44,7 @@ describe('Test Timestamps manger', function() {
         assert.deepStrictEqual(await timestampsManager.getBlockTimestamp(null, 100), 1000)
     })
 
-    it("test correct full loop", async function () {
+    it("test block from node is corrected", async function () {
         const timestampsManager = new TimestampsManager()
         await timestampsManager.init(new ExporterMock(true))
 
@@ -53,6 +53,20 @@ describe('Test Timestamps manger', function() {
         }
 
         assert.deepStrictEqual(await timestampsManager.getBlockTimestamp(null, 101), 1001)
+    })
+
+    it("test correct block from node is saved", async function () {
+        const timestampsManager = new TimestampsManager()
+        await timestampsManager.init(new ExporterMock(true))
+
+        timestampsManager.getTimestampFromNode = async function() {
+            return 1001
+        }
+
+        // This get method should save the timestamp in the internal store
+        await timestampsManager.getBlockTimestamp(null, 101)
+
+        assert.deepStrictEqual(await timestampsManager.getTimestampFromStore(101), 1001)
     })
 
 

@@ -51,8 +51,10 @@ class TimestampsManager {
     return block["timestamp"]
   }
 
-  increaseTimestampIfNeed(timestamp) {
+  increaseTimestampIfNeed(blockNumber, timestamp) {
     if (this.lastTimestampUsed.timestamp > timestamp) {
+      logger.info(`Correcting timestamp for block  ${blockNumber} from ${timestamp}
+        to ${this.lastTimestampUsed.timestamp + 1}`)
       return this.lastTimestampUsed.timestamp + 1
     }
 
@@ -66,7 +68,7 @@ class TimestampsManager {
     }
 
     let timestamp = await this.getTimestampFromNode(web3, blockNumber)
-    timestamp = this.increaseTimestampIfNeed(timestamp)
+    timestamp = this.increaseTimestampIfNeed(blockNumber, timestamp)
 
     this.saveTimestampInStore(blockNumber, timestamp)
     this.saveTimestampInZK(blockNumber, timestamp)

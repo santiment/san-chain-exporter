@@ -2,7 +2,8 @@
 
 const { decodeAddress } = require('./util')
 const { addCustomTokenDistribution } = require('./custom_token_distribution')
-const { TimestampsManager} = require('./timestamps_manager')
+const { TimestampsManager} = require('./timestamps_manager');
+const {logger} = require('../../../lib/logger');
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 const MINT_ADDRESS = "mint"
@@ -21,7 +22,7 @@ function setGlobalTimestampManager(exporter) {
 }
 
 async function getBlockTimestamp(web3, blockNumber) {
-  return timestampsManager.getBlockTimestamps(web3, blockNumber)
+  return await timestampsManager.getBlockTimestamp(web3, blockNumber)
 }
 
 async function decodeEventBasicInfo(web3, event, blockTimestamps) {
