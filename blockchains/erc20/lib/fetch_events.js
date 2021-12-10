@@ -2,6 +2,8 @@
 
 const { decodeAddress } = require('./util')
 const { addCustomTokenDistribution } = require('./custom_token_distribution')
+const { TimestampsManager} = require('./timestamps_manager');
+const {logger} = require('../../../lib/logger');
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 const MINT_ADDRESS = "mint"
@@ -12,10 +14,15 @@ const QNT_contract = "0x4a220e6096b25eadb88358cb44068a3248254675"
 const WETH_contract = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 
 
-async function getBlockTimestamp(web3, blockNumber) {
-  const block = await web3.eth.getBlock(blockNumber)
+let timestampsManager = null
 
-  return block["timestamp"]
+function setGlobalTimestampManager(exporter) {
+  timestampsManager = new TimestampsManager()
+  timestampsManager.init(exporter)
+}
+
+async function getBlockTimestamp(web3, blockNumber) {
+  return await timestampsManager.getBlockTimestamp(web3, blockNumber)
 }
 
 async function decodeEventBasicInfo(web3, event, blockTimestamps) {
@@ -317,5 +324,6 @@ module.exports = {
   getPastEvents,
   decodeEvents,
   getBlockTimestamp,
-  decodeEventBasicInfo
+  decodeEventBasicInfo,
+  setGlobalTimestampManager
 }

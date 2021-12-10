@@ -7,7 +7,7 @@ let contractEditor = null
 if (constants.CONTRACT_MODE != "vanilla") {
   contractEditor = require('./lib/contract_overwrite').contractEditor
 }
-const { getPastEvents } = require('./lib/fetch_events')
+const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events')
 const BaseWorker = require('../../lib/worker_base');
 const { stableSort } = require('./lib/util');
 
@@ -20,8 +20,9 @@ class ERC20Worker extends BaseWorker {
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
   }
 
-  async init() {
+  async init(exporter) {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS
+    setGlobalTimestampManager(exporter)
   }
 
   async work() {
