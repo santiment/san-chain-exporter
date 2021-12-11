@@ -13,6 +13,8 @@ const BNB_contract = "0xb8c77482e45f1f44de1745f52c74426c631bdd52"
 const QNT_contract = "0x4a220e6096b25eadb88358cb44068a3248254675"
 const WETH_contract = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 
+const constants = require('./constants')
+
 
 let timestampsManager = null
 
@@ -22,7 +24,13 @@ function setGlobalTimestampManager(exporter) {
 }
 
 async function getBlockTimestamp(web3, blockNumber) {
-  return await timestampsManager.getBlockTimestamp(web3, blockNumber)
+  if (constants.USE_TIMESTAMP_MANAGER) {
+    return await timestampsManager.getBlockTimestamp(web3, blockNumber)
+  }
+  else {
+    return await timestampsManager.getTimestampFromNode(web3, blockNumber)
+  }
+
 }
 
 async function decodeEventBasicInfo(web3, event, blockTimestamps) {
