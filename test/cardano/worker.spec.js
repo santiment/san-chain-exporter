@@ -5,14 +5,15 @@ const constants = require("../../blockchains/cardano/lib/constants");
 
 function getParsedTransactions() {
   return [
-    {
+         {
       "includedAt": "2017-12-06T08:55:31Z",
       "blockIndex": 1,
       "fee": 194933,
       "hash": "c56e8d96a91163bdb265191980dfe330a54777ba052222ce4aebd7483119ae6c",
       "block": {
         "number": 317330,
-        "epochNo": 14
+        "epochNo": 14,
+        "transactionsCount": 2
       },
       "inputs": [
         {
@@ -50,7 +51,8 @@ function getParsedTransactions() {
       "hash": "9403cb2fde3573dc4f72b5b2249fe74e28bcbb039e51689535834c73e6aa3b64",
       "block": {
         "number": 317330,
-        "epochNo": 14
+        "epochNo": 14,
+        "transactionsCount": 2
       },
       "inputs": [
         {
@@ -84,7 +86,8 @@ function getParsedTransactions() {
       "hash": "1413633eb460e7657ee606eeca43a7b37e7e97aeafc406056e8d226edfc299d4",
       "block": {
         "number": 317338,
-        "epochNo": 14
+        "epochNo": 14,
+        "transactionsCount": 1
       },
       "inputs": [
         {
