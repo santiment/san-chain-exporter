@@ -6,6 +6,7 @@ const BaseWorker = require('../../lib/worker_base')
 const Web3Wrapper = require('../eth/lib/web3_wrapper')
 const { extendEventsWithPrimaryKey } = require('../erc20/lib/extend_events_key')
 const { getPastEvents } = require('./lib/fetch_events')
+const { setGlobalTimestampManager } = require('../erc20/lib/fetch_events')
 
 
 class MaticWorker extends BaseWorker {
@@ -56,8 +57,9 @@ class MaticWorker extends BaseWorker {
 
   }
 
-  async init() {
+  async init(exporter) {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS
+    setGlobalTimestampManager(exporter)
   }
 }
 
