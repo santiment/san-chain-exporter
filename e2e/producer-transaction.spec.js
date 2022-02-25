@@ -8,7 +8,7 @@
  */
 
 const { Exporter } = require('san-exporter')
-const Kafka = require("@santiment-network/node-rdkafka")
+const Kafka = require("node-rdkafka")
 const {storeEvents} = require('../lib/store_events')
 const KAFKA_URL = process.env.KAFKA_URL || "localhost:9092";
 
