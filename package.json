@@ -19,13 +19,13 @@
   },
   "homepage": "https://github.com/santiment/erc20_transfers_exporter#readme",
   "dependencies": {
-    "@santiment-network/node-rdkafka": "2.10.12",
     "bignumber.js": "^9.0.0",
     "blockchain-utils": "git+https://github.com/santiment/blockchain-utils.git",
     "got": "^11.8.2",
     "jayson": "^3.5.2",
     "micro": "^9.3.4",
     "node-json-logger": "^0.0.17",
+    "node-rdkafka": "2.12.0",
     "node-zookeeper-client-async": "^1.0.0",
     "prom-client": "^13.1.0",
     "web3": "^1.2.11"
