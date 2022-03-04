@@ -13,6 +13,7 @@ const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
 class CardanoWorker extends BaseWorker {
   constructor() {
     super()
+    this.genesisExtracted = false
   }
 
   async sendRequest(query) {
@@ -34,6 +35,48 @@ class CardanoWorker extends BaseWorker {
       throw new Error('Error getting Cardano current block number')
     }
     return response.data.cardano.tip.number
+  }
+
+  async getGenesisTransactions() {
+    const response = await this.sendRequest(`
+   {
+     transactions(
+        where: {
+          block: { hash: { _eq: "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" } }
+        }
+        order_by: { includedAt: asc }
+      ) {
+        includedAt
+        blockIndex
+        fee
+        hash
+
+        block {
+          number
+          epochNo
+          transactionsCount
+        }
+
+        inputs {
+          address
+          value
+        }
+
+        outputs {
+          address
+          value
+        }
+
+
+      }
+    }
+  `)
+
+    if (response.data === null) {
+      throw new Error(`Error getting transactions for current block number ${blockNumber}`)
+    }
+
+    return response.data.transactions;
   }
 
   async getTransactions(blockNumber) {
@@ -100,12 +143,22 @@ class CardanoWorker extends BaseWorker {
       this.sleepTimeMsec = 0
     }
 
-    const fromBlock = this.lastExportedBlock + 1
-
-    let transactions = await this.getTransactions(fromBlock);
-
-    if (transactions.length == 0) {
-      return []
+    let transactions = null
+    if (this.genesisExtracted) {
+      const fromBlock = this.lastExportedBlock + 1
+      transactions = await this.getTransactions(fromBlock);
+      if (transactions.length == 0) {
+        return []
+      }
+      // The block number for the genesis block is 'null' so only set it for non-genesis blocks.
+      this.lastExportedBlock = transactions[transactions.length - 1].block.number
+    }
+    else {
+      transactions = await this.getGenesisTransactions();
+      this.genesisExtracted = true
+      if (transactions.length == 0) {
+        throw new Error('Error getting Cardano genesis transactions')
+      }
     }
 
     transactions = util.discardNotCompletedBlock(transactions)
@@ -116,7 +169,6 @@ class CardanoWorker extends BaseWorker {
     }
 
     this.lastExportTime = Date.now()
-    this.lastExportedBlock = transactions[transactions.length - 1].block.number
     this.lastPrimaryKey += transactions.length
 
     return transactions
