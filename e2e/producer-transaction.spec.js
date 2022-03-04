@@ -7,7 +7,7 @@
  * of the MIT license.  See the LICENSE.txt file for details.
  */
 
-const { Exporter } = require('san-exporter')
+const { Exporter } = require('../lib/kafka_storage')
 const Kafka = require("node-rdkafka")
 const {storeEvents} = require('../lib/store_events')
 const KAFKA_URL = process.env.KAFKA_URL || "localhost:9092";
@@ -77,6 +77,20 @@ class TestConsumer {
   }
 }
 
+async function sendMessagesInTransaction(exporter) {
+  await exporter.initTransactions()
+  await exporter.beginTransaction()
+
+  // At this point the exporter is connected.
+  // We send one message just to create the topic.
+  await exporter.sendDataWithKey({
+    timestamp: 10000000,
+    iso_date: new Date().toISOString(),
+    key: 1
+  }, "key")
+
+  await exporter.commitTransaction();
+}
 
 describe('Producer transactions', function() {
   let exporter
@@ -97,27 +111,16 @@ describe('Producer transactions', function() {
         })
       })
 
-      exporter.initTransactions();
-      exporter.beginTransaction();
-
-      // At this point the exporter is connected.
-      // We send one message just to create the topic.
-      exporter.sendDataWithKey({
-        timestamp: 10000000,
-        iso_date: new Date().toISOString(),
-        key: 1
-      }, "key")
-
-      exporter.commitTransaction();
-    });
-  })
+      sendMessagesInTransaction(exporter)
+    })
+  });
 
   beforeEach(function(done) {
     this.timeout(5000);
 
     exporter = new Exporter('erc20-producer-transactions-test', true)
     exporter.connect().then(() => {
-      testConsumer = new TestConsumer(exporter.topic_name, num_messages_test)
+      testConsumer = new TestConsumer(exporter.topicName, num_messages_test)
       done()
     });
   });
@@ -136,13 +139,13 @@ describe('Producer transactions', function() {
 
     await testConsumer.waitSubscribed();
 
-    exporter.initTransactions();
-    exporter.beginTransaction();
+    await exporter.initTransactions();
+    await exporter.beginTransaction();
 
     // Do a small delay before starting writing messages, otherwise the consumer is missing them.
     // This should not really be needed, because we have received the 'subscribed' event in the
     // consumer but there is something I am missing.
-    setTimeout( function () {
+    setTimeout( async function () {
       for (let i = 0; i < num_messages_test; i++) {
         exporter.sendDataWithKey({
           timestamp: 10000000,
@@ -150,7 +153,7 @@ describe('Producer transactions', function() {
           key: 1
         }, "key")
       }
-      exporter.commitTransaction();
+      await exporter.commitTransaction();
     }, 2000)
 
     await testConsumer.waitData();
@@ -159,7 +162,7 @@ describe('Producer transactions', function() {
   it("using the 'storeEvents' function should begin and commit a transaction", async function() {
     // We need the huge timeout because starting and closing a transaction takes around 1 sec
     this.timeout(10000);
-    exporter.initTransactions();
+    await exporter.initTransactions();
 
     const testEvent = {
       "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",

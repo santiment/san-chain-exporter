@@ -1,6 +1,6 @@
 {
   "name": "san-chain-exporter",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Exporter of all transfer events for a blockchain",
   "main": "index.js",
   "scripts": {
