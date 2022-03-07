@@ -3,7 +3,7 @@ const assert = require("assert")
 const cardano_worker = require(`../../blockchains/cardano/cardano_worker`)
 const constants = require("../../blockchains/cardano/lib/constants");
 
-function getParsedTransactions() {
+function getTransactions() {
   return [
          {
       "includedAt": "2017-12-06T08:55:31Z",
@@ -109,19 +109,64 @@ function getParsedTransactions() {
   ]
 }
 
-
+function getGenesisTransactions() {
+  return [
+      {
+        "includedAt": "2017-09-23T21:44:51Z",
+        "blockIndex": 0,
+        "fee": 0,
+        "hash": "2d51b929d79a0ac8f360f38e8a38cdcb28ca84139aced314c5d7edc739aa4366",
+        "block": {
+          "number": null,
+          "epochNo": null,
+          "transactionsCount": "2"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "address": "Ae2tdPwUPEZGvXJ3ebp4LDgBhbxekAH2oKZgfahKq896fehv8oCJxmGJgLt",
+            "value": "1153846000000"
+          }
+        ]
+      },
+      {
+        "includedAt": "2017-09-23T21:44:51Z",
+        "blockIndex": 0,
+        "fee": 0,
+        "hash": "29c8a63ac4ff2bdb630656e9e568c3e526ef316b280b7123b9a9a9719f9ce8d7",
+        "block": {
+          "number": null,
+          "epochNo": null,
+          "transactionsCount": "2"
+        },
+        "inputs": [],
+        "outputs": [
+          {
+            "address": "Ae2tdPwUPEYyahAbgfTxhChyWV6xMWKCDQs35Cr9qUXgzVviBrvhJ6NyUzA",
+            "value": "455585000000"
+          }
+        ]
+      }
+  ]
+}
 
 describe('workLoopTest', function() {
   let cardanoWorker = null
   const BLOCKCHAIN_HEAD_BLOCK = 100
   let transactions = null
+  let genesisTransactions = null
 
   beforeEach(async function() {
     cardanoWorker = new cardano_worker.worker()
-    transactions = getParsedTransactions()
+    transactions = getTransactions()
     cardanoWorker.getTransactions = async function () {
       // Return a deep copy of the transactions so not to pollute the original object
       return JSON.parse(JSON.stringify(transactions))
+    }
+    genesisTransactions = getGenesisTransactions()
+    cardanoWorker.getGenesisTransactions = async function () {
+      // Return a deep copy of the transactions so not to pollute the original object
+      return JSON.parse(JSON.stringify(genesisTransactions))
     }
     cardanoWorker.getCurrentBlock = async function () {
       return BLOCKCHAIN_HEAD_BLOCK
@@ -140,13 +185,26 @@ describe('workLoopTest', function() {
     assert.strictEqual(cardanoWorker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000)
   })
 
-  it("test primary key assignment", async function() {
+  it("test genesis transfers are returned first", async function() {
     const result = await cardanoWorker.work()
-    const expected = JSON.parse(JSON.stringify(transactions))
+    const expected = JSON.parse(JSON.stringify(genesisTransactions))
     expected[0].primaryKey = 1
     expected[1].primaryKey = 2
-    expected[2].primaryKey = 3
+
+    assert.deepStrictEqual(result, expected)
+  })
+
+  it("test regular transfers are returned after genesis", async function() {
+    // This should returned the genesis transfers
+    await cardanoWorker.work()
+    // This should return the first batch of regular transfers
+    const result = await cardanoWorker.work()
+    const expected = JSON.parse(JSON.stringify(transactions))
+    expected[0].primaryKey = 3
+    expected[1].primaryKey = 4
+    expected[2].primaryKey = 5
 
     assert.deepStrictEqual(result, expected)
   })
 })
+
