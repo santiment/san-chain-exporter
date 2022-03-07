@@ -1,26 +1,26 @@
-const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
-const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
+const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100");
+const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3");
 // This multiplier is used to expand the space of the output primary keys.
 //This allows for the event indexes to be added to the primary key.
-const PRIMARY_KEY_MULTIPLIER = 10000
+const PRIMARY_KEY_MULTIPLIER = 10000;
 // We support three modes of operation
 // "vanilla" - extract events as seen on the blockchain
 // "extract_exact_overwrite" - extract only specified list of contracts, overwrite contract names
 // "extract_all_append" - extract all contracts, also append events with overwritten contract name
-const CONTRACT_MODES_SUPPORTED = ["vanilla", "extract_exact_overwrite", "extract_all_append"]
-const CONTRACT_MODE = process.env.CONTRACT_MODE || "vanilla"
-const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/"
-const CONTRACT_MAPPING_FILE_PATH = "./contract_mapping/contract_mapping.json"
-const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || "30")
-const USE_TIMESTAMP_MANAGER = parseInt(process.env.USE_TIMESTAMP_MANAGER || "0")
+const CONTRACT_MODES_SUPPORTED = ["vanilla", "extract_exact_overwrite", "extract_all_append"];
+const CONTRACT_MODE = process.env.CONTRACT_MODE || "vanilla";
+const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/";
+const CONTRACT_MAPPING_FILE_PATH = "./contract_mapping/contract_mapping.json";
+const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || "30");
+const USE_TIMESTAMP_MANAGER = parseInt(process.env.USE_TIMESTAMP_MANAGER || "0");
 
 function checkEnvVariables() {
     if (!CONTRACT_MODES_SUPPORTED.includes(CONTRACT_MODE)) {
-        throw new Error(`"${CONTRACT_MODE}" mode is not supported`)
+        throw new Error(`"${CONTRACT_MODE}" mode is not supported`);
     }
 }
 
-checkEnvVariables()
+checkEnvVariables();
 
 module.exports = {
     BLOCK_INTERVAL,
@@ -31,4 +31,4 @@ module.exports = {
     CONTRACT_MAPPING_FILE_PATH,
     LOOP_INTERVAL_CURRENT_MODE_SEC,
     USE_TIMESTAMP_MANAGER
-}
+};
