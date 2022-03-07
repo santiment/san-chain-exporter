@@ -24,7 +24,7 @@ class Main {
   async init() {
     this.exporter = new Exporter(EXPORTER_NAME, true)
     await this.exporter.connect()
-    this.exporter.initTransactions()
+    await this.exporter.initTransactions()
     await this.initLastProcessedBlock()
     await this.setWorker()
     metrics.startCollection()
