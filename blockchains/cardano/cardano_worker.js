@@ -79,6 +79,18 @@ class CardanoWorker extends BaseWorker {
     return response.data.transactions;
   }
 
+  // Genesis transfers have block number set to 'null'. For our computation purposes we need some block number.
+  // We set it to 0.
+  setBlockZeroForGenesisTransfers(transactions) {
+    transactions.forEach(transaction => {
+      if (transaction.block.number != null) {
+        throw new Error(`Unexpected block number ${transaction.block.number} for genesis transaction
+        ${transaction.hash}`)
+      }
+      transaction.block.number = 0
+    })
+  }
+
   async getTransactions(blockNumber) {
     const response = await this.sendRequest(`
     {
@@ -159,6 +171,7 @@ class CardanoWorker extends BaseWorker {
       if (transactions.length == 0) {
         throw new Error('Error getting Cardano genesis transactions')
       }
+      this.setBlockZeroForGenesisTransfers(transactions)
     }
 
     transactions = util.discardNotCompletedBlock(transactions)

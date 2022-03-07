@@ -190,6 +190,9 @@ describe('workLoopTest', function() {
     const expected = JSON.parse(JSON.stringify(genesisTransactions))
     expected[0].primaryKey = 1
     expected[1].primaryKey = 2
+    // Test also that we have overwritten the block numbers
+    expected[0].block.number = 0
+    expected[1].block.number = 0
 
     assert.deepStrictEqual(result, expected)
   })
