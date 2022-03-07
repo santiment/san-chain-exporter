@@ -37,46 +37,64 @@ class CardanoWorker extends BaseWorker {
     return response.data.cardano.tip.number
   }
 
-  async getGenesisTransactions() {
+  async getGenesisTransactionsPage(offset, limit) {
     const response = await this.sendRequest(`
-   {
-     transactions(
-        where: {
-          block: { hash: { _eq: "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" } }
+    {
+      transactions(
+          where: {
+            block: { hash: { _eq: "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" } }
+          }
+          offset: ${offset}
+          limit: ${limit}
+          order_by: { includedAt: asc }
+        ) {
+          includedAt
+          blockIndex
+          fee
+          hash
+
+          block {
+            number
+            epochNo
+            transactionsCount
+          }
+
+          inputs {
+            address
+            value
+          }
+
+          outputs {
+            address
+            value
+          }
+
+
         }
-        order_by: { includedAt: asc }
-      ) {
-        includedAt
-        blockIndex
-        fee
-        hash
-
-        block {
-          number
-          epochNo
-          transactionsCount
-        }
-
-        inputs {
-          address
-          value
-        }
-
-        outputs {
-          address
-          value
-        }
-
-
       }
-    }
-  `)
+    `)
 
     if (response.data === null) {
-      throw new Error(`Error getting transactions for current block number ${blockNumber}`)
+      throw new Error(`Error getting transactions for genesis block offset: ${offset} limit: ${limit}`)
     }
 
     return response.data.transactions;
+  }
+
+  async getGenesisTransactions() {
+    const batch_size = 100
+    let current_offset = 0
+    const transactionsMerged = []
+    let transactionsBatch = []
+
+    do {
+      transactionsBatch = await this.getGenesisTransactionsPage(current_offset, batch_size)
+      transactionsMerged.push(...transactionsBatch)
+      current_offset += batch_size
+    }
+    while (transactionsBatch.length == batch_size )
+
+    return transactionsMerged
   }
 
   // Genesis transfers have block number set to 'null'. For our computation purposes we need some block number.
