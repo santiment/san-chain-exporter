@@ -5,7 +5,7 @@ const uuidv1 = require('uuid/v1')
 const BaseWorker = require("../../lib/worker_base")
 const constants = require("./lib/constants")
 const util = require("./lib/util")
-
+const { logger } = require('../../lib/logger')
 
 const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || "http://localhost:3100/graphql"
 const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
@@ -13,7 +13,6 @@ const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
 class CardanoWorker extends BaseWorker {
   constructor() {
     super()
-    this.genesisExtracted = false
   }
 
   async sendRequest(query) {
@@ -90,8 +89,9 @@ class CardanoWorker extends BaseWorker {
       transactionsMerged.push(...transactionsBatch)
       current_offset += transactionsBatch.length
     }
-    while (transactionsBatch.length == 0)
+    while (transactionsBatch.length > 0)
 
+    logger.info(`Extracted ${transactionsMerged.length} genesis transactions`)
     return transactionsMerged
   }
 
@@ -172,22 +172,21 @@ class CardanoWorker extends BaseWorker {
     }
 
     let transactions = null
-    if (this.genesisExtracted) {
+    if (this.lastExportedBlock < 0) {
+      transactions = await this.getGenesisTransactions();
+      if (transactions.length == 0) {
+        throw new Error('Error getting Cardano genesis transactions')
+      }
+      this.setBlockZeroForGenesisTransfers(transactions)
+      this.lastExportedBlock = 0
+    }
+    else {
       const fromBlock = this.lastExportedBlock + 1
       transactions = await this.getTransactions(fromBlock);
       if (transactions.length == 0) {
         return []
       }
-      // The block number for the genesis block is 'null' so only set it for non-genesis blocks.
       this.lastExportedBlock = transactions[transactions.length - 1].block.number
-    }
-    else {
-      transactions = await this.getGenesisTransactions();
-      this.genesisExtracted = true
-      if (transactions.length == 0) {
-        throw new Error('Error getting Cardano genesis transactions')
-      }
-      this.setBlockZeroForGenesisTransfers(transactions)
     }
 
     transactions = util.discardNotCompletedBlock(transactions)
