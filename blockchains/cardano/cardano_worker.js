@@ -37,7 +37,7 @@ class CardanoWorker extends BaseWorker {
     return response.data.cardano.tip.number
   }
 
-  async getGenesisTransactionsPage(offset, limit) {
+  async getGenesisTransactionsPage(offset) {
     const response = await this.sendRequest(`
     {
       transactions(
@@ -45,7 +45,6 @@ class CardanoWorker extends BaseWorker {
             block: { hash: { _eq: "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" } }
           }
           offset: ${offset}
-          limit: ${limit}
           order_by: { includedAt: asc }
         ) {
           includedAt
@@ -82,17 +81,16 @@ class CardanoWorker extends BaseWorker {
   }
 
   async getGenesisTransactions() {
-    const batch_size = 100
     let current_offset = 0
     const transactionsMerged = []
     let transactionsBatch = []
 
     do {
-      transactionsBatch = await this.getGenesisTransactionsPage(current_offset, batch_size)
+      transactionsBatch = await this.getGenesisTransactionsPage(current_offset)
       transactionsMerged.push(...transactionsBatch)
-      current_offset += batch_size
+      current_offset += transactionsBatch.length
     }
-    while (transactionsBatch.length == batch_size )
+    while (transactionsBatch.length == 0)
 
     return transactionsMerged
   }
