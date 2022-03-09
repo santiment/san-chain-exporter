@@ -178,7 +178,6 @@ class CardanoWorker extends BaseWorker {
         throw new Error('Error getting Cardano genesis transactions')
       }
       this.setBlockZeroForGenesisTransfers(transactions)
-      this.lastExportedBlock = 0
     }
     else {
       const fromBlock = this.lastExportedBlock + 1
@@ -186,7 +185,6 @@ class CardanoWorker extends BaseWorker {
       if (transactions.length == 0) {
         return []
       }
-      this.lastExportedBlock = transactions[transactions.length - 1].block.number
     }
 
     transactions = util.discardNotCompletedBlock(transactions)
@@ -197,6 +195,7 @@ class CardanoWorker extends BaseWorker {
     }
 
     this.lastExportTime = Date.now()
+    this.lastExportedBlock = transactions[transactions.length - 1].block.number
     this.lastPrimaryKey += transactions.length
 
     return transactions
