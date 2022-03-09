@@ -113,7 +113,7 @@ class CardanoWorker extends BaseWorker {
       transactions(
         where: {
           block: { epoch: { number: { _is_null: false } } }
-          _and: { block: { number: { _gt: ${blockNumber} } } }
+          _and: { block: { number: { _gte: ${blockNumber} } } }
         }
         order_by: { includedAt: asc }
       ) {
