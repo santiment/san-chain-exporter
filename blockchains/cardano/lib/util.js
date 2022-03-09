@@ -17,7 +17,7 @@ const { logger } = require('../../../lib/logger')
           Block number is ${lastBlockNumber} it has ${transactions[0].block.transactionsCount} but only
           ${transactions.length - 1} were extracted.`)
       }
-      logger.debug("Removing ", transactions.length - index, " transactions from partial block ", lastBlockNumber)
+      logger.debug(`Removing ${transactions.length - index} transactions from partial block ${lastBlockNumber}`)
       return transactions.slice(0, index + 1)
     }
 
