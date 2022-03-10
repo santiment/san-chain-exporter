@@ -1,43 +1,43 @@
-"use strict";
+"use strict"
 
-const { decodeAddress } = require('./util');
-const { addCustomTokenDistribution } = require('./custom_token_distribution');
-const { TimestampsManager} = require('./timestamps_manager');
+const { decodeAddress } = require("./util")
+const { addCustomTokenDistribution } = require("./custom_token_distribution")
+const { TimestampsManager} = require("./timestamps_manager")
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const MINT_ADDRESS = "mint";
-const BURN_ADDRESS = "burn";
-const FREEZE_ADDRESS = "freeze";
-const BNB_contract = "0xb8c77482e45f1f44de1745f52c74426c631bdd52";
-const QNT_contract = "0x4a220e6096b25eadb88358cb44068a3248254675";
-const WETH_contract = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+const MINT_ADDRESS = "mint"
+const BURN_ADDRESS = "burn"
+const FREEZE_ADDRESS = "freeze"
+const BNB_contract = "0xb8c77482e45f1f44de1745f52c74426c631bdd52"
+const QNT_contract = "0x4a220e6096b25eadb88358cb44068a3248254675"
+const WETH_contract = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 
-const constants = require('./constants');
+const constants = require("./constants")
 
 
-let timestampsManager = null;
+let timestampsManager = null
 
 function setGlobalTimestampManager(exporter) {
-  timestampsManager = new TimestampsManager();
-  timestampsManager.init(exporter);
+  timestampsManager = new TimestampsManager()
+  timestampsManager.init(exporter)
 }
 
 async function getBlockTimestamp(web3, blockNumber) {
   if (constants.USE_TIMESTAMP_MANAGER) {
-    return await timestampsManager.getBlockTimestamp(web3, blockNumber);
+    return await timestampsManager.getBlockTimestamp(web3, blockNumber)
   }
   else {
-    return await timestampsManager.getTimestampFromNode(web3, blockNumber);
+    return await timestampsManager.getTimestampFromNode(web3, blockNumber)
   }
 
 }
 
 async function decodeEventBasicInfo(web3, event, blockTimestamps) {
-  let timestamp;
+  let timestamp
   if (!blockTimestamps[event["blockNumber"]]) {
-    timestamp = blockTimestamps[event["blockNumber"]] = await getBlockTimestamp(web3, event["blockNumber"]);
+    timestamp = blockTimestamps[event["blockNumber"]] = await getBlockTimestamp(web3, event["blockNumber"])
   } else {
-    timestamp = blockTimestamps[event["blockNumber"]];
+    timestamp = blockTimestamps[event["blockNumber"]]
   }
 
   return {
@@ -46,7 +46,7 @@ async function decodeEventBasicInfo(web3, event, blockTimestamps) {
     timestamp: timestamp,
     transactionHash: event["transactionHash"],
     logIndex: parseInt(web3.utils.hexToNumberString(event["logIndex"]))
-  };
+  }
 }
 
 /**Transfer(address,address,uint256)
@@ -54,24 +54,24 @@ async function decodeEventBasicInfo(web3, event, blockTimestamps) {
  **/
 async function decodeTransferEvent(web3, event, blockTimestamps) {
   if (event["topics"].length != 3) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
   // Custom burn event for QNT token
-  let to = decodeAddress(event["topics"][2]);
+  let to = decodeAddress(event["topics"][2])
   if (to.toLowerCase() == QNT_contract && event["address"].toLowerCase() == QNT_contract) {
-    result.to = BURN_ADDRESS;
+    result.to = BURN_ADDRESS
   } else {
-    result.to = to;
+    result.to = to
   }
 
-  result.from = decodeAddress(event["topics"][1]);
-  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = decodeAddress(event["topics"][1])
+  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 /**Burn(address,uint256)
@@ -79,17 +79,17 @@ async function decodeTransferEvent(web3, event, blockTimestamps) {
  **/
 async function decodeBurnEvent(web3, event, blockTimestamps) {
   if (event["topics"].length != 2) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
-  result.from = decodeAddress(event["topics"][1]);
-  result.to = BURN_ADDRESS;
-  result.value =  parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = decodeAddress(event["topics"][1])
+  result.to = BURN_ADDRESS
+  result.value =  parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 /**Mint(address,uint256)
@@ -97,17 +97,17 @@ async function decodeBurnEvent(web3, event, blockTimestamps) {
  **/
 async function decodeMintEvent(web3, event, blockTimestamps) {
   if (event["topics"].length != 2) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
-  result.from = MINT_ADDRESS;
-  result.to = decodeAddress(event["topics"][1]);
-  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = MINT_ADDRESS
+  result.to = decodeAddress(event["topics"][1])
+  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 /**Freeze(address indexed,uint256)
@@ -116,17 +116,17 @@ async function decodeMintEvent(web3, event, blockTimestamps) {
 async function decodeBNBFreezeEvent(web3, event, blockTimestamps) {
   if (event["address"].toLowerCase() != BNB_contract
       || event["topics"].length != 2) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
-  result.from = decodeAddress(event["topics"][1]);
-  result.to = FREEZE_ADDRESS;
-  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = decodeAddress(event["topics"][1])
+  result.to = FREEZE_ADDRESS
+  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 /**Unfreeze(address indexed,uint256)
@@ -135,17 +135,17 @@ async function decodeBNBFreezeEvent(web3, event, blockTimestamps) {
 async function decodeBNBUnfreezeEvent(web3, event, blockTimestamps) {
   if (event["address"].toLowerCase() != BNB_contract
       || event["topics"].length != 2) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
-  result.from = FREEZE_ADDRESS;
-  result.to = decodeAddress(event["topics"][1]);
-  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = FREEZE_ADDRESS
+  result.to = decodeAddress(event["topics"][1])
+  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 /**Deposit(address indexed dst, uint wad)
@@ -154,17 +154,17 @@ async function decodeBNBUnfreezeEvent(web3, event, blockTimestamps) {
 async function decodeWETHDepositEvent(web3, event, blockTimestamps) {
   if (event["address"].toLowerCase() != WETH_contract
       || event["topics"].length != 2) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
-  result.from = MINT_ADDRESS;
-  result.to = decodeAddress(event["topics"][1]);
-  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = MINT_ADDRESS
+  result.to = decodeAddress(event["topics"][1])
+  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 /**Withdrawal(address,uint256)
@@ -173,17 +173,17 @@ async function decodeWETHDepositEvent(web3, event, blockTimestamps) {
 async function decodeWETHWithdrawalEvent(web3, event, blockTimestamps) {
   if (event["address"].toLowerCase() != WETH_contract
       || event["topics"].length != 2) {
-    return null;
+    return null
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, blockTimestamps)
 
-  result.from = decodeAddress(event["topics"][1]);
-  result.to = BURN_ADDRESS;
-  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]));
-  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36);
+  result.from = decodeAddress(event["topics"][1])
+  result.to = BURN_ADDRESS
+  result.value = parseFloat(web3.utils.hexToNumberString(event["data"]))
+  result.valueExactBase36 = web3.utils.toBN(event["data"]).toString(36)
 
-  return result;
+  return result
 }
 
 // hashes generated with https://emn178.github.io/online-tools/keccak_256.html
@@ -196,19 +196,19 @@ const decodeFunctionsMap = {
   "0xb33527d2e0d30b7aece2c5e82927985866c1b75173d671c14f4457bf67aa6910": decodeMintEvent, //CreateBAT(address,uint256)
   "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c": decodeWETHDepositEvent,  //Deposit(address,uint256)
   "0x7fcf532c15f0a6db0bd6d0e038bea71d30d808c7d98cb3bf7268a95bf5081b65": decodeWETHWithdrawalEvent //Withdrawal(address,uint256)
-};
+}
 
 
 
 async function getPastEvents(web3, fromBlock, toBlock, contractAddress) {
-  const events = await getRawEvents(web3, fromBlock, toBlock, contractAddress);
+  const events = await getRawEvents(web3, fromBlock, toBlock, contractAddress)
 
-  const decodedEvents = await decodeEvents(web3, events);
-  const result = filterEvents(decodedEvents);
+  const decodedEvents = await decodeEvents(web3, events)
+  const result = filterEvents(decodedEvents)
 
-  addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress);
+  addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress)
 
-  return result;
+  return result
 }
 
 
@@ -219,110 +219,110 @@ async function getRawEvents(web3, fromBlock, toBlock, contractAddress) {
     // Parity has a bug when filtering topics: https://github.com/paritytech/parity-ethereum/issues/9629
     // TODO: Revert it when they fix it
     topics: decodeFunctions.keys()*/
-  };
+  }
 
   if (contractAddress) {
-    queryObject.address = contractAddress;
+    queryObject.address = contractAddress
   }
-  return await web3.eth.getPastLogs(queryObject);
+  return await web3.eth.getPastLogs(queryObject)
 }
 
 async function decodeEvents(web3, events, decodeFunctions=decodeFunctionsMap) {
-  const blockTimestamps = {};
-  const result = [];
+  const blockTimestamps = {}
+  const result = []
   for (let i = 0; i < events.length; i++) {
-    let event = events[i];
+    let event = events[i]
     if(event.topics && event.topics[0]) {
-      const decodeFunction = decodeFunctions[event.topics[0]];
+      const decodeFunction = decodeFunctions[event.topics[0]]
       if(decodeFunction) {
-        const decodedEvent = await decodeFunction(web3, event, blockTimestamps);
-        if (decodedEvent) result.push(decodedEvent);
+        const decodedEvent = await decodeFunction(web3, event, blockTimestamps)
+        if (decodedEvent) result.push(decodedEvent)
       }
     }
   }
 
-  return result;
+  return result
 }
 
 function filterEvents(events) {
-  const result = [];
-  const eventsByTransactionIter = getEventsByTransaction(events);
+  const result = []
+  const eventsByTransactionIter = getEventsByTransaction(events)
   for(let curTransactionEvents of eventsByTransactionIter) {
-    let curResult = filterTransactionEvents(curTransactionEvents);
-    curResult.forEach((x) => result.push(x));
+    let curResult = filterTransactionEvents(curTransactionEvents)
+    curResult.forEach((x) => result.push(x))
   }
 
-  return result;
+  return result
 }
 
 // returns an array of arrays - all events in one transaction are grouped together
 // assumes that all events in one transaction are next to one another in the log
 function* getEventsByTransaction(events) {
   if (0 == events.length) {
-    return;
+    return
   }
-  let curTransactionHash = events[0].transactionHash;
-  let curTransactionEvents = [];
+  let curTransactionHash = events[0].transactionHash
+  let curTransactionEvents = []
   for (let i = 0;i < events.length; i++) {
-    let event = events[i];
+    let event = events[i]
     if(event.transactionHash) {
       if(event.transactionHash != curTransactionHash) {
         if(curTransactionEvents.length > 0) {
-          yield curTransactionEvents;
+          yield curTransactionEvents
 
-          curTransactionHash = event.transactionHash;
-          curTransactionEvents = [];
+          curTransactionHash = event.transactionHash
+          curTransactionEvents = []
         }
       }
 
-      curTransactionEvents.push(event);
+      curTransactionEvents.push(event)
     }
   }
 
   if(curTransactionEvents.length > 0) {
-    yield curTransactionEvents;
+    yield curTransactionEvents
   }
 }
 
 // Within a transaction removes the transfer events from/to the zero address that match a corresponding mint/burn event
 function filterTransactionEvents(eventsInTransaction) {
-  const mintEvents = [];
-  const burnEvents = [];
+  const mintEvents = []
+  const burnEvents = []
   eventsInTransaction.forEach((event) => {
     if(event.from == MINT_ADDRESS) {
-      mintEvents.push(event);
+      mintEvents.push(event)
     }
     else if(event.to == BURN_ADDRESS) {
-      burnEvents.push(event);
+      burnEvents.push(event)
     }
-  });
+  })
 
-  const result = [];
+  const result = []
   eventsInTransaction.forEach((event) => {
     if(event.from == ZERO_ADDRESS) {
       const exists = mintEvents.some((mintEvent) =>
         mintEvent.contract == event.contract
         && mintEvent.to == event.to
-        && mintEvent.valueExactBase36 == event.valueExactBase36);
+        && mintEvent.valueExactBase36 == event.valueExactBase36)
       if(!exists) {
-        result.push(event);
+        result.push(event)
       }
     }
     else if(event.to == ZERO_ADDRESS) {
       const exists = burnEvents.some((burnEvent) =>
         burnEvent.contract == event.contract
         && burnEvent.from == event.from
-        && burnEvent.valueExactBase36 == event.valueExactBase36);
+        && burnEvent.valueExactBase36 == event.valueExactBase36)
       if(!exists) {
-        result.push(event);
+        result.push(event)
       }
     }
     else {
-      result.push(event);
+      result.push(event)
     }
-  });
+  })
 
-  return result;
+  return result
 }
 
 
@@ -332,4 +332,4 @@ module.exports = {
   getBlockTimestamp,
   decodeEventBasicInfo,
   setGlobalTimestampManager
-};
+}
