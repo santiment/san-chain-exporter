@@ -62,19 +62,17 @@ class ETHWorker extends BaseWorker {
     const responses = []
 
     for (const blockNumber of blockNumbers) {
-      const req = this.parityClient.request('parity_getBlockReceipts', [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
+      const req = this.parityClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
       responses.push(this.parityClient.request([req]))
     }
 
     const finishedRequests = await Promise.all(responses)
     const result = {}
 
-
     finishedRequests.forEach((blockResponses) => {
       if (!blockResponses) return
 
       blockResponses.forEach((blockResponse) => {
-
         if (blockResponse.result) {
           blockResponse.result.forEach((receipt) => {
             result[receipt.transactionHash] = receipt

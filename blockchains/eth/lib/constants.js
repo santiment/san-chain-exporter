@@ -4,6 +4,10 @@ const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/"
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || "30")
 const BURN_ADDRESS = "burn"
 const LONDON_FORK_BLOCK = 12965000
+// This is the API method that Parity provides for fetching receipts across multiple blocks. Erigon instead provides
+// a method called 'eth_getBlockReceipts'. If we are deploying against Erigon, we need to overwrite this variable
+// through the deploy.
+const RECEIPTS_API_METHOD = process.env.RECEIPTS_API_METHOD || "parity_getBlockReceipts"
 
 module.exports = {
     BLOCK_INTERVAL,
@@ -11,5 +15,6 @@ module.exports = {
     PARITY_NODE,
     LOOP_INTERVAL_CURRENT_MODE_SEC,
     BURN_ADDRESS,
-    LONDON_FORK_BLOCK
+    LONDON_FORK_BLOCK,
+    RECEIPTS_API_METHOD
 }
