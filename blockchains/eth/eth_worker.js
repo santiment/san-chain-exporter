@@ -69,14 +69,19 @@ class ETHWorker extends BaseWorker {
     const finishedRequests = await Promise.all(responses)
     const result = {}
 
+
     finishedRequests.forEach((blockResponses) => {
       if (!blockResponses) return
 
       blockResponses.forEach((blockResponse) => {
+
         if (blockResponse.result) {
           blockResponse.result.forEach((receipt) => {
             result[receipt.transactionHash] = receipt
           })
+        }
+        else {
+          throw new Error(JSON.stringify(blockResponse))
         }
       })
     })
