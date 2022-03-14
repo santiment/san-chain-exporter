@@ -5,7 +5,7 @@ const uuidv1 = require('uuid/v1')
 const BaseWorker = require("../../lib/worker_base")
 const constants = require("./lib/constants")
 const util = require("./lib/util")
-
+const { logger } = require('../../lib/logger')
 
 const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || "http://localhost:3100/graphql"
 const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
@@ -36,13 +36,82 @@ class CardanoWorker extends BaseWorker {
     return response.data.cardano.tip.number
   }
 
+  async getGenesisTransactionsPage(offset) {
+    const response = await this.sendRequest(`
+    {
+      transactions(
+          where: {
+            block: { hash: { _eq: "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb" } }
+          }
+          offset: ${offset}
+          order_by: { includedAt: asc }
+        ) {
+          includedAt
+          blockIndex
+          fee
+          hash
+
+          block {
+            number
+            epochNo
+            transactionsCount
+          }
+
+          inputs {
+            address
+            value
+          }
+
+          outputs {
+            address
+            value
+          }
+        }
+      }
+    `)
+
+    if (response.data === null) {
+      throw new Error(`Error getting transactions for genesis block offset: ${offset} limit: ${limit}`)
+    }
+
+    return response.data.transactions;
+  }
+
+  async getGenesisTransactions() {
+    let current_offset = 0
+    const transactionsMerged = []
+    let transactionsBatch = []
+
+    do {
+      transactionsBatch = await this.getGenesisTransactionsPage(current_offset)
+      transactionsMerged.push(...transactionsBatch)
+      current_offset += transactionsBatch.length
+    }
+    while (transactionsBatch.length > 0)
+
+    logger.info(`Extracted ${transactionsMerged.length} genesis transactions`)
+    return transactionsMerged
+  }
+
+  // Genesis transfers have block number set to 'null'. For our computation purposes we need some block number.
+  // We set it to 0.
+  setBlockZeroForGenesisTransfers(transactions) {
+    transactions.forEach(transaction => {
+      if (transaction.block.number != null) {
+        throw new Error(`Unexpected block number ${transaction.block.number} for genesis transaction
+        ${transaction.hash}`)
+      }
+      transaction.block.number = 0
+    })
+  }
+
   async getTransactions(blockNumber) {
     const response = await this.sendRequest(`
     {
       transactions(
         where: {
           block: { epoch: { number: { _is_null: false } } }
-          _and: { block: { number: { _gt: ${blockNumber} } } }
+          _and: { block: { number: { _gte: ${blockNumber} } } }
         }
         order_by: { includedAt: asc }
       ) {
@@ -100,12 +169,20 @@ class CardanoWorker extends BaseWorker {
       this.sleepTimeMsec = 0
     }
 
-    const fromBlock = this.lastExportedBlock + 1
-
-    let transactions = await this.getTransactions(fromBlock);
-
-    if (transactions.length == 0) {
-      return []
+    let transactions = null
+    if (this.lastExportedBlock < 0) {
+      transactions = await this.getGenesisTransactions();
+      if (transactions.length == 0) {
+        throw new Error('Error getting Cardano genesis transactions')
+      }
+      this.setBlockZeroForGenesisTransfers(transactions)
+    }
+    else {
+      const fromBlock = this.lastExportedBlock + 1
+      transactions = await this.getTransactions(fromBlock);
+      if (transactions.length == 0) {
+        return []
+      }
     }
 
     transactions = util.discardNotCompletedBlock(transactions)
