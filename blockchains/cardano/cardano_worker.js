@@ -66,8 +66,6 @@ class CardanoWorker extends BaseWorker {
             address
             value
           }
-
-
         }
       }
     `)
