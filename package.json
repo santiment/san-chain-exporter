@@ -21,6 +21,7 @@
   "dependencies": {
     "bignumber.js": "^9.0.0",
     "got": "^11.8.2",
+    "request-promise-native": "^1.0.9",
     "jayson": "^3.5.2",
     "lodash": "^4.17.21",
     "micro": "^9.3.4",
