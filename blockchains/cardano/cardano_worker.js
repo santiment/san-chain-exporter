@@ -151,8 +151,9 @@ class CardanoWorker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastConfirmedBlock == this.lastExportedBlock) {
+    if (this.lastExportedBlock >= this.lastConfirmedBlock - 1) {
       // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
+      // The last confirmed block may be partial and would not be exported. Allow for one block gap.
       this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
       // On the previous cycle we closed the gap to the head of the blockchain.
