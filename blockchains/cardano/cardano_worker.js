@@ -16,6 +16,7 @@ class CardanoWorker extends BaseWorker {
   }
 
   async sendRequest(query) {
+    try {
       return await got.post(CARDANO_GRAPHQL_URL, {
         json: {
           jsonrpc: '2.0',
@@ -25,6 +26,10 @@ class CardanoWorker extends BaseWorker {
         responseType: 'json',
         timeout: DEFAULT_TIMEOUT_MSEC
       }).json()
+    }
+    catch (error) {
+      throw new Error(`Error sending request to Cardano GraphQL: ${error.message}`)
+    }
   }
 
   async getCurrentBlock() {
