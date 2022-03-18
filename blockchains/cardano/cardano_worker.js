@@ -16,6 +16,7 @@ class CardanoWorker extends BaseWorker {
   }
 
   async sendRequest(query) {
+    try {
       return await got.post(CARDANO_GRAPHQL_URL, {
         json: {
           jsonrpc: '2.0',
@@ -25,6 +26,10 @@ class CardanoWorker extends BaseWorker {
         responseType: 'json',
         timeout: DEFAULT_TIMEOUT_MSEC
       }).json()
+    }
+    catch (error) {
+      throw new Error(`Error sending request to Cardano GraphQL: ${error.message}`)
+    }
   }
 
   async getCurrentBlock() {
@@ -105,13 +110,14 @@ class CardanoWorker extends BaseWorker {
     })
   }
 
-  async getTransactions(blockNumber) {
+  async getTransactions(blockNumber, lastConfirmedBlock) {
     const response = await this.sendRequest(`
     {
       transactions(
         where: {
           block: { epoch: { number: { _is_null: false } } }
-          _and: { block: { number: { _gte: ${blockNumber} } } }
+          _and: [{ block: { number: { _gte: ${blockNumber} } } },
+                 { block: { number: { _lt: ${lastConfirmedBlock} } } }]
         }
         order_by: { includedAt: asc }
       ) {
@@ -180,7 +186,7 @@ class CardanoWorker extends BaseWorker {
     }
     else {
       const fromBlock = this.lastExportedBlock + 1
-      transactions = await this.getTransactions(fromBlock);
+      transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock)
       if (transactions.length == 0) {
         return []
       }
