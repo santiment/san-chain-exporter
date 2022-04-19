@@ -23,7 +23,7 @@ slaveTemplates.dockerTemplate { label ->
           sh "docker build \
             -t ${awsRegistry}/${imageName}:${env.BRANCH_NAME} \
             -t ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT} \
-            -t ${ghcrRegistry}/${imageName}:${env.BRANCH_NAME} \
+            -t ${ghcrRegistry}/santiment/${imageName}:${env.BRANCH_NAME} \
             -f docker/Dockerfile ."
 
           docker.withRegistry("https://${awsRegistry}", "ecr:eu-central-1:ecr-credentials") {
