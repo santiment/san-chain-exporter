@@ -33,6 +33,7 @@ class Main {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work()
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
+
       // This metric is intended to count the requests towards the Node endpoint.
       // The counting is done inside the worker and we fetch the reult here.
       metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
@@ -43,6 +44,7 @@ class Main {
       // Different workers may store different type of position so this is
       // part of the blockchain specific code.
       this.lastProcessedPosition = this.worker.getLastProcessedPosition()
+      this.worker.fillLastProcessedPosition(this.lastProcessedPosition)
 
       if (events.length > 0) {
         await storeEvents(this.exporter, events)
@@ -65,15 +67,14 @@ class Main {
     }
 
     this.worker = new worker.worker()
-
     await this.worker.init(this.exporter, metrics)
 
     const lastRecoveredPosition = await this.exporter.getLastPosition()
     // Provide the latest recovered from Zookeeper position to the worker. Receive the actual position to start from.
     // This moves the logic of what a proper initial position is to the worker.
     this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition)
-
     await this.exporter.savePosition(this.lastProcessedPosition)
+
   }
 
   healthcheckKafka() {
