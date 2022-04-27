@@ -47,12 +47,12 @@ class Main {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work()
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
-      metrics.requestsCounter.inc();
+      // Those should be set by the worker
+      //metrics.requestsCounter.inc();
       metrics.requestsResponseTime.observe(new Date() - lastRequestStartTime);
       metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
 
-      this.lastProcessedPosition.blockNumber = this.worker.lastExportedBlock
-      this.lastProcessedPosition.primaryKey = this.worker.lastPrimaryKey
+      this.worker.fillLastProcessedPosition(this.lastProcessedPosition)
 
       if (events.length > 0) {
         await storeEvents(this.exporter, events)
@@ -76,9 +76,9 @@ class Main {
 
     this.worker = new worker.worker()
 
-    this.worker.lastExportedBlock = this.lastProcessedPosition.blockNumber
-    this.worker.lastPrimaryKey = this.lastProcessedPosition.primaryKey
-    await this.worker.init(this.exporter)
+    this.worker.initPosition(this.lastProcessedPosition)
+
+    await this.worker.init(this.exporter, metrics)
   }
 
   healthcheckKafka() {
