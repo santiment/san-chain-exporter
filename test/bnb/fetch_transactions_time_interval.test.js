@@ -7,6 +7,7 @@ const fetch_transactions = rewire("../../blockchains/bnb/lib/fetch_transactions"
 let intervalStartResult
 let intervalEndResult
 fetch_transactions.__set__("fetchTimeInterval", function (queue, intervalFetchStart, intervalFetchEnd) {
+  console.log("Callback is called")
   intervalStartResult = intervalFetchStart
   intervalEndResult = intervalFetchEnd
 
@@ -22,30 +23,24 @@ fetch_transactions.__set__("utils.getLastBlockTimestamp", function () {
 
 describe('startIntervalIsNotModified', function() {
   it("Checking that the start interval for fetching transactions will not be modified.", async function() {
-    const queue = "";
-    let lastProcessedPosition = {
-      timestampReached: START_TIMESTAMP - 1,
-      blockNumber: 900
-    };
+    const queue = ""
+    const timestampReached = START_TIMESTAMP - 1
+
 
     // The loop is only triggered here. The result would be saved in by the callback function.
-    await fetch_transactions.fetchTransactions(queue, lastProcessedPosition)
+    await fetch_transactions.fetchTransactions(queue, timestampReached)
 
-    assert.deepStrictEqual(
-      START_TIMESTAMP,
-      intervalStartResult)
+    console.log("Deep equal check")
+    assert.deepStrictEqual(intervalStartResult, START_TIMESTAMP)
   })
 })
 
 describe('endIntervalIsEditedNotToGoIntoFuture', function() {
   it("Checking that the end start will be modified to stay into the present.", async function() {
     const queue = "";
-    let lastProcessedPosition = {
-      timestampReached: START_TIMESTAMP - 1,
-      blockNumber: 900
-    };
+    const timestampReached = START_TIMESTAMP - 1
 
-    const result = await fetch_transactions.fetchTransactions(queue, lastProcessedPosition)
+    const result = await fetch_transactions.fetchTransactions(queue, timestampReached)
 
     // Assert that the end interval is about to go into the future before corrections.
     assert(

@@ -114,7 +114,8 @@ async function fetchTransactions(queue, timestampReached, metrics) {
 
   const nodeResponsePromises = [];
   logger.info(`Fetching transactions for time interval: ${intervalFetchStart}-${intervalFetchEnd}`);
-  const fetchScheduleSuccess = await fetchTimeInterval(queue, intervalFetchStart, intervalFetchEnd, nodeResponsePromises);
+  const fetchScheduleSuccess = await fetchTimeInterval(queue, intervalFetchStart, intervalFetchEnd,
+    nodeResponsePromises, metrics);
 
   if (!fetchScheduleSuccess) {
     logger.info(`Can not fetch time interval. Reducing interval size from ${msecInFetchRange} msec to ${msecInFetchRange / 2} msec`);
