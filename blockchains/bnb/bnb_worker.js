@@ -1,23 +1,32 @@
 /*jslint node: true */
 "use strict";
 
+//import PQueue from 'p-queue';
 const fetch_transactions = require('./lib/fetch_transactions')
 const { getTransactionsWithKeys } = require('./lib/edit_transactions')
-const PQueue = import('p-queue');
 const BaseWorker = require("../../lib/worker_base")
 
 const MAX_CONNECTION_CONCURRENCY = parseInt(process.env.MAX_CONNECTION_CONCURRENCY || "5");
 const TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC = parseInt(process.env.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC || "2000");
 const BNB_CHAIN_START_MSEC = parseInt(process.env.BNB_CHAIN_START_MSEC || "1555545600000");
 
+// This dynamic import is a workaround for p-queue being 'pure ESM' package.
+// https://github.com/sindresorhus/p-queue/issues/143
+let PQueue = null;
+(async () => {
+  PQueue = (await import('p-queue')).default;
+})()
+
 class BNBWorker extends BaseWorker {
   constructor() {
-    super()
+    super();
+
     this.queue = new PQueue({
       concurrency: MAX_CONNECTION_CONCURRENCY,
       interval: TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
       intervalCap: MAX_CONNECTION_CONCURRENCY
-    })
+    });
+
     this.timestampReached = BNB_CHAIN_START_MSEC
   }
 
@@ -26,7 +35,7 @@ class BNBWorker extends BaseWorker {
   }
 
   async work() {
-    const fetchResult = await fetch_transactions.fetchTransactions(this.queue, this.timestampReached)
+    const fetchResult = await fetch_transactions.fetchTransactions(this.queue, this.timestampReached, this.metrics)
 
     let resultTransactions = []
     if (true === fetchResult.success) {
@@ -41,8 +50,13 @@ class BNBWorker extends BaseWorker {
         resultTransactions = getTransactionsWithKeys(mergedTransactions)
       }
 
+      if (fetchResult.intervalFetchEnd > this.timestampReached) {
+        this.timestampReached = fetchResult.intervalFetchEnd;
+      }
+
+
       this.lastExportTime = Date.now()
-      this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].block.number
+      this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
       this.lastPrimaryKey += resultTransactions.length
     }
 
@@ -59,7 +73,7 @@ class BNBWorker extends BaseWorker {
   }
 
   fillLastProcessedPosition(lastProcessedPosition) {
-    super.fillLastProcessedPosition(lastProcessedPosition)
+    lastProcessedPosition.blockNumber = this.lastExportedBlock
     lastProcessedPosition.timestampReached = this.timestampReached
   }
 

@@ -43,56 +43,43 @@ bnb_worker.__set__("fetch_transactions.fetchTransactions", async function () {
   return { "transactions": [txWithoutChild2, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
 })
 
-let result = []
-
-let position;
-let mockExporter = {};
-mockExporter.savePosition = async function (positionArg) {
-  position = positionArg
-}
-
-let mockMetrics = {};
-mockMetrics.lastExportedBlock = {}
-mockMetrics.lastExportedBlock.set = function () {
-}
-
-let lastProcessedPosition = {
-  timestampReached: 0,
-  blockNumber: 0
-};
-// TODO, to be restored
-
-/*
 describe('workLoopSimpleTest', function() {
-  it("Checking that two transactions without children are passing through the work loop without modifications", async function() {
-    const queue = "";
-    // The loop is only triggered here. The result would be saved in 'testResult' by the callback function.
-    await work_loop.workLoop(queue, mockExporter, mockMetrics, lastProcessedPosition)
+  it("Checking that position is being updated", async function() {
+    const worker = new bnb_worker.worker()
 
-    assert.deepEqual(position, { timestampReached: END_INTERVAL, blockNumber: 112581035 })
+    await worker.work()
+
+    const lastProcessedPosition = {}
+    worker.fillLastProcessedPosition(lastProcessedPosition)
+
+    assert.deepEqual(lastProcessedPosition, { timestampReached: END_INTERVAL, blockNumber: 112581035 })
+
+  })
+
+  it("Checking that two transactions without children are passing through the work loop without modifications", async function() {
+    const worker = new bnb_worker.worker()
+
+    const result = await worker.work()
 
     assert.deepEqual(
       result,
-      [txWithoutChild2, txWithoutChild1])
+      [txWithoutChild1, txWithoutChild2])
   })
 })
 
-work_loop.__set__("fetch_transactions.fetchTransactions", async function () {
-  // It is important to match the order of how the API returns transactions - reverse order.
-  return { "transactions": [txWithoutChild2, txWithoutChild1, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
-})
 
 describe('workLoopRepeatedTest', function() {
-  it("Checking that a repeated transaction would be removed", async function() {
-    const queue = "";
-    // The loop is only triggered here. The result would be saved in 'testResult' by the callback function.
-    await work_loop.workLoop(queue, mockExporter, mockMetrics, lastProcessedPosition)
+  bnb_worker.__set__("fetch_transactions.fetchTransactions", async function () {
+    return { "transactions": [txWithoutChild2, txWithoutChild1, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
+  })
 
-    assert.deepEqual(position, { timestampReached: END_INTERVAL, blockNumber: 112581035 })
+  it("Checking that a repeated transaction would be removed", async function() {
+    const worker = new bnb_worker.worker()
+
+    const result = await worker.work()
 
     assert.deepEqual(
       result,
-      [txWithoutChild2, txWithoutChild1])
+      [txWithoutChild1, txWithoutChild2])
   })
 })
-*/
