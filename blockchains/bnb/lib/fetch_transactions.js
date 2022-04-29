@@ -16,10 +16,6 @@ const SAFETY_BLOCK_WAIT_MSEC = 100000;
 // We start by fetching transactions for an hour. This will be dynamically reduced when the transactions number increase.
 const FETCH_INTERVAL_HISTORIC_MODE_MSEC =  parseInt(process.env.FETCH_INTERVAL_HISTORIC_MODE_MSEC || "3600000");
 
-// The timestamp of the last block produced. Will be reduced with real value.
-let lastBlockTimestamp = 0;
-// We start by fetching transactions for an hour. This will be dynamically reduced when the transactions number increase.
-let msecInFetchRange = FETCH_INTERVAL_HISTORIC_MODE_MSEC;
 
 function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) {
   return queue.add(async () => {
@@ -98,47 +94,59 @@ async function fetchTransactionWithChildren(queue, parentTrx, subTrxMap, metrics
   subTrxMap[parentTrx.txHash] = correctedSubTrx;
 }
 
-async function fetchTransactions(queue, timestampReached, metrics) {
-  const intervalFetchStart = timestampReached + 1;
-  let intervalFetchEnd = intervalFetchStart + msecInFetchRange;
+class BNBTransactionsFetcher {
+  constructor() {
+    // The timestamp of the last block produced. Will be reduced with real value.
+    this.lastBlockTimestamp = 0;
+    // We start by fetching transactions for an hour. This will be dynamically reduced when the transactions number increase.
+    this.msecInFetchRange = FETCH_INTERVAL_HISTORIC_MODE_MSEC;
+  }
+  async fetchTransactions(queue, timestampReached, metrics) {
+    const intervalFetchStart = timestampReached + 1;
+    let intervalFetchEnd = intervalFetchStart + this.msecInFetchRange;
 
-  // When the exporter catches up with the Node, we need to limit the range of blocks we query
-  if (intervalFetchEnd > lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC) {
-    lastBlockTimestamp = await utils.getLastBlockTimestamp(metrics);
-    // Check again if the end interval is correct against the updated last block timestamp
-    if (intervalFetchEnd > lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC) {
-      intervalFetchEnd = lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC;
-      msecInFetchRange = intervalFetchEnd - intervalFetchStart;
+    // When the exporter catches up with the Node, we need to limit the range of blocks we query
+    if (intervalFetchEnd > this.lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC) {
+      this.lastBlockTimestamp = await utils.getLastBlockTimestamp(metrics);
+      // Check again if the end interval is correct against the updated last block timestamp
+      if (intervalFetchEnd > this.lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC) {
+        intervalFetchEnd = this.lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC;
+        this.msecInFetchRange = intervalFetchEnd - intervalFetchStart;
+      }
     }
-  }
 
-  const nodeResponsePromises = [];
-  logger.info(`Fetching transactions for time interval: ${intervalFetchStart}-${intervalFetchEnd}`);
-  const fetchScheduleSuccess = await fetchTimeInterval(queue, intervalFetchStart, intervalFetchEnd,
-    nodeResponsePromises, metrics);
+    const nodeResponsePromises = [];
+    logger.info(`Fetching transactions for time interval: ${intervalFetchStart}-${intervalFetchEnd}`);
+    const fetchScheduleSuccess = await fetchTimeInterval(queue, intervalFetchStart, intervalFetchEnd,
+      nodeResponsePromises, metrics);
 
-  if (!fetchScheduleSuccess) {
-    logger.info(`Can not fetch time interval. Reducing interval size from ${msecInFetchRange} msec to ${msecInFetchRange / 2} msec`);
-    msecInFetchRange /= 2;
-    // The data is compromised, nothing would be written on this iteration
-    return { "success": false };
-  }
-
-  const trxResults = [];
-  try {
-    logger.info(`Waiting for the pages of the time interval to be fetched from BNB Node. ${nodeResponsePromises.length - 1} requests.`)
-    const blockResults = await Promise.all(nodeResponsePromises);
-    for (let blockResultsIndex = 0; blockResultsIndex < blockResults.length; ++blockResultsIndex) {
-      trxResults.push(...blockResults[blockResultsIndex].txArray);
+    if (!fetchScheduleSuccess) {
+      logger.info(`Can not fetch time interval. Reducing interval size from ${this.msecInFetchRange} msec to \
+${this.msecInFetchRange / 2} msec`);
+      this.msecInFetchRange /= 2;
+      // The data is compromised, nothing would be written on this iteration
+      return { "success": false };
     }
-    logger.info(`${trxResults.length} transactions fetched.`)
-  }
-  catch (exception) {
-    logger.error(exception);
-    return { "success": false };
-  }
 
-  return { "transactions": trxResults, "intervalFetchEnd": intervalFetchEnd, "lastFetchRangeMsec": msecInFetchRange, "lastBlockTimestamp": lastBlockTimestamp, "success": true };
+    const trxResults = [];
+    try {
+      logger.info(`Waiting for the pages of the time interval to be fetched from BNB Node. \
+${nodeResponsePromises.length - 1} requests.`)
+      const blockResults = await Promise.all(nodeResponsePromises);
+      for (let blockResultsIndex = 0; blockResultsIndex < blockResults.length; ++blockResultsIndex) {
+        trxResults.push(...blockResults[blockResultsIndex].txArray);
+      }
+      logger.info(`${trxResults.length} transactions fetched.`)
+    }
+    catch (exception) {
+      logger.error(exception);
+      return { "success": false };
+    }
+
+    return { "transactions": trxResults, "intervalFetchEnd": intervalFetchEnd,
+      "lastFetchRangeMsec": this.msecInFetchRange, "lastBlockTimestamp": this.lastBlockTimestamp, "success": true
+    };
+  }
 }
 
 /**
@@ -251,7 +259,7 @@ function filterRepeatedTransactions(listTrx) {
 
 
 module.exports = {
-  fetchTransactions,
+  BNBTransactionsFetcher,
   replaceParentTransactionsWithChildren,
   filterRepeatedTransactions,
   SAFETY_BLOCK_WAIT_MSEC

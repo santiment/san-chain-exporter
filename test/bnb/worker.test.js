@@ -1,8 +1,7 @@
 /*jshint esversion: 6 */
 const assert = require("assert")
-const rewire = require('rewire')
 
-const bnb_worker = rewire("../../blockchains/bnb/bnb_worker")
+const bnb_worker = require("../../blockchains/bnb/bnb_worker")
 
 /** The transaction summary as it is returned when fetching time intervals. */
 const txWithoutChild1 = {
@@ -38,15 +37,18 @@ const txWithoutChild2 = {
 }
 
 const END_INTERVAL = 1599699350979;
-bnb_worker.__set__("fetch_transactions.fetchTransactions", async function () {
-  // It is important to match the order of how the API returns transactions - reverse order.
-  return { "transactions": [txWithoutChild2, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
-})
+class MockTransactionsFetcher1 {
+  async fetchTransactions() {
+    // It is important to match the order of how the API returns transactions - reverse order.
+    return { "transactions": [txWithoutChild2, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
+  }
+}
 
 describe('workLoopSimpleTest', function() {
   it("Checking that position is being updated", async function() {
     const worker = new bnb_worker.worker()
     worker.init()
+    worker.bnbTransactionsFetcher = new MockTransactionsFetcher1()
 
     await worker.work()
     const lastProcessedPosition = worker.getLastProcessedPosition()
@@ -58,6 +60,7 @@ describe('workLoopSimpleTest', function() {
   it("Checking that two transactions without children are passing through the work loop without modifications", async function() {
     const worker = new bnb_worker.worker()
     worker.init()
+    worker.bnbTransactionsFetcher = new MockTransactionsFetcher1()
 
     const result = await worker.work()
     assert.deepEqual(
@@ -66,14 +69,17 @@ describe('workLoopSimpleTest', function() {
   })
 })
 
-
-describe('workLoopRepeatedTest', function() {
-  bnb_worker.__set__("fetch_transactions.fetchTransactions", async function () {
+class MockTransactionsFetcher2 {
+  async fetchTransactions() {
+    // It is important to match the order of how the API returns transactions - reverse order.
     return { "transactions": [txWithoutChild2, txWithoutChild1, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
-  })
-
+  }
+}
+describe('workLoopRepeatedTest', function() {
   it("Checking that a repeated transaction would be removed", async function() {
     const worker = new bnb_worker.worker()
+    worker.init()
+    worker.bnbTransactionsFetcher = new MockTransactionsFetcher2()
 
     const result = await worker.work()
 

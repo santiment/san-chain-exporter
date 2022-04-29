@@ -42,16 +42,17 @@ class BNBWorker extends BaseWorker {
       intervalCap: MAX_CONNECTION_CONCURRENCY
     });
 
+    this.timestampReached = BNB_CHAIN_START_MSEC
+    this.newRequestsCount = 0
+    this.bnbTransactionsFetcher = new fetch_transactions.BNBTransactionsFetcher()
   }
 
   async init() {
-    this.timestampReached = BNB_CHAIN_START_MSEC
-    this.newRequestsCount = 0
   }
 
   async work() {
     const metrics = new MetricsStore()
-    const fetchResult = await fetch_transactions.fetchTransactions(this.queue, this.timestampReached, metrics)
+    const fetchResult = await this.bnbTransactionsFetcher.fetchTransactions(this.queue, this.timestampReached, metrics)
     this.newRequestsCount += metrics.get()
 
     let resultTransactions = []

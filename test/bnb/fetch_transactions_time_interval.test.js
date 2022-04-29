@@ -26,11 +26,11 @@ describe('startIntervalIsNotModified', function() {
     const queue = ""
     const timestampReached = START_TIMESTAMP - 1
 
+    const bnbTransactionsFetcher = new fetch_transactions.BNBTransactionsFetcher()
 
     // The loop is only triggered here. The result would be saved in by the callback function.
-    await fetch_transactions.fetchTransactions(queue, timestampReached)
+    await bnbTransactionsFetcher.fetchTransactions(queue, timestampReached)
 
-    console.log("Deep equal check")
     assert.deepStrictEqual(intervalStartResult, START_TIMESTAMP)
   })
 })
@@ -40,7 +40,9 @@ describe('endIntervalIsEditedNotToGoIntoFuture', function() {
     const queue = "";
     const timestampReached = START_TIMESTAMP - 1
 
-    const result = await fetch_transactions.fetchTransactions(queue, timestampReached)
+    const bnbTransactionsFetcher = new fetch_transactions.BNBTransactionsFetcher()
+
+    const result = await bnbTransactionsFetcher.fetchTransactions(queue, timestampReached)
 
     // Assert that the end interval is about to go into the future before corrections.
     assert(
