@@ -47,12 +47,11 @@ class Main {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work()
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
-      // Those should be set by the worker
-      //metrics.requestsCounter.inc();
+      metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
       metrics.requestsResponseTime.observe(new Date() - lastRequestStartTime);
       metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
 
-      this.worker.fillLastProcessedPosition(this.lastProcessedPosition)
+      this.lastProcessedPosition = this.worker.getLastProcessedPosition()
 
       if (events.length > 0) {
         await storeEvents(this.exporter, events)

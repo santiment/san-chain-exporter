@@ -46,11 +46,10 @@ bnb_worker.__set__("fetch_transactions.fetchTransactions", async function () {
 describe('workLoopSimpleTest', function() {
   it("Checking that position is being updated", async function() {
     const worker = new bnb_worker.worker()
+    worker.init()
 
     await worker.work()
-
-    const lastProcessedPosition = {}
-    worker.fillLastProcessedPosition(lastProcessedPosition)
+    const lastProcessedPosition = worker.getLastProcessedPosition()
 
     assert.deepEqual(lastProcessedPosition, { timestampReached: END_INTERVAL, blockNumber: 112581035 })
 
@@ -58,9 +57,9 @@ describe('workLoopSimpleTest', function() {
 
   it("Checking that two transactions without children are passing through the work loop without modifications", async function() {
     const worker = new bnb_worker.worker()
+    worker.init()
 
     const result = await worker.work()
-
     assert.deepEqual(
       result,
       [txWithoutChild1, txWithoutChild2])
