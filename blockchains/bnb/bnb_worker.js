@@ -3,12 +3,11 @@
 
 //import PQueue from 'p-queue';
 const fetch_transactions = require('./lib/fetch_transactions')
+const {BNBTransactionsFetcher} = require('./lib/bnb_transactions_fetcher')
 const { getTransactionsWithKeys } = require('./lib/edit_transactions')
 const BaseWorker = require("../../lib/worker_base")
+const constants = require("./lib/constants")
 
-const MAX_CONNECTION_CONCURRENCY = parseInt(process.env.MAX_CONNECTION_CONCURRENCY || "5");
-const TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC = parseInt(process.env.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC || "2000");
-const BNB_CHAIN_START_MSEC = parseInt(process.env.BNB_CHAIN_START_MSEC || "1555545600000");
 
 // This dynamic import is a workaround for p-queue being 'pure ESM' package.
 // https://github.com/sindresorhus/p-queue/issues/143
@@ -36,18 +35,17 @@ class BNBWorker extends BaseWorker {
   constructor() {
     super();
 
-    this.queue = new PQueue({
-      concurrency: MAX_CONNECTION_CONCURRENCY,
-      interval: TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
-      intervalCap: MAX_CONNECTION_CONCURRENCY
-    });
-
-    this.timestampReached = BNB_CHAIN_START_MSEC
+    this.timestampReached = constants.BNB_CHAIN_START_MSEC
     this.newRequestsCount = 0
-    this.bnbTransactionsFetcher = new fetch_transactions.BNBTransactionsFetcher()
+    this.bnbTransactionsFetcher = new BNBTransactionsFetcher()
   }
 
   async init() {
+    this.queue = new PQueue({
+      concurrency: constants.MAX_CONNECTION_CONCURRENCY,
+      interval: constants.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
+      intervalCap: constants.MAX_CONNECTION_CONCURRENCY
+    })
   }
 
   async work() {
@@ -82,9 +80,7 @@ class BNBWorker extends BaseWorker {
     // If we have catched up with the chain do an extra sleep to reduce the load on the API further.
     if (this.timestampReached + fetchResult.lastFetchRangeMsec +
       fetch_transactions.SAFETY_BLOCK_WAIT_MSEC > fetchResult.lastBlockTimestamp ) {
-      // Use the available timeouts we have to devise some sleep interval.
-      // Not some great idea of why exactly this. Want the interval to be dynamic but still upper bound.
-      this.sleepTimeMsec = Math.min(fetchResult.lastFetchRangeMsec, fetch_transactions.SAFETY_BLOCK_WAIT_MSEC)
+      this.sleepTimeMsec = Math.min(constants.LOOP_INTERVAL_CURRENT_MODE_SEC)
     }
 
     return resultTransactions

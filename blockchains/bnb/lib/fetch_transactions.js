@@ -1,27 +1,21 @@
 "use strict";
 const { logger } = require('../../../lib/logger')
 const utils = require('./utils')
+const constants = require("./constants")
 
 
 global.SERVER_URL = process.env.NODE_URL || "https://explorer.binance.org/api/v1/";
 // Hint for ESlint
 /* global SERVER_URL */
 
-// The biggest page we can ask the BNB API for. We should query a time interval small enough, so that it results fit in this number of pages.
-const BNB_API_MAX_PAGE = parseInt(process.env.BNB_API_MAX_PAGE || "100");
-// The maximum number of rows that can be requested according to the BNB API. The value is different depending on the request.
-const MAX_NUM_ROWS_TIME_INTERVAL = 100;
-// Stay number of msecs behind the chain head in case of forks
-const SAFETY_BLOCK_WAIT_MSEC = 100000;
-// We start by fetching transactions for an hour. This will be dynamically reduced when the transactions number increase.
-const FETCH_INTERVAL_HISTORIC_MODE_MSEC =  parseInt(process.env.FETCH_INTERVAL_HISTORIC_MODE_MSEC || "3600000");
+
 
 
 function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) {
   return queue.add(async () => {
     const queryString = {
       page: pageIndex,
-      rows: MAX_NUM_ROWS_TIME_INTERVAL,
+      rows: constants.MAX_NUM_ROWS_TIME_INTERVAL,
       startTime: startTimeMsec,
       endTime: endTimeMsec
     };
@@ -44,7 +38,7 @@ function sendTrxQuery(trxId, queue, metrics) {
 
 async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponsePromises, metrics) {
   // On the first iteration update with the exact number
-  let pagesToIterate = BNB_API_MAX_PAGE;
+  let pagesToIterate = constants.BNB_API_MAX_PAGE;
   for (let pageIndex = 1; pageIndex <= pagesToIterate; ++pageIndex) {
     let promiseResult = sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics);
 
@@ -56,12 +50,12 @@ async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponse
         throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec);
       }
 
-      pagesToIterate = Math.ceil(firstPageResult.txNums / MAX_NUM_ROWS_TIME_INTERVAL);
+      pagesToIterate = Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL);
 
       let intervalString = `${startTimeMsec}-${endTimeMsec}`
       logger.info(`Interval ${intervalString} has ${pagesToIterate} pages`);
 
-      if (pagesToIterate > BNB_API_MAX_PAGE) {
+      if (pagesToIterate > constants.BNB_API_MAX_PAGE) {
         // There are too many transactions in this time interval. The only way to proceed is reduce the time interval.
         // Abort all currently collected and come back with smaller interval.
         logger.info(`Interval ${intervalString} has too many transactions. Reducing interval.`);
@@ -93,62 +87,6 @@ async function fetchTransactionWithChildren(queue, parentTrx, subTrxMap, metrics
 
   subTrxMap[parentTrx.txHash] = correctedSubTrx;
 }
-
-class BNBTransactionsFetcher {
-  constructor() {
-    // The timestamp of the last block produced. Will be reduced with real value.
-    this.lastBlockTimestamp = 0;
-    // We start by fetching transactions for an hour. This will be dynamically reduced when the transactions number increase.
-    this.msecInFetchRange = FETCH_INTERVAL_HISTORIC_MODE_MSEC;
-  }
-  async fetchTransactions(queue, timestampReached, metrics) {
-    const intervalFetchStart = timestampReached + 1;
-    let intervalFetchEnd = intervalFetchStart + this.msecInFetchRange;
-
-    // When the exporter catches up with the Node, we need to limit the range of blocks we query
-    if (intervalFetchEnd > this.lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC) {
-      this.lastBlockTimestamp = await utils.getLastBlockTimestamp(metrics);
-      // Check again if the end interval is correct against the updated last block timestamp
-      if (intervalFetchEnd > this.lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC) {
-        intervalFetchEnd = this.lastBlockTimestamp - SAFETY_BLOCK_WAIT_MSEC;
-        this.msecInFetchRange = intervalFetchEnd - intervalFetchStart;
-      }
-    }
-
-    const nodeResponsePromises = [];
-    logger.info(`Fetching transactions for time interval: ${intervalFetchStart}-${intervalFetchEnd}`);
-    const fetchScheduleSuccess = await fetchTimeInterval(queue, intervalFetchStart, intervalFetchEnd,
-      nodeResponsePromises, metrics);
-
-    if (!fetchScheduleSuccess) {
-      logger.info(`Can not fetch time interval. Reducing interval size from ${this.msecInFetchRange} msec to \
-${this.msecInFetchRange / 2} msec`);
-      this.msecInFetchRange /= 2;
-      // The data is compromised, nothing would be written on this iteration
-      return { "success": false };
-    }
-
-    const trxResults = [];
-    try {
-      logger.info(`Waiting for the pages of the time interval to be fetched from BNB Node. \
-${nodeResponsePromises.length - 1} requests.`)
-      const blockResults = await Promise.all(nodeResponsePromises);
-      for (let blockResultsIndex = 0; blockResultsIndex < blockResults.length; ++blockResultsIndex) {
-        trxResults.push(...blockResults[blockResultsIndex].txArray);
-      }
-      logger.info(`${trxResults.length} transactions fetched.`)
-    }
-    catch (exception) {
-      logger.error(exception);
-      return { "success": false };
-    }
-
-    return { "transactions": trxResults, "intervalFetchEnd": intervalFetchEnd,
-      "lastFetchRangeMsec": this.msecInFetchRange, "lastBlockTimestamp": this.lastBlockTimestamp, "success": true
-    };
-  }
-}
-
 /**
  * Go over the transactions, and fetch sub transactions for those who have children.
  */
@@ -259,8 +197,7 @@ function filterRepeatedTransactions(listTrx) {
 
 
 module.exports = {
-  BNBTransactionsFetcher,
+  fetchTimeInterval,
   replaceParentTransactionsWithChildren,
-  filterRepeatedTransactions,
-  SAFETY_BLOCK_WAIT_MSEC
+  filterRepeatedTransactions
 }
