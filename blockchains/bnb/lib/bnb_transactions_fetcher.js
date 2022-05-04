@@ -18,7 +18,7 @@ class BNBTransactionsFetcher {
   }
 
   async updateIntervalFetchEnd(intervalFetchStart, metrics) {
-     let potentialNewEnd = intervalFetchStart + this.msecInFetchRange;
+    let potentialNewEnd = intervalFetchStart + this.msecInFetchRange;
 
     // When the exporter catches up with the Node, we need to limit the range of blocks we query
     if (potentialNewEnd > this.lastBlockTimestamp - constants.SAFETY_BLOCK_WAIT_MSEC) {
