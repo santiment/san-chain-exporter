@@ -53,7 +53,7 @@ describe('workLoopSimpleTest', function() {
     await worker.work()
     const lastProcessedPosition = worker.getLastProcessedPosition()
 
-    assert.deepEqual(lastProcessedPosition, { timestampReached: END_INTERVAL, blockNumber: 112581035 })
+    assert.deepEqual({ timestampReached: END_INTERVAL, blockNumber: 112581035 }, lastProcessedPosition)
 
   })
 

@@ -1,5 +1,6 @@
 /*jslint node: true */
 "use strict";
+const { logger } = require('../../lib/logger')
 
 //import PQueue from 'p-queue';
 const fetch_transactions = require('./lib/fetch_transactions')
@@ -35,9 +36,9 @@ class BNBWorker extends BaseWorker {
   constructor() {
     super();
 
-    this.timestampReached = constants.BNB_CHAIN_START_MSEC
     this.newRequestsCount = 0
     this.bnbTransactionsFetcher = new BNBTransactionsFetcher()
+    this.timestampReached = 0
   }
 
   async init() {
@@ -61,7 +62,7 @@ class BNBWorker extends BaseWorker {
         this.lastExportedBlock = fetchResult.transactions[0].blockHeight;
 
         const mergedTransactions = await fetch_transactions.replaceParentTransactionsWithChildren(this.queue,
-          fetchResult.transactions)
+          fetchResult.transactions, metrics)
         //logger.info(`Storing: ${mergedTransactions.length} transactions to Kafka.`)
         resultTransactions = getTransactionsWithKeys(mergedTransactions)
 
@@ -103,8 +104,20 @@ class BNBWorker extends BaseWorker {
    * Initialize the position from which export should start based on latest stored position in Zookeeper.
    */
   initPosition(lastProcessedPosition) {
-    super.initPosition(lastProcessedPosition)
+    if (lastProcessedPosition) {
+      logger.info(`Resuming export from position ${JSON.stringify(lastProcessedPosition)}`)
+    } else {
+      lastProcessedPosition = {
+        timestampReached : constants.BNB_CHAIN_START_MSEC,
+        blockNumber: 0
+      }
+      logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
+    }
+
     this.timestampReached = lastProcessedPosition.timestampReached
+    this.lastExportedBlock = lastProcessedPosition.blockNumber
+
+    return lastProcessedPosition
   }
 }
 

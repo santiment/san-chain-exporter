@@ -15,31 +15,14 @@ class Main {
   constructor() {
     // To be set depending on which blockchain worker is configured on runtime
     this.worker = null
-    this.lastProcessedPosition = {
-      blockNumber: parseInt(process.env.START_BLOCK || "-1"),
-      primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
-    }
   }
 
   async init() {
     this.exporter = new Exporter(EXPORTER_NAME, true)
     await this.exporter.connect()
     await this.exporter.initTransactions()
-    await this.initLastProcessedBlock()
-    await this.setWorker()
+    await this.initWorker()
     metrics.startCollection()
-  }
-
-  async initLastProcessedBlock() {
-    const lastPosition = await this.exporter.getLastPosition()
-
-    if (lastPosition) {
-      this.lastProcessedPosition = lastPosition
-      logger.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
-    } else {
-      await this.exporter.savePosition(this.lastProcessedPosition)
-      logger.info(`Initialized exporter with initial position ${JSON.stringify(this.lastProcessedPosition)}`)
-    }
   }
 
   async workLoop() {
@@ -68,16 +51,21 @@ class Main {
     }
   }
 
-  async setWorker() {
+  async initWorker() {
     if (this.worker != null) {
       throw new Error("Worker is already set")
     }
 
     this.worker = new worker.worker()
 
-    this.worker.initPosition(this.lastProcessedPosition)
-
     await this.worker.init(this.exporter, metrics)
+
+    const lastRecoveredPosition = await this.exporter.getLastPosition()
+    // Provide the latest recovered from Zookeeper position to the worker. Receive the actual position to start from.
+    // This moves the logic to what a proper initial position is to the worker.
+    this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition)
+
+    await this.exporter.savePosition(this.lastProcessedPosition)
   }
 
   healthcheckKafka() {
