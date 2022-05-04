@@ -19,21 +19,9 @@ function getTransactionsWithKeys(inputTransactions) {
     trx.primaryKey = lastBlockSent.toString() + "-" + trxIndexInLastBlock;
 
     result.push(trx);
-    /*try {
-      requests.push(trx);
-      if (requests.length >= SEND_BATCH_SIZE || 0 === trxIndex) {
-        await exporter.sendDataWithKey(requests, "primaryKey");
-        requests.length = 0;
-      }
-    }
-    catch (error) {
-      logger.error(`Error storing message to Kafka: ${error}`);
-      throw (error);
-    }*/
   }
 
   return result
-  //logger.info(`Stored ${trxResults.length} transactions in block range ${trxResults[0].blockHeight}-${trxResults[trxResults.length - 1].blockHeight}`);
 }
 
 

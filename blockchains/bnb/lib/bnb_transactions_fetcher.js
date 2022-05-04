@@ -12,7 +12,10 @@ class BNBTransactionsFetcher {
   constructor() {
     // The timestamp of the last block produced. Will be reduced with real value.
     this.lastBlockTimestamp = 0
-    // We start by fetching transactions for an hour. This will be dynamically reduced when the transactions number increase.
+    /**
+     * We start by fetching transactions for an hour. This will be dynamically reduced when the transactions
+     * number increase.
+     */
     this.msecInFetchRange = constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC
     this.intervalFetchEnd = 0
   }
@@ -54,7 +57,7 @@ class BNBTransactionsFetcher {
     if (!fetchScheduleSuccess) {
       logger.info(`Can not fetch time interval. Reducing interval size from ${this.msecInFetchRange} msec to \
 ${this.msecInFetchRange / 2} msec`);
-      this.msecInFetchRange /= 2;
+      this.msecInFetchRange = Math.floor(this.msecInFetchRange / 2)
       // The data is compromised, nothing would be written on this iteration
       return { "success": false }
     }

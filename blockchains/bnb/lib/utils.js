@@ -2,14 +2,12 @@
 
 const { logger } = require('../../../lib/logger')
 const got = require('got')
-const uuidv1 = require('uuid/v1')
-const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
 
 // Hint for ESlint
 /* global SERVER_URL */
 
 /**
- * Not setting 'blockHeight' will return the block
+ * Not setting 'blockHeight' will return the last block
  */
 async function readLastBlock(metrics) {
 

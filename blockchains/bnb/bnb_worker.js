@@ -17,6 +17,10 @@ let PQueue = null;
   PQueue = (await import('p-queue')).default;
 })()
 
+/**
+ * A helper class to store the number of calls made to the BNB API endpoint. The value is then transferred
+ * to the metrics variables.
+ */
 class MetricsStore {
   constructor() {
     this.count = 0
@@ -41,6 +45,9 @@ class BNBWorker extends BaseWorker {
     this.timestampReached = 0
   }
 
+  /**
+   * @override
+   */
   async init() {
     this.queue = new PQueue({
       concurrency: constants.MAX_CONNECTION_CONCURRENCY,
@@ -49,6 +56,9 @@ class BNBWorker extends BaseWorker {
     })
   }
 
+  /**
+   * @override
+   */
   async work() {
     const metrics = new MetricsStore()
     const fetchResult = await this.bnbTransactionsFetcher.fetchTransactions(this.queue, this.timestampReached, metrics)
@@ -63,7 +73,6 @@ class BNBWorker extends BaseWorker {
 
         const mergedTransactions = await fetch_transactions.replaceParentTransactionsWithChildren(this.queue,
           fetchResult.transactions, metrics)
-        //logger.info(`Storing: ${mergedTransactions.length} transactions to Kafka.`)
         resultTransactions = getTransactionsWithKeys(mergedTransactions)
 
         this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
@@ -87,12 +96,18 @@ class BNBWorker extends BaseWorker {
     return resultTransactions
   }
 
+  /**
+   * @override
+   */
   getNewRequestsCount() {
     const count = this.newRequestsCount
     this.newRequestsCount = 0
     return count
   }
 
+  /**
+   * @override
+   */
   getLastProcessedPosition() {
     return {
       blockNumber: this.lastExportedBlock,
@@ -102,6 +117,8 @@ class BNBWorker extends BaseWorker {
 
   /**
    * Initialize the position from which export should start based on latest stored position in Zookeeper.
+   *
+   * @override
    */
   initPosition(lastProcessedPosition) {
     if (lastProcessedPosition) {
