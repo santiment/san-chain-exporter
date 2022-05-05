@@ -87,6 +87,29 @@ describe('intervalStartIsNotModified', function() {
     )
   })
 
+  it("Checking that up to date with blockchain flag is set",
+  async function() {
+
+    const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(
+      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC
+    )
+
+    await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
+
+    // Check that since intervalFetchEnd can not be moved forward it would not be updated.
+    assert.strictEqual(
+      bnbTransactionsFetcher.intervalFetchEnd,
+      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC
+    )
+
+    // Check correct flag is set
+    assert.strictEqual(
+      bnbTransactionsFetcher.isUpToDateWithBlockchain,
+      true
+    )
+  })
+
+
   it("Checking that the end interval would not slip into the past if the Node reports a previous block for head.",
   async function() {
     // Choose a start timestamp such, that only one interval is possible
