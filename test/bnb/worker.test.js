@@ -1,5 +1,6 @@
 /*jshint esversion: 6 */
 const assert = require("assert")
+const constants = require("../../blockchains/bnb/lib/constants")
 
 const bnb_worker = require("../../blockchains/bnb/bnb_worker")
 
@@ -100,5 +101,30 @@ describe('workLoopRepeatedTest', function() {
     assert.deepEqual(
       result,
       [txWithoutChild1, txWithoutChild2])
+  })
+})
+
+class MockTransactionsFetcher3 {
+  constructor() {
+    this.isUpToDateWithBlockchain = true
+  }
+
+  async tryFetchTransactionsNextRange() {
+    // It is important to match the order of how the API returns transactions - reverse order.
+    return []
+  }
+}
+
+describe('workLoopRepeatedTest', function() {
+  it("Checking that correct sleep timeout is set", async function() {
+    const worker = new bnb_worker.worker()
+    worker.init()
+    worker.bnbTransactionsFetcher = new MockTransactionsFetcher3()
+
+    await worker.work()
+
+    assert.deepEqual(
+      worker.sleepTimeMsec,
+      1000 * constants.LOOP_INTERVAL_CURRENT_MODE_SEC)
   })
 })
