@@ -27,45 +27,47 @@ class BNBTransactionsFetcher {
   }
 
   // When the exporter catches up with the Node, we need to limit the range of blocks we query
-  createNextRangeIfPossible() {
+  tryGetNextInterval() {
     let potentialNewStart = this.intervalFetchEnd + 1
     let potentialNewEnd = potentialNewStart + this.msecInFetchRange
 
     if (potentialNewEnd <= this.lastBlockTimestamp - constants.SAFETY_BLOCK_WAIT_MSEC) {
-      this.intervalFetchStart = potentialNewStart
-      this.intervalFetchEnd = potentialNewEnd
-      return true
+      return {
+        intervalFetchStart: potentialNewStart,
+        intervalFetchEnd: potentialNewEnd,
+        result: true
+      }
     }
-    return false
+    return {result: false}
   }
 
-  async tryUpdateInterval(metrics) {
+  async tryGetNextIntervalWithNode(metrics) {
     // If the end interval exceeds the head of the blockchain, check if the blockchain has moved forward since the
     // last value we have locally. We do not check the blockchain head on each call to reduce the load on the API when
     // in 'historic' mode. In that mode we can export a lot of data before reaching the last seen 'head'.
-    if (!this.createNextRangeIfPossible()) {
-      this.lastBlockTimestamp = await getLastBlockTimestamp(metrics);
-      // Check again if the end interval is possible now
-      if (!this.createNextRangeIfPossible()) {
-        // Nothing to do now, allow time for the chain to progress.
-        return false
-      }
+    const nextRange = this.tryGetNextInterval()
+    if (nextRange.result) {
+      return nextRange
     }
 
-    return true
+    this.lastBlockTimestamp = await getLastBlockTimestamp(metrics);
+    // Check again if the end interval is possible now
+    return this.tryGetNextInterval()
   }
 
   async tryFetchTransactionsNextRange(queue, metrics) {
-    this.isUpToDateWithBlockchain = ! (await this.tryUpdateInterval(metrics))
-    if (this.isUpToDateWithBlockchain) {
+    const nextRange = await this.tryGetNextIntervalWithNode(metrics)
+    this.isUpToDateWithBlockchain = ! nextRange.result
+    if (!nextRange.result) {
       // Unable to move forward. Blockchain has not progressed.
       return []
     }
 
     const nodeResponsePromises = [];
-    logger.info(`Fetching transactions for time interval: ${this.intervalFetchStart}-${this.intervalFetchEnd}`);
-    const fetchScheduleSuccess = await fetchTimeInterval(queue, this.intervalFetchStart, this.intervalFetchEnd,
-      nodeResponsePromises, metrics);
+    logger.info(`Fetching transactions for time interval: ${nextRange.intervalFetchStart}-\
+${nextRange.intervalFetchEnd}`);
+    const fetchScheduleSuccess = await fetchTimeInterval(queue, nextRange.intervalFetchStart,
+      nextRange.intervalFetchEnd, nodeResponsePromises, metrics);
 
     if (!fetchScheduleSuccess) {
       logger.info(`Can not fetch time interval. Reducing interval size from ${this.msecInFetchRange} msec to \
@@ -90,6 +92,9 @@ ${nodeResponsePromises.length - 1} requests.`)
       return { "success": false };
     }
 
+    // No errors, commit the fetch range
+    this.intervalFetchStart = nextRange.intervalFetchStart
+    this.intervalFetchEnd = nextRange.intervalFetchEnd
     return trxResults
   }
 }

@@ -11,13 +11,6 @@ const START_TIMESTAMP = 80000000
 let intervalStartResult = -1
 let intervalEndResult = -1
 
-bnb_transactions_fetcher.__set__("fetchTimeInterval", function (queue, intervalFetchStart, intervalFetchEnd) {
-  intervalStartResult = intervalFetchStart
-  intervalEndResult = intervalFetchEnd
-
-  return true;
-})
-
 
 describe('intervalStartIsNotModified', function() {
   beforeEach(function(done) {
@@ -26,6 +19,13 @@ describe('intervalStartIsNotModified', function() {
 
     bnb_transactions_fetcher.__set__("getLastBlockTimestamp", function () {
       return CURRENT_BLOCK_TIMESTAMP;
+    })
+
+    bnb_transactions_fetcher.__set__("fetchTimeInterval", function (queue, intervalFetchStart, intervalFetchEnd) {
+      intervalStartResult = intervalFetchStart
+      intervalEndResult = intervalFetchEnd
+
+      return true;
     })
 
     done()
@@ -78,7 +78,7 @@ describe('intervalStartIsNotModified', function() {
     // Call 2:  100 - ?
     // If the blockchain head is still at 100 we should not update the end interval.
     // Note: When we say 'head' we mean what the Node returns subtracted with a safety margin.
-    await bnbTransactionsFetcher.tryUpdateInterval()
+    await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
 
     // Check that since intervalFetchEnd can not be moved forward it would not be updated.
     assert.strictEqual(
@@ -116,7 +116,7 @@ describe('intervalStartIsNotModified', function() {
     const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(
       CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC - constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC - 1
     )
-    await bnbTransactionsFetcher.tryUpdateInterval()
+    await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
 
     // End timestamp is the last one possible
     assert.strictEqual(
@@ -129,13 +129,37 @@ describe('intervalStartIsNotModified', function() {
       return CURRENT_BLOCK_TIMESTAMP - 1
     })
 
-    await bnbTransactionsFetcher.tryUpdateInterval(bnbTransactionsFetcher.intervalFetchEnd + 1, "")
+    await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
 
     // We expect the timestamp to not progress
     assert.strictEqual(
       bnbTransactionsFetcher.intervalFetchEnd,
       CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC
     )
-
   })
+
+  it("Checking interval does not progress on fetch error.",
+  async function() {
+    bnb_transactions_fetcher.__set__("fetchTimeInterval", function (queue, intervalFetchStart, intervalFetchEnd) {
+      intervalStartResult = intervalFetchStart
+      intervalEndResult = intervalFetchEnd
+
+      return false;
+    })
+
+    const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(START_TIMESTAMP)
+
+    // Assert that the next interval is possible
+    const nextInterval = await bnbTransactionsFetcher.tryGetNextIntervalWithNode()
+    assert.strictEqual(
+      nextInterval.result,
+      true
+    )
+
+    await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
+
+    // Even though the next interval is possible, we have not progressed due to the fetch error
+    assert.strictEqual(bnbTransactionsFetcher.intervalFetchEnd, START_TIMESTAMP)
+  })
+
 })
