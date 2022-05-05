@@ -9,7 +9,7 @@ const constants = require("./constants")
  * A class wrapping the tools for fetching transactions. It holds as state the position of the last fetch.
  */
 class BNBTransactionsFetcher {
-  constructor() {
+  constructor(lastIntervalFetchEnd) {
     // The timestamp of the last block produced. Will be reduced with real value.
     this.lastBlockTimestamp = 0
     /**
@@ -17,49 +17,62 @@ class BNBTransactionsFetcher {
      * number increase.
      */
     this.msecInFetchRange = constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC
-    this.intervalFetchEnd = 0
+    this.intervalFetchStart = 0
+    this.intervalFetchEnd = lastIntervalFetchEnd
+    this.isUpToDateWithBlockchain = false
   }
 
-  async updateIntervalFetchEnd(intervalFetchStart, metrics) {
-    let potentialNewEnd = intervalFetchStart + this.msecInFetchRange;
+  getIntervalFetchEnd() {
+    return this.intervalFetchEnd
+  }
 
-    // When the exporter catches up with the Node, we need to limit the range of blocks we query
-    if (potentialNewEnd > this.lastBlockTimestamp - constants.SAFETY_BLOCK_WAIT_MSEC) {
-      this.lastBlockTimestamp = await getLastBlockTimestamp(metrics);
-      // Check again if the end interval is correct against the updated last block timestamp
-      if (potentialNewEnd > this.lastBlockTimestamp - constants.SAFETY_BLOCK_WAIT_MSEC) {
-        potentialNewEnd = this.lastBlockTimestamp - constants.SAFETY_BLOCK_WAIT_MSEC;
-      }
-    }
+  // When the exporter catches up with the Node, we need to limit the range of blocks we query
+  createNextRangeIfPossible() {
+    let potentialNewStart = this.intervalFetchEnd + 1
+    let potentialNewEnd = potentialNewStart + this.msecInFetchRange
 
-    if (potentialNewEnd > intervalFetchStart) {
+    if (potentialNewEnd <= this.lastBlockTimestamp - constants.SAFETY_BLOCK_WAIT_MSEC) {
+      this.intervalFetchStart = potentialNewStart
       this.intervalFetchEnd = potentialNewEnd
-      this.msecInFetchRange = this.intervalFetchEnd - intervalFetchStart
       return true
     }
-
     return false
   }
 
-  async fetchTransactions(queue, timestampReached, metrics) {
-    const intervalFetchStart = timestampReached + 1;
+  async tryUpdateInterval(metrics) {
+    // If the end interval exceeds the head of the blockchain, check if the blockchain has moved forward since the
+    // last value we have locally. We do not check the blockchain head on each call to reduce the load on the API when
+    // in 'historic' mode. In that mode we can export a lot of data before reaching the last seen 'head'.
+    if (!this.createNextRangeIfPossible()) {
+      this.lastBlockTimestamp = await getLastBlockTimestamp(metrics);
+      // Check again if the end interval is possible now
+      if (!this.createNextRangeIfPossible()) {
+        // Nothing to do now, allow time for the chain to progress.
+        return false
+      }
+    }
 
-    if( false == await this.updateIntervalFetchEnd(intervalFetchStart, metrics)) {
+    return true
+  }
+
+  async tryFetchTransactionsNextRange(queue, metrics) {
+    this.isUpToDateWithBlockchain = ! (await this.tryUpdateInterval(metrics))
+    if (this.isUpToDateWithBlockchain) {
       // Unable to move forward. Blockchain has not progressed.
-      return { "success": false };
+      return []
     }
 
     const nodeResponsePromises = [];
-    logger.info(`Fetching transactions for time interval: ${intervalFetchStart}-${this.intervalFetchEnd}`);
-    const fetchScheduleSuccess = await fetchTimeInterval(queue, intervalFetchStart, this.intervalFetchEnd,
+    logger.info(`Fetching transactions for time interval: ${this.intervalFetchStart}-${this.intervalFetchEnd}`);
+    const fetchScheduleSuccess = await fetchTimeInterval(queue, this.intervalFetchStart, this.intervalFetchEnd,
       nodeResponsePromises, metrics);
 
     if (!fetchScheduleSuccess) {
       logger.info(`Can not fetch time interval. Reducing interval size from ${this.msecInFetchRange} msec to \
-${this.msecInFetchRange / 2} msec`);
+${Math.floor(this.msecInFetchRange / 2)} msec`)
       this.msecInFetchRange = Math.floor(this.msecInFetchRange / 2)
       // The data is compromised, nothing would be written on this iteration
-      return { "success": false }
+      return []
     }
 
     const trxResults = [];
@@ -77,9 +90,7 @@ ${nodeResponsePromises.length - 1} requests.`)
       return { "success": false };
     }
 
-    return { "transactions": trxResults, "intervalFetchEnd": this.intervalFetchEnd,
-      "lastFetchRangeMsec": this.msecInFetchRange, "lastBlockTimestamp": this.lastBlockTimestamp, "success": true
-    };
+    return trxResults
   }
 }
 
