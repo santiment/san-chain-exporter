@@ -3,9 +3,11 @@ const assert = require("assert")
 
 const bnb_worker = require("../../blockchains/bnb/bnb_worker")
 
+const END_INTERVAL = 1599699350979
+const BLOCK_HEIGHT = 112581035
 /** The transaction summary as it is returned when fetching time intervals. */
 const txWithoutChild1 = {
-    "blockHeight": 112581034,
+    "blockHeight": BLOCK_HEIGHT - 1,
     "code": 0,
     "confirmBlocks": 0,
     "fromAddr": "bnb1lm7kn7e3uq6sev04qnqayhrl6g0s4gyms5753g",
@@ -21,7 +23,7 @@ const txWithoutChild1 = {
 }
 
 const txWithoutChild2 = {
-  "blockHeight": 112581035,
+  "blockHeight": BLOCK_HEIGHT,
   "code": 0,
   "confirmBlocks": 0,
   "fromAddr": "bnb1lm7kn7e3uq6sev04qnqayhrl6g0s4gyms5753g",
@@ -36,11 +38,20 @@ const txWithoutChild2 = {
   "txType": "TRANSFER"
 }
 
-const END_INTERVAL = 1599699350979;
 class MockTransactionsFetcher1 {
-  async fetchTransactions() {
+  /**
+   * @override
+   */
+  async tryFetchTransactionsNextRange() {
     // It is important to match the order of how the API returns transactions - reverse order.
-    return { "transactions": [txWithoutChild2, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
+    return [txWithoutChild2, txWithoutChild1]
+  }
+
+  /**
+   * @override
+   */
+  getIntervalFetchEnd() {
+    return END_INTERVAL
   }
 }
 
@@ -53,7 +64,10 @@ describe('workLoopSimpleTest', function() {
     await worker.work()
     const lastProcessedPosition = worker.getLastProcessedPosition()
 
-    assert.deepEqual({ timestampReached: END_INTERVAL, blockNumber: 112581035 }, lastProcessedPosition)
+    assert.deepEqual(
+      lastProcessedPosition,
+      { timestampReached: END_INTERVAL, blockNumber: BLOCK_HEIGHT }
+    )
 
   })
 
@@ -70,9 +84,9 @@ describe('workLoopSimpleTest', function() {
 })
 
 class MockTransactionsFetcher2 {
-  async fetchTransactions() {
+  async tryFetchTransactionsNextRange() {
     // It is important to match the order of how the API returns transactions - reverse order.
-    return { "transactions": [txWithoutChild2, txWithoutChild1, txWithoutChild1], "intervalFetchEnd": END_INTERVAL, "success": true, "historic": true };
+    return [txWithoutChild2, txWithoutChild1, txWithoutChild1]
   }
 }
 describe('workLoopRepeatedTest', function() {

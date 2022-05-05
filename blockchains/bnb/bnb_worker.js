@@ -41,8 +41,7 @@ class BNBWorker extends BaseWorker {
     super();
 
     this.newRequestsCount = 0
-    this.bnbTransactionsFetcher = new BNBTransactionsFetcher()
-    this.timestampReached = 0
+    this.bnbTransactionsFetcher = null
   }
 
   /**
@@ -60,36 +59,29 @@ class BNBWorker extends BaseWorker {
    * @override
    */
   async work() {
-    const metrics = new MetricsStore()
-    const fetchResult = await this.bnbTransactionsFetcher.fetchTransactions(this.queue, this.timestampReached, metrics)
-    this.newRequestsCount += metrics.get()
+    const metrics = new MetricsStore();
+    let fetchTransactions = await this.bnbTransactionsFetcher.tryFetchTransactionsNextRange(this.queue, metrics);
+    this.newRequestsCount += metrics.get();
+
 
     let resultTransactions = []
-    if (true === fetchResult.success) {
-      if (fetchResult.transactions.length > 0) {
-        fetch_transactions.filterRepeatedTransactions(fetchResult.transactions);
-        // The API returns most recent transactions first. Take block number from the first one.
-        this.lastExportedBlock = fetchResult.transactions[0].blockHeight;
+    if (fetchTransactions.length > 0) {
+      fetch_transactions.filterRepeatedTransactions(fetchTransactions);
+      // The API returns most recent transactions first. Take block number from the first one.
+      this.lastExportedBlock = fetchTransactions[0].blockHeight;
 
-        const mergedTransactions = await fetch_transactions.replaceParentTransactionsWithChildren(this.queue,
-          fetchResult.transactions, metrics)
-        resultTransactions = getTransactionsWithKeys(mergedTransactions)
+      const mergedTransactions = await fetch_transactions.replaceParentTransactionsWithChildren(this.queue,
+        fetchTransactions, metrics)
+      resultTransactions = getTransactionsWithKeys(mergedTransactions)
 
-        this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
-        this.lastPrimaryKey += resultTransactions.length
-      }
-
-      if (fetchResult.intervalFetchEnd > this.timestampReached) {
-        this.timestampReached = fetchResult.intervalFetchEnd;
-      }
-
-      this.lastExportTime = Date.now()
+      this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
     }
+
+    this.lastExportTime = Date.now()
 
     // The upper limit of the load rate is enforced by p-queue.
     // If we have catched up with the chain do an extra sleep to reduce the load on the API further.
-    if (this.timestampReached + fetchResult.lastFetchRangeMsec +
-      fetch_transactions.SAFETY_BLOCK_WAIT_MSEC > fetchResult.lastBlockTimestamp ) {
+    if (this.bnbTransactionsFetcher.isUpToDateWithBlockchain) {
       this.sleepTimeMsec = Math.min(constants.LOOP_INTERVAL_CURRENT_MODE_SEC)
     }
 
@@ -111,7 +103,7 @@ class BNBWorker extends BaseWorker {
   getLastProcessedPosition() {
     return {
       blockNumber: this.lastExportedBlock,
-      timestampReached: this.timestampReached
+      timestampReached: this.bnbTransactionsFetcher.getIntervalFetchEnd()
     }
   }
 
@@ -131,7 +123,7 @@ class BNBWorker extends BaseWorker {
       logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
     }
 
-    this.timestampReached = lastProcessedPosition.timestampReached
+    this.bnbTransactionsFetcher = new BNBTransactionsFetcher(lastProcessedPosition.timestampReached)
     this.lastExportedBlock = lastProcessedPosition.blockNumber
 
     return lastProcessedPosition
