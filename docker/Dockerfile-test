@@ -1,4 +1,4 @@
-FROM node:16.5-buster-slim AS builder
+FROM node:18.1.0-buster-slim AS builder
 
 # This Dockerfile could have been omitted if mounting volumes was working in Jenkins.
 # We use this file just so we can copy inside the image the contract mapping json file
@@ -22,7 +22,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --verbose
 RUN npm cache clean --force
 
-FROM node:16.5-buster-slim
+FROM node:18.1.0-buster-slim
 
 RUN apt-get update; \
     apt-get install -y openssl netcat-openbsd

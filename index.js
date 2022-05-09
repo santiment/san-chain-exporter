@@ -11,6 +11,9 @@ const worker = require(`./blockchains/${process.env.BLOCKCHAIN}/${process.env.BL
 const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name
 const constants = require('./lib/constants')
 
+var SegfaultHandler = require('segfault-handler')
+SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`)
+
 class Main {
   constructor() {
     // To be set depending on which blockchain worker is configured on runtime
