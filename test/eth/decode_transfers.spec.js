@@ -10,7 +10,7 @@ describe('genesis transfers', function() {
   let web3 = null
 
   beforeEach(async function() {
-    web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+    web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
     web3Wrapper = new Web3Wrapper(web3)
   });
 

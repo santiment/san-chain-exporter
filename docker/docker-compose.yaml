@@ -38,7 +38,7 @@ services:
     environment:
       KAFKA_URL: kafka:9092
       ZOOKEEPER_URL: zookeeper:2181
-      PARITY_URL: http://parity.stage.san:30954
+      NODE_URL: http://parity.stage.san:30954
       START_BLOCK: "5710092"
       BLOCK_INTERVAL: "50"
       EXPORT_TIMEOUT_MLS: 300000

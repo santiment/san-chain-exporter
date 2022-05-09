@@ -16,8 +16,8 @@ class ERC20Worker extends BaseWorker {
   constructor() {
     super()
 
-    logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+    logger.info(`Connecting to ethereum node ${constants.NODE_URL}`)
+    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
   }
 
   async init(exporter) {
