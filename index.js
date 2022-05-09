@@ -62,7 +62,7 @@ class Main {
 
     const lastRecoveredPosition = await this.exporter.getLastPosition()
     // Provide the latest recovered from Zookeeper position to the worker. Receive the actual position to start from.
-    // This moves the logic to what a proper initial position is to the worker.
+    // This moves the logic of what a proper initial position is to the worker.
     this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition)
 
     await this.exporter.savePosition(this.lastProcessedPosition)

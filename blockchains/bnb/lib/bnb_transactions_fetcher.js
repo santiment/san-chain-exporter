@@ -89,7 +89,7 @@ ${nodeResponsePromises.length - 1} requests.`)
     }
     catch (exception) {
       logger.error(exception);
-      return { "success": false };
+      return []
     }
 
     // No errors, commit the fetch range

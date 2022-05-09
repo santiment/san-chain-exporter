@@ -81,7 +81,8 @@ class BNBWorker extends BaseWorker {
 
     // The upper limit of the load rate is enforced by p-queue.
     // If we have catched up with the chain do an extra sleep to reduce the load on the API further.
-    if (this.bnbTransactionsFetcher.isUpToDateWithBlockchain) {
+    // Also if the result is empty, this must be an error on the previous fetch
+    if (this.bnbTransactionsFetcher.isUpToDateWithBlockchain || 0 == resultTransactions.length) {
       this.sleepTimeMsec = 1000 * constants.LOOP_INTERVAL_CURRENT_MODE_SEC
     }
 
