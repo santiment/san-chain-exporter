@@ -85,6 +85,9 @@ class BNBWorker extends BaseWorker {
     if (this.bnbTransactionsFetcher.isUpToDateWithBlockchain || 0 == resultTransactions.length) {
       this.sleepTimeMsec = 1000 * constants.LOOP_INTERVAL_CURRENT_MODE_SEC
     }
+    else {
+      this.sleepTimeMsec = 0
+    }
 
     return resultTransactions
   }
