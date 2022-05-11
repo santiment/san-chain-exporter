@@ -18,31 +18,14 @@ class Main {
   constructor() {
     // To be set depending on which blockchain worker is configured on runtime
     this.worker = null
-    this.lastProcessedPosition = {
-      blockNumber: parseInt(process.env.START_BLOCK || "-1"),
-      primaryKey: parseInt(process.env.START_PRIMARY_KEY || "-1")
-    }
   }
 
   async init() {
     this.exporter = new Exporter(EXPORTER_NAME, true)
     await this.exporter.connect()
     await this.exporter.initTransactions()
-    await this.initLastProcessedBlock()
-    await this.setWorker()
+    await this.initWorker()
     metrics.startCollection()
-  }
-
-  async initLastProcessedBlock() {
-    const lastPosition = await this.exporter.getLastPosition()
-
-    if (lastPosition) {
-      this.lastProcessedPosition = lastPosition
-      logger.info(`Resuming export from position ${JSON.stringify(lastPosition)}`)
-    } else {
-      await this.exporter.savePosition(this.lastProcessedPosition)
-      logger.info(`Initialized exporter with initial position ${JSON.stringify(this.lastProcessedPosition)}`)
-    }
   }
 
   async workLoop() {
@@ -50,12 +33,16 @@ class Main {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work()
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
-      metrics.requestsCounter.inc();
+      // This metric is intended to count the requests towards the Node endpoint.
+      // The counting is done inside the worker and we fetch the reult here.
+      metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
       metrics.requestsResponseTime.observe(new Date() - lastRequestStartTime);
       metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
 
-      this.lastProcessedPosition.blockNumber = this.worker.lastExportedBlock
-      this.lastProcessedPosition.primaryKey = this.worker.lastPrimaryKey
+      // Get the position to store in Zookeeper as constructed by the worker.
+      // Different workers may store different type of position so this is
+      // part of the blockchain specific code.
+      this.lastProcessedPosition = this.worker.getLastProcessedPosition()
 
       if (events.length > 0) {
         await storeEvents(this.exporter, events)
@@ -72,16 +59,21 @@ class Main {
     }
   }
 
-  async setWorker() {
+  async initWorker() {
     if (this.worker != null) {
       throw new Error("Worker is already set")
     }
 
     this.worker = new worker.worker()
 
-    this.worker.lastExportedBlock = this.lastProcessedPosition.blockNumber
-    this.worker.lastPrimaryKey = this.lastProcessedPosition.primaryKey
-    await this.worker.init(this.exporter)
+    await this.worker.init(this.exporter, metrics)
+
+    const lastRecoveredPosition = await this.exporter.getLastPosition()
+    // Provide the latest recovered from Zookeeper position to the worker. Receive the actual position to start from.
+    // This moves the logic of what a proper initial position is to the worker.
+    this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition)
+
+    await this.exporter.savePosition(this.lastProcessedPosition)
   }
 
   healthcheckKafka() {
