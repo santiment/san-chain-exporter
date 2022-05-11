@@ -1,4 +1,4 @@
-FROM node:16.5-buster-slim AS builder
+FROM node:18.1.0-buster-slim AS builder
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
@@ -19,7 +19,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --production
 RUN npm cache clean --force
 
-FROM node:16.5-buster-slim
+FROM node:18.1.0-buster-slim
 
 RUN apt-get update; \
     apt-get install -y openssl netcat-openbsd
