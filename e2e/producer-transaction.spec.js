@@ -116,7 +116,7 @@ describe('Producer transactions', function() {
   });
 
   beforeEach(function(done) {
-    this.timeout(5000);
+    this.timeout(20000);
 
     exporter = new Exporter('erc20-producer-transactions-test', true)
     exporter.connect().then(() => {
@@ -135,7 +135,7 @@ describe('Producer transactions', function() {
   });
 
   it('should get 100% deliverability if transaction is commited', async function() {
-    this.timeout(10000);
+    this.timeout(20000);
 
     await testConsumer.waitSubscribed();
 

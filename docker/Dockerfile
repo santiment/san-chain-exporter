@@ -28,9 +28,9 @@ WORKDIR /opt/app
 
 ENV PATH /opt/node_modules/.bin:$PATH
 
-COPY . /opt/app
-
 COPY --from=builder /opt/node_modules /opt/node_modules
+
+COPY . /opt/app
 
 EXPOSE 3000
 
