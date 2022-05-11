@@ -21,13 +21,24 @@ If the health check does not pass you get response code 500 and a message descri
 
 ## Tests
 
-You can run the unit tests with:
+You can run the unit tests in one of the following ways:
 
+1) Without Docker
+You need to have `nodejs` installed locally.
+```bash
+$ npm install
+$ npm test
+```
+
+2) With Docker
 ```bash
 $ ./bin/test.sh
+```
 
 You can run the integration tests with:
+```bash
 $ ./e2e/test.sh
+```
 
 ## Writing exporters
 

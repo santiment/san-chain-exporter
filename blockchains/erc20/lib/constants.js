@@ -10,7 +10,13 @@ const PRIMARY_KEY_MULTIPLIER = 10000
 const CONTRACT_MODES_SUPPORTED = ["vanilla", "extract_exact_overwrite", "extract_all_append"]
 const CONTRACT_MODE = process.env.CONTRACT_MODE || "vanilla"
 const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/"
-const CONTRACT_MAPPING_FILE_PATH = "./contract_mapping/contract_mapping.json"
+
+const CONTRACT_MAPPING_FILE_PATH = (
+    process.env.CONTRACT_MAPPING_FILE_PATH ?
+        "../../../"+process.env.CONTRACT_MAPPING_FILE_PATH :
+        "./contract_mapping/contract_mapping.json"
+)
+
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || "30")
 const USE_TIMESTAMP_MANAGER = parseInt(process.env.USE_TIMESTAMP_MANAGER || "0")
 

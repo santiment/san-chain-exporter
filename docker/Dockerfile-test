@@ -30,10 +30,8 @@ RUN apt-get update; \
 WORKDIR /opt/app
 
 ENV PATH /opt/node_modules/.bin:$PATH
-ENV CONTRACT_MODE "extract_exact_overwrite"
 
 COPY --from=builder /opt/node_modules /opt/node_modules
-COPY test/erc20/contract_mapping/ /opt/app/blockchains/erc20/lib/contract_mapping/
 
 COPY . /opt/app
 
