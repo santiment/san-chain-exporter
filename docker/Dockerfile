@@ -16,7 +16,7 @@ WORKDIR /opt
 
 COPY package.json package-lock.json* ./
 
-RUN npm ci --production
+RUN npm ci --${NODE_ENV}
 RUN npm cache clean --force
 
 FROM node:16.5-buster-slim
