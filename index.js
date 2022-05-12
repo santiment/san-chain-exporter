@@ -44,7 +44,6 @@ class Main {
       // Different workers may store different type of position so this is
       // part of the blockchain specific code.
       this.lastProcessedPosition = this.worker.getLastProcessedPosition()
-      this.worker.fillLastProcessedPosition(this.lastProcessedPosition)
 
       if (events.length > 0) {
         await storeEvents(this.exporter, events)

@@ -35,14 +35,14 @@ function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, met
   });
 }
 
-function sendTrxQuery(trxId, queue) {
+function sendTrxQuery(trxId, queue, metrics) {
   return queue.add(async () => {
     const queryString = {
        txHash: trxId
     };
     const serverUri = SERVER_URL + "tx";
 
-    return await utils.sendRequest(queryString, serverUri);
+    return await utils.sendRequest(queryString, serverUri, metrics);
   });
 }
 
@@ -82,9 +82,9 @@ async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponse
   return true;
 }
 
-async function fetchTransactionWithChildren(queue, parentTrx, subTrxMap) {
+async function fetchTransactionWithChildren(queue, parentTrx, subTrxMap, metrics) {
   // On the first iteration update with the exact number
-  let promiseResult = sendTrxQuery(parentTrx.txHash, queue);
+  let promiseResult = sendTrxQuery(parentTrx.txHash, queue, metrics);
 
   // The API does not seem to have a way to choose the pages in the sub-transactions response.
   // Store only what is returned on the first page.
@@ -144,14 +144,14 @@ async function fetchTransactions(queue, timestampReached, metrics) {
 /**
  * Go over the transactions, and fetch sub transactions for those who have children.
  */
-async function replaceParentTransactionsWithChildren(queue, baseTransactions) {
+async function replaceParentTransactionsWithChildren(queue, baseTransactions, metrics) {
   const responsePromises = [];
   // A map storing parent trx id to an array of children transactions
   let subTrxMap = {}
   // Go over all base transactions and populate above map.
   for (const baseTrx of baseTransactions) {
     if (baseTrx.hasChildren > 0) {
-      responsePromises.push( fetchTransactionWithChildren(queue, baseTrx, subTrxMap) );
+      responsePromises.push( fetchTransactionWithChildren(queue, baseTrx, subTrxMap, metrics) );
     }
   }
 

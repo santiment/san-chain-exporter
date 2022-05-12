@@ -17,6 +17,21 @@ let PQueue = null;
   PQueue = (await import('p-queue')).default;
 })()
 
+class MetricsStore {
+  constructor() {
+    this.count = 0
+  }
+
+  increment() {
+    this.count += 1
+  }
+
+  get() {
+    return this.count
+  }
+}
+
+
 class BNBWorker extends BaseWorker {
   constructor() {
     super();
@@ -27,15 +42,17 @@ class BNBWorker extends BaseWorker {
       intervalCap: MAX_CONNECTION_CONCURRENCY
     });
 
-    this.timestampReached = BNB_CHAIN_START_MSEC
   }
 
-  async init(exporter, metrics) {
-    this.metrics = metrics
+  async init() {
+    this.timestampReached = BNB_CHAIN_START_MSEC
+    this.newRequestsCount = 0
   }
 
   async work() {
-    const fetchResult = await fetch_transactions.fetchTransactions(this.queue, this.timestampReached, this.metrics)
+    const metrics = new MetricsStore()
+    const fetchResult = await fetch_transactions.fetchTransactions(this.queue, this.timestampReached, metrics)
+    this.newRequestsCount += metrics.get()
 
     let resultTransactions = []
     if (true === fetchResult.success) {
@@ -48,16 +65,16 @@ class BNBWorker extends BaseWorker {
           fetchResult.transactions)
         //logger.info(`Storing: ${mergedTransactions.length} transactions to Kafka.`)
         resultTransactions = getTransactionsWithKeys(mergedTransactions)
+
+        this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
+        this.lastPrimaryKey += resultTransactions.length
       }
 
       if (fetchResult.intervalFetchEnd > this.timestampReached) {
         this.timestampReached = fetchResult.intervalFetchEnd;
       }
 
-
       this.lastExportTime = Date.now()
-      this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
-      this.lastPrimaryKey += resultTransactions.length
     }
 
     // The upper limit of the load rate is enforced by p-queue.
@@ -72,9 +89,17 @@ class BNBWorker extends BaseWorker {
     return resultTransactions
   }
 
-  fillLastProcessedPosition(lastProcessedPosition) {
-    lastProcessedPosition.blockNumber = this.lastExportedBlock
-    lastProcessedPosition.timestampReached = this.timestampReached
+  getNewRequestsCount() {
+    const count = this.newRequestsCount
+    this.newRequestsCount = 0
+    return count
+  }
+
+  getLastProcessedPosition() {
+    return {
+      blockNumber: this.lastExportedBlock,
+      timestampReached: this.timestampReached
+    }
   }
 
   /**

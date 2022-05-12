@@ -1,8 +1,9 @@
 "use strict";
 
 const { logger } = require('../../../lib/logger')
-const got = require('got');
-
+const got = require('got')
+const uuidv1 = require('uuid/v1')
+const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
 
 // Hint for ESlint
 /* global SERVER_URL */
@@ -21,10 +22,15 @@ async function readLastBlock(metrics) {
   return sendRequest(queryString, serverUri, metrics);
 }
 
-async function sendRequest(queryString, serverUri, metrics) {
-  metrics.requestsCounter.inc();
+async function sendRequest(query, serverUri, metrics) {
+  metrics.increment();
 
-  return await got.get(serverUri, queryString)
+  const result = await got.get(serverUri, {
+    searchParams: query,
+    resolveBodyOnly: true
+  })
+
+  return JSON.parse(result)
 }
 
 /**
