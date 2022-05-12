@@ -19,6 +19,14 @@ curl http://localhost:3000/healthcheck
 If the health check passes you get response code 200 and response message `ok`.
 If the health check does not pass you get response code 500 and a message describing what failed.
 
+## Log level
+
+You can control the log level during development with the following environment variables:
+
+* `LOG_LEVEL`. Severity of messages that will be produced. Available values are "trace", "debug", "info", "warn", "error", "fatal"
+* `RDKAFKA_DEBUG`. This determines which rdkafka debug contexts will be enabled. The value corresponds to the `debug` configuration value of rdkafka. See https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md for possible values. By default no contexts are enabled.
+
+
 ## Tests
 
 You can run the unit tests in one of the following ways:
