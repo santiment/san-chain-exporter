@@ -1,10 +1,9 @@
 "use strict";
 
 const { logger } = require('../../../lib/logger')
+const constants = require("./constants")
 const got = require('got')
 
-// Hint for ESlint
-/* global SERVER_URL */
 
 /**
  * Not setting 'blockHeight' will return the last block
@@ -16,7 +15,7 @@ async function readLastBlock(metrics) {
     rows: 1
   };
 
-  const serverUri = SERVER_URL + "txs";
+  const serverUri = constants.SERVER_URL + "txs";
   return sendRequest(queryString, serverUri, metrics);
 }
 

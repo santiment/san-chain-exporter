@@ -4,13 +4,6 @@ const utils = require('./utils')
 const constants = require("./constants")
 
 
-global.SERVER_URL = process.env.NODE_URL || "https://explorer.binance.org/api/v1/";
-// Hint for ESlint
-/* global SERVER_URL */
-
-
-
-
 function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) {
   return queue.add(async () => {
     const queryString = {
@@ -19,10 +12,10 @@ function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, met
       startTime: startTimeMsec,
       endTime: endTimeMsec
     };
-    const serverUri = SERVER_URL + "txs";
+    const serverUri = constants.SERVER_URL + "txs"
 
-    return await utils.sendRequest(queryString, serverUri, metrics);
-  });
+    return await utils.sendRequest(queryString, serverUri, metrics)
+  })
 }
 
 function sendTrxQuery(trxId, queue, metrics) {
@@ -30,10 +23,10 @@ function sendTrxQuery(trxId, queue, metrics) {
     const queryString = {
        txHash: trxId
     };
-    const serverUri = SERVER_URL + "tx";
+    const serverUri = constants.SERVER_URL + "tx"
 
-    return await utils.sendRequest(queryString, serverUri, metrics);
-  });
+    return await utils.sendRequest(queryString, serverUri, metrics)
+  })
 }
 
 async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponsePromises, metrics) {

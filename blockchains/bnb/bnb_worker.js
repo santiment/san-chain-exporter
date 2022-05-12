@@ -2,7 +2,6 @@
 "use strict";
 const { logger } = require('../../lib/logger')
 
-//import PQueue from 'p-queue';
 const fetch_transactions = require('./lib/fetch_transactions')
 const {BNBTransactionsFetcher} = require('./lib/bnb_transactions_fetcher')
 const { getTransactionsWithKeys } = require('./lib/edit_transactions')
