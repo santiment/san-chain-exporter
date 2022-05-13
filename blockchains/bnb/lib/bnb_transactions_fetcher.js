@@ -38,7 +38,12 @@ class BNBTransactionsFetcher {
         result: true
       }
     }
-    return {result: false}
+    // Return the potential interval for logging purpose
+    return {
+      intervalFetchStart: potentialNewStart,
+      intervalFetchEnd: potentialNewEnd,
+      result: false
+    }
   }
 
   async tryGetNextIntervalWithNode(metrics) {
@@ -60,6 +65,12 @@ class BNBTransactionsFetcher {
     this.isUpToDateWithBlockchain = ! nextRange.result
     if (!nextRange.result) {
       // Unable to move forward. Blockchain has not progressed.
+      //
+      // TODO: When the exporter has just started (or restart) it tries to work with a huge fetch interval.
+      // We do this for the 'historic' mode where there is less data in the blocks and we fetch a lot at once.
+      // However, this is not optimal for the 'current' mode. It waits for the blockchain to progress only to find out
+      // that the interval has too much data and to reduce it.
+      logger.info(`Waiting for blockchain to reach timestamp ${nextRange.intervalFetchEnd} so we can fetch interval`)
       return []
     }
 
