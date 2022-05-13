@@ -212,7 +212,7 @@ describe('Fees decoder test', function() {
     let web3Wrapper = null
 
     beforeEach(function() {
-      web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+      web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
       web3Wrapper = new Web3Wrapper(web3)
       feesDecoder = new FeesDecoder(web3, web3Wrapper)
     })
