@@ -9,7 +9,7 @@ const PRIMARY_KEY_MULTIPLIER = 10000
 // "extract_all_append" - extract all contracts, also append events with overwritten contract name
 const CONTRACT_MODES_SUPPORTED = ["vanilla", "extract_exact_overwrite", "extract_all_append"]
 const CONTRACT_MODE = process.env.CONTRACT_MODE || "vanilla"
-const PARITY_NODE = process.env.PARITY_URL || "http://localhost:8545/"
+const NODE_URL =  process.env.NODE_URL || process.env.PARITY_URL || "http://localhost:8545/"
 
 const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
@@ -33,7 +33,7 @@ module.exports = {
     CONFIRMATIONS,
     PRIMARY_KEY_MULTIPLIER,
     CONTRACT_MODE,
-    PARITY_NODE,
+    NODE_URL,
     CONTRACT_MAPPING_FILE_PATH,
     LOOP_INTERVAL_CURRENT_MODE_SEC,
     USE_TIMESTAMP_MANAGER

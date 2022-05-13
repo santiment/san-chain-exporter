@@ -4,7 +4,7 @@ const Web3 = require('web3')
 const constants =  require('../../blockchains/eth/lib/constants')
 
 describe('Web3Wrapper tests', function() {
-    const web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+    const web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
     const web3Wrapper = new Web3Wrapper(web3)
 
     it("decode timestamp block", function() {

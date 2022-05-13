@@ -16,15 +16,15 @@ class ETHWorker extends BaseWorker {
   constructor() {
     super()
 
-    logger.info(`Connecting to parity node ${constants.PARITY_NODE}`)
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+    logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`)
+    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
     this.web3Wrapper = new Web3Wrapper(this.web3)
-    this.parityClient = jayson.client.http(constants.PARITY_NODE)
+    this.ethClient = jayson.client.http(constants.NODE_URL)
     this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper)
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
-    return this.parityClient.request('trace_filter', [{
+    return this.ethClient.request('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
     }]).then((data) => {
@@ -43,7 +43,7 @@ class ETHWorker extends BaseWorker {
     const blockRequests = []
     for (let i = fromBlock; i <= toBlock; i++) {
       blockRequests.push(
-        this.parityClient.request(
+        this.ethClient.request(
           'eth_getBlockByNumber',
           [this.web3Wrapper.parseNumberToHex(i), true],
           undefined,
@@ -52,7 +52,7 @@ class ETHWorker extends BaseWorker {
       )
     }
 
-    const responses = await this.parityClient.request(blockRequests);
+    const responses = await this.ethClient.request(blockRequests);
     const result = new Map()
     responses.forEach((response, index) => result.set(fromBlock + index, response.result))
     return result
@@ -62,8 +62,8 @@ class ETHWorker extends BaseWorker {
     const responses = []
 
     for (const blockNumber of blockNumbers) {
-      const req = this.parityClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
-      responses.push(this.parityClient.request([req]))
+      const req = this.ethClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
+      responses.push(this.ethClient.request([req]))
     }
 
     const finishedRequests = await Promise.all(responses)

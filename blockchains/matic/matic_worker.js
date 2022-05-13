@@ -13,10 +13,10 @@ class MaticWorker extends BaseWorker {
   constructor() {
     super()
 
-    logger.info(`Connecting to Polygon node ${constants.PARITY_NODE}`)
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.PARITY_NODE))
+    logger.info(`Connecting to Polygon node ${constants.NODE_URL}`)
+    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
     this.web3Wrapper = new Web3Wrapper(this.web3)
-    this.parityClient = jayson.client.http(constants.PARITY_NODE);
+    this.ethClient = jayson.client.http(constants.NODE_URL);
   }
 
   async work() {

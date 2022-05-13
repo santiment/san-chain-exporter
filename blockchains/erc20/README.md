@@ -4,7 +4,7 @@ A small service that exports all ERC20 Transfer Events from the ethereum blockch
 
 ## Run
 
-You need to have access to a Parity full node. By default in docker-compose `PARITY_URL` points to
+You need to have access to an Ethereum full node. By default in docker-compose `NODE_URL` points to
 the staging instance.
 
 ```bash
@@ -15,7 +15,7 @@ $ ./bin/run_erc20.sh
 
 You can configure the service with the following ENV variables:
 
-* `PARITY_URL` - Parity node url. Default: `http://localhost:8545/`
+* `NODE_URL` - Ethereum node url. Default: `http://localhost:8545/`
 * `START_BLOCK` - the block number from which to begin extracting the events. Default: `-1`
 * `START_PRIMARY_KEY` - the block primary key from which to begin extracting the events. Default: `-1`
 * `BLOCK_INTERVAL` - the number of blocks for which to fetch the events at once. Default: `1000`
