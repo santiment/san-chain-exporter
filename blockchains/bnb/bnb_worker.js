@@ -106,7 +106,8 @@ class BNBWorker extends BaseWorker {
   getLastProcessedPosition() {
     return {
       blockNumber: this.lastExportedBlock,
-      timestampReached: this.bnbTransactionsFetcher.getIntervalFetchEnd()
+      timestampReached: this.bnbTransactionsFetcher.getIntervalFetchEnd(),
+      fetchRangeMsec: this.bnbTransactionsFetcher.getMsecInFetchRange()
     }
   }
 
@@ -116,9 +117,16 @@ class BNBWorker extends BaseWorker {
    * @override
    */
   initPosition(lastProcessedPosition) {
+    let fetchRangeMsec = constants.FETCH_INTERVAL_CURRENT_MODE_MSEC
     if (lastProcessedPosition) {
       logger.info(`Resuming export from position ${JSON.stringify(lastProcessedPosition)}`)
+      // If the last range used is bigger than 'current' mode - use it
+      if (lastProcessedPosition.fetchRangeMsec > constants.FETCH_INTERVAL_CURRENT_MODE_MSEC) {
+        fetchRangeMsec = lastProcessedPosition.fetchRangeMsec
+      }
     } else {
+      // This is a new deploy, we would try the big historic fetch interval
+      fetchRangeMsec = constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC
       lastProcessedPosition = {
         timestampReached : constants.BNB_CHAIN_START_MSEC,
         blockNumber: 0
@@ -126,7 +134,9 @@ class BNBWorker extends BaseWorker {
       logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)
     }
 
-    this.bnbTransactionsFetcher = new BNBTransactionsFetcher(lastProcessedPosition.timestampReached)
+    lastProcessedPosition.fetchRangeMsec = fetchRangeMsec
+
+    this.bnbTransactionsFetcher = new BNBTransactionsFetcher(lastProcessedPosition.timestampReached, fetchRangeMsec)
     this.lastExportedBlock = lastProcessedPosition.blockNumber
 
     return lastProcessedPosition

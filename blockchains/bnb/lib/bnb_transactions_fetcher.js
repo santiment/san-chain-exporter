@@ -9,14 +9,14 @@ const constants = require("./constants")
  * A class wrapping the tools for fetching transactions. It holds as state the position of the last fetch.
  */
 class BNBTransactionsFetcher {
-  constructor(lastIntervalFetchEnd) {
+  constructor(lastIntervalFetchEnd, msecInFetchRange) {
     // The timestamp of the last block produced. Will be reduced with real value.
     this.lastBlockTimestamp = 0
     /**
      * We start by fetching transactions for an hour. This will be dynamically reduced when the transactions
      * number increase.
      */
-    this.msecInFetchRange = constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC
+    this.msecInFetchRange = msecInFetchRange
     this.intervalFetchStart = 0
     this.intervalFetchEnd = lastIntervalFetchEnd
     this.isUpToDateWithBlockchain = false
@@ -24,6 +24,10 @@ class BNBTransactionsFetcher {
 
   getIntervalFetchEnd() {
     return this.intervalFetchEnd
+  }
+
+  getMsecInFetchRange() {
+    return this.msecInFetchRange
   }
 
   // When the exporter catches up with the Node, we need to limit the range of blocks we query
@@ -38,7 +42,12 @@ class BNBTransactionsFetcher {
         result: true
       }
     }
-    return {result: false}
+    // Return the potential interval for logging purpose
+    return {
+      intervalFetchStart: potentialNewStart,
+      intervalFetchEnd: potentialNewEnd,
+      result: false
+    }
   }
 
   async tryGetNextIntervalWithNode(metrics) {
@@ -60,6 +69,7 @@ class BNBTransactionsFetcher {
     this.isUpToDateWithBlockchain = ! nextRange.result
     if (!nextRange.result) {
       // Unable to move forward. Blockchain has not progressed.
+      logger.info(`Waiting for blockchain to reach timestamp ${nextRange.intervalFetchEnd} so we can fetch interval`)
       return []
     }
 
