@@ -6,7 +6,6 @@ const bnb_worker = require("../../blockchains/bnb/bnb_worker")
 
 const END_INTERVAL = 1599699350979
 const BLOCK_HEIGHT = 112581035
-const INTERVAL_RANGE_MSEC = 1000
 /** The transaction summary as it is returned when fetching time intervals. */
 const txWithoutChild1 = {
     "blockHeight": BLOCK_HEIGHT - 1,
@@ -55,13 +54,6 @@ class MockTransactionsFetcher1 {
   getIntervalFetchEnd() {
     return END_INTERVAL
   }
-
-  /**
-   * @override
-   */
-   getMsecInFetchRange() {
-    return INTERVAL_RANGE_MSEC
-  }
 }
 
 describe('workLoopSimpleTest', function() {
@@ -75,11 +67,7 @@ describe('workLoopSimpleTest', function() {
 
     assert.deepEqual(
       lastProcessedPosition,
-      {
-        timestampReached: END_INTERVAL,
-        blockNumber: BLOCK_HEIGHT,
-        fetchRangeMsec: INTERVAL_RANGE_MSEC
-      }
+      { timestampReached: END_INTERVAL, blockNumber: BLOCK_HEIGHT }
     )
 
   })
@@ -138,51 +126,5 @@ describe('workLoopRepeatedTest', function() {
     assert.deepEqual(
       worker.sleepTimeMsec,
       1000 * constants.LOOP_INTERVAL_CURRENT_MODE_SEC)
-  })
-})
-
-describe('checkBNBWorkersSetsInitRange', function() {
-  it("Checking no previous data would set historic", async function() {
-    const worker = new bnb_worker.worker()
-    const lastPosition = worker.initPosition()
-
-    assert.strictEqual(
-      lastPosition.fetchRangeMsec,
-      constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC)
-
-    assert.strictEqual(
-      lastPosition.fetchRangeMsec,
-      worker.bnbTransactionsFetcher.getMsecInFetchRange()
-    )
-  })
-
-  it("Checking small range would be extended to 'current'", async function() {
-    const worker = new bnb_worker.worker()
-    const lastPosition = worker.initPosition({fetchRangeMsec: 1})
-
-    assert.strictEqual(
-      lastPosition.fetchRangeMsec,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC
-    )
-
-    assert.strictEqual(
-      lastPosition.fetchRangeMsec,
-      worker.bnbTransactionsFetcher.getMsecInFetchRange()
-    )
-  })
-
-  it("Checking value bigger than 'current' would be preserved", async function() {
-    const worker = new bnb_worker.worker()
-    const lastPosition = worker.initPosition({fetchRangeMsec: constants.FETCH_INTERVAL_CURRENT_MODE_MSEC + 1})
-
-    assert.strictEqual(
-      lastPosition.fetchRangeMsec,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC + 1
-    )
-
-    assert.strictEqual(
-      lastPosition.fetchRangeMsec,
-      worker.bnbTransactionsFetcher.getMsecInFetchRange()
-    )
   })
 })

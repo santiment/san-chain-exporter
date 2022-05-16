@@ -32,8 +32,7 @@ describe('intervalStartIsNotModified', function() {
   })
 
   it("Checking that the start interval for fetching transactions will not be modified.", async function() {
-    const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(START_TIMESTAMP,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC)
+    const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(START_TIMESTAMP)
 
     // The loop is only triggered here. The result would be saved in by the callback function.
     await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
@@ -43,15 +42,14 @@ describe('intervalStartIsNotModified', function() {
 
   it("Checking that the end will be modified to stay into the present.", async function() {
     const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(
-      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC
+      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC
     )
 
     await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
 
     // Assert that the end interval is about to go into the future before corrections.
     assert(
-      bnbTransactionsFetcher.intervalFetchEnd + bnbTransactionsFetcher.msecInFetchRange >
+      bnbTransactionsFetcher.intervalFetchEnd + constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC >
       bnb_transactions_fetcher.__get__("getLastBlockTimestamp")()
     )
 
@@ -70,8 +68,7 @@ describe('intervalStartIsNotModified', function() {
   async function() {
 
     const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(
-      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC
+      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC
     )
 
     // Provide a start interval which matches the currently possible end interval. This can happen if the
@@ -94,8 +91,7 @@ describe('intervalStartIsNotModified', function() {
   async function() {
 
     const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(
-      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC
+      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC
     )
 
     await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
@@ -118,8 +114,7 @@ describe('intervalStartIsNotModified', function() {
   async function() {
     // Choose a start timestamp such, that only one interval is possible
     const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(
-      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC - constants.FETCH_INTERVAL_CURRENT_MODE_MSEC - 1,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC
+      CURRENT_BLOCK_TIMESTAMP - constants.SAFETY_BLOCK_WAIT_MSEC - constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC - 1
     )
     await bnbTransactionsFetcher.tryFetchTransactionsNextRange()
 
@@ -152,8 +147,7 @@ describe('intervalStartIsNotModified', function() {
       return false;
     })
 
-    const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(START_TIMESTAMP,
-      constants.FETCH_INTERVAL_CURRENT_MODE_MSEC)
+    const bnbTransactionsFetcher = new bnb_transactions_fetcher.BNBTransactionsFetcher(START_TIMESTAMP)
 
     // Assert that the next interval is possible
     const nextInterval = await bnbTransactionsFetcher.tryGetNextIntervalWithNode()
