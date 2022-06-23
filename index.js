@@ -18,6 +18,7 @@ class Main {
   constructor() {
     // To be set depending on which blockchain worker is configured on runtime
     this.worker = null
+    this.shouldWork = true
   }
 
   async init() {
@@ -52,7 +53,12 @@ class Main {
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}`)
 
       const _this = this
-      setTimeout(function() {_this.workLoop()}, _this.worker.sleepTimeMsec)
+      if (this.shouldWork) {
+        setTimeout(function() {_this.workLoop()}, _this.worker.sleepTimeMsec)
+      }
+      else {
+        this.exporter.disconnect()
+      }
     }
     catch(ex) {
       console.error("Error in exporter work loop: ", ex)
@@ -74,6 +80,10 @@ class Main {
     this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition)
     await this.exporter.savePosition(this.lastProcessedPosition)
 
+  }
+
+  stop() {
+    this.shouldWork = false
   }
 
   healthcheckKafka() {
@@ -108,6 +118,10 @@ main.init().then(() => {
 })
 .catch((ex) => {
   console.error("Error initializing exporter: ", ex)
+})
+
+process.on('SIGINT', () => {
+  main.stop()
 })
 
 

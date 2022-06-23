@@ -18,6 +18,20 @@ function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, met
   })
 }
 
+function sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) {
+  return queue.add(async () => {
+    const queryString = {
+      offset: pageIndex * constants.NUM_TRADE_ROWS_FETCH,
+      limit: constants.NUM_TRADE_ROWS_FETCH,
+      start: startTimeMsec,
+      end: endTimeMsec,
+      total: 1
+    }
+
+    return await utils.sendRequest(queryString, constants.SERVER_URL, metrics)
+  })
+}
+
 function sendTrxQuery(trxId, queue, metrics) {
   return queue.add(async () => {
     const queryString = {
@@ -29,21 +43,35 @@ function sendTrxQuery(trxId, queue, metrics) {
   })
 }
 
-async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponsePromises, metrics) {
+function getNumPagesToIterate(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode) {
+  if (typeof firstPageResult === 'undefined' ||
+   (bnbTradesMode && firstPageResult.trade === 'undefined') ||
+   (!bnbTradesMode && firstPageResult.txArray === 'undefined')) {
+      throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec)
+  }
+
+  return bnbTradesMode ?
+  Math.ceil(firstPageResult.total / constants.NUM_TRADE_ROWS_FETCH)
+  :
+  Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL);
+
+}
+
+async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponsePromises, metrics, bnbTradesMode) {
   // On the first iteration update with the exact number
   let pagesToIterate = constants.BNB_API_MAX_PAGE;
-  for (let pageIndex = 1; pageIndex <= pagesToIterate; ++pageIndex) {
-    let promiseResult = sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics);
+  const startPage = bnbTradesMode ? 0 : 1
+  for (let pageIndex = startPage; pageIndex <= pagesToIterate; ++pageIndex) {
+    let promiseResult = bnbTradesMode ?
+    sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics)
+    :
+    sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics)
 
-    if (1 === pageIndex) {
+    if (startPage === pageIndex) {
       // On the first request, check how many pages we would need to get
       const firstPageResult = await promiseResult;
 
-      if (typeof firstPageResult === 'undefined' || firstPageResult.txArray === 'undefined') {
-        throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec);
-      }
-
-      pagesToIterate = Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL);
+      pagesToIterate = getNumPagesToIterate(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode)
 
       let intervalString = `${startTimeMsec}-${endTimeMsec}`
       logger.info(`Interval ${intervalString} has ${pagesToIterate} pages`);
@@ -188,9 +216,29 @@ function filterRepeatedTransactions(listTrx) {
   }
 }
 
+/**
+ * For reasons currently unknown the BNB API returns same results on different pages. Last result from page x may
+ * appear as first result on page x + 1. That is the oldest result on page x may be the newest on page x + 1.
+ * @param {*} listTrx An array of trades to be filtered
+
+ */
+ function filterRepeatedTrade(listTrx) {
+  let index = 1;
+
+  while (index < listTrx.length) {
+    if (listTrx[index].tradeId === listTrx[index - 1].tradeId) {
+      listTrx.splice(index, 1);
+    }
+    else {
+      ++index;
+    }
+  }
+}
+
 
 module.exports = {
   fetchTimeInterval,
   replaceParentTransactionsWithChildren,
-  filterRepeatedTransactions
+  filterRepeatedTransactions,
+  filterRepeatedTrade
 }

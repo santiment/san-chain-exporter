@@ -41,6 +41,13 @@ class BNBWorker extends BaseWorker {
 
     this.newRequestsCount = 0
     this.bnbTransactionsFetcher = null
+
+    if (constants.BNB_MODE != "trades" && constants.BNB_MODE != "transactions") {
+      throw new Error(`BNB mode needs to be either 'transactions' or 'trades' provided is '${constants.BNB_MODE}'`)
+    }
+    this.bnbTradesMode = constants.BNB_MODE == "trades"
+
+    logger.info(`BNBWorker running in '${constants.BNB_MODE}' mode. Node URL is: '${constants.SERVER_URL}'`)
   }
 
   /**
@@ -58,20 +65,29 @@ class BNBWorker extends BaseWorker {
    * @override
    */
   async work() {
-    const metrics = new MetricsStore();
-    let fetchTransactions = await this.bnbTransactionsFetcher.tryFetchTransactionsNextRange(this.queue, metrics);
-    this.newRequestsCount += metrics.get();
+    const metrics = new MetricsStore()
+    let fetchTransactions = await this.bnbTransactionsFetcher.tryFetchTransactionsNextRange(this.queue, metrics)
+    this.newRequestsCount += metrics.get()
 
 
     let resultTransactions = []
     if (fetchTransactions.length > 0) {
-      fetch_transactions.filterRepeatedTransactions(fetchTransactions);
-      // The API returns most recent transactions first. Take block number from the first one.
-      this.lastExportedBlock = fetchTransactions[0].blockHeight;
+      if (this.bnbTradesMode) {
+        fetch_transactions.filterRepeatedTrade(fetchTransactions)
+      }
+      else {
+        fetch_transactions.filterRepeatedTransactions(fetchTransactions)
+      }
 
-      const mergedTransactions = await fetch_transactions.replaceParentTransactionsWithChildren(this.queue,
-        fetchTransactions, metrics)
-      resultTransactions = getTransactionsWithKeys(mergedTransactions)
+      // The API returns most recent transactions first. Take block number from the first one.
+      this.lastExportedBlock = fetchTransactions[0].blockHeight
+
+      if (!this.bnbTradesMode) {
+        fetchTransactions = await fetch_transactions.replaceParentTransactionsWithChildren(this.queue,
+          fetchTransactions, metrics)
+      }
+
+      resultTransactions = getTransactionsWithKeys(fetchTransactions)
 
       this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight
     }
@@ -136,7 +152,8 @@ class BNBWorker extends BaseWorker {
 
     lastProcessedPosition.fetchRangeMsec = fetchRangeMsec
 
-    this.bnbTransactionsFetcher = new BNBTransactionsFetcher(lastProcessedPosition.timestampReached, fetchRangeMsec)
+    this.bnbTransactionsFetcher = new BNBTransactionsFetcher(lastProcessedPosition.timestampReached, fetchRangeMsec,
+      this.bnbTradesMode)
     this.lastExportedBlock = lastProcessedPosition.blockNumber
 
     return lastProcessedPosition

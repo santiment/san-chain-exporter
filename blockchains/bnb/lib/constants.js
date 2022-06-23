@@ -12,7 +12,11 @@ const FETCH_INTERVAL_CURRENT_MODE_MSEC =  parseInt(process.env.FETCH_INTERVAL_HI
 const BNB_API_MAX_PAGE = parseInt(process.env.BNB_API_MAX_PAGE || "100")
 // The maximum number of rows that can be requested according to the BNB API. The value is different depending on the request.
 const MAX_NUM_ROWS_TIME_INTERVAL = 100
+// Similar to the above but for trades
+const NUM_TRADE_ROWS_FETCH = 50
 const SERVER_URL = process.env.NODE_URL || "https://explorer.binance.org/api/v1/"
+// Support two types of BNB extractions, 'transactions' and 'trades'.
+const BNB_MODE = process.env.BNB_MODE || "transactions"
 
 module.exports = {
     MAX_CONNECTION_CONCURRENCY,
@@ -24,5 +28,7 @@ module.exports = {
     FETCH_INTERVAL_CURRENT_MODE_MSEC,
     BNB_API_MAX_PAGE,
     MAX_NUM_ROWS_TIME_INTERVAL,
-    SERVER_URL
+    NUM_TRADE_ROWS_FETCH,
+    SERVER_URL,
+    BNB_MODE
 }
