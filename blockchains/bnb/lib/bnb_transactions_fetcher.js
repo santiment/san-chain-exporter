@@ -1,6 +1,6 @@
 "use strict";
 const { logger } = require('../../../lib/logger')
-const utils = require('./utils')
+const {getLastBlockTimestamp, getLastTradesBlockTimestamp}  = require('./utils')
 const {fetchTimeInterval} = require('./fetch_transactions')
 const constants = require("./constants")
 
@@ -61,9 +61,9 @@ class BNBTransactionsFetcher {
     }
 
     this.lastBlockTimestamp = this.bnbTradesMode ?
-    await utils.getLastTradesBlockTimestamp(metrics)
+    await getLastTradesBlockTimestamp(metrics)
     :
-    await utils.getLastBlockTimestamp(metrics);
+    await getLastBlockTimestamp(metrics);
 
     // Check again if the end interval is possible now
     return this.tryGetNextInterval()
