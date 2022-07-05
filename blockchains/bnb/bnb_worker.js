@@ -3,7 +3,7 @@
 const { logger } = require('../../lib/logger')
 
 const fetch_transactions = require('./lib/fetch_transactions')
-const {BNBTransactionsFetcher} = require('./lib/bnb_transactions_fetcher')
+const { BNBTransactionsFetcher } = require('./lib/bnb_transactions_fetcher')
 const { getTransactionsWithKeys } = require('./lib/edit_transactions')
 const BaseWorker = require("../../lib/worker_base")
 const constants = require("./lib/constants")
@@ -144,7 +144,7 @@ class BNBWorker extends BaseWorker {
       // This is a new deploy, we would try the big historic fetch interval
       fetchRangeMsec = constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC
       lastProcessedPosition = {
-        timestampReached : constants.BNB_CHAIN_START_MSEC,
+        timestampReached: constants.BNB_CHAIN_START_MSEC,
         blockNumber: 0
       }
       logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`)

@@ -35,7 +35,7 @@ function sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, q
 function sendTrxQuery(trxId, queue, metrics) {
   return queue.add(async () => {
     const queryString = {
-       txHash: trxId
+      txHash: trxId
     };
     const serverUri = constants.SERVER_URL + "tx"
 
@@ -45,15 +45,14 @@ function sendTrxQuery(trxId, queue, metrics) {
 
 function getNumPagesToIterate(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode) {
   if (typeof firstPageResult === 'undefined' ||
-   (bnbTradesMode && firstPageResult.trade === 'undefined') ||
-   (!bnbTradesMode && firstPageResult.txArray === 'undefined')) {
-      throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec)
+    (bnbTradesMode && firstPageResult.trade === 'undefined') ||
+    (!bnbTradesMode && firstPageResult.txArray === 'undefined')) {
+    throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec)
   }
 
   return bnbTradesMode ?
-  Math.ceil(firstPageResult.total / constants.NUM_TRADE_ROWS_FETCH)
-  :
-  Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL);
+    Math.ceil(firstPageResult.total / constants.NUM_TRADE_ROWS_FETCH) :
+    Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL)
 
 }
 
@@ -63,9 +62,8 @@ async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponse
   const startPage = bnbTradesMode ? 0 : 1
   for (let pageIndex = startPage; pageIndex <= pagesToIterate; ++pageIndex) {
     let promiseResult = bnbTradesMode ?
-    sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics)
-    :
-    sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics)
+      sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) :
+      sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics)
 
     if (startPage === pageIndex) {
       // On the first request, check how many pages we would need to get
@@ -102,7 +100,7 @@ async function fetchTransactionWithChildren(queue, parentTrx, subTrxMap, metrics
   // https://docs.binance.org/api-swagger/index.html#api-Tx-getTransaction
   const trxResult = await promiseResult;
   const correctedSubTrx = [];
-  for(let subTrx of trxResult.subTxsDto.subTxDtoList) {
+  for (let subTrx of trxResult.subTxsDto.subTxDtoList) {
     correctedSubTrx.push(correctSubTrxFormat(subTrx, parentTrx));
   }
 
@@ -118,7 +116,7 @@ async function replaceParentTransactionsWithChildren(queue, baseTransactions, me
   // Go over all base transactions and populate above map.
   for (const baseTrx of baseTransactions) {
     if (baseTrx.hasChildren > 0) {
-      responsePromises.push( fetchTransactionWithChildren(queue, baseTrx, subTrxMap, metrics) );
+      responsePromises.push(fetchTransactionWithChildren(queue, baseTrx, subTrxMap, metrics));
     }
   }
 
@@ -186,9 +184,17 @@ function correctSubTrxFormat(childTrx, parentTrx) {
 
 /**
  * For what appears as a bug, the BNB API returns same results on different pages.
+ *
+ * Example: The following query returns two repeating transactions:
+ * curl 'https://explorer.bnbchain.org/api/v1/txs?startTime=1657028600029&endTime=1657028689649&page=6&rows=100'
+ * and
+ * curl 'https://explorer.bnbchain.org/api/v1/txs?startTime=1657028600029&endTime=1657028689649&page=7&rows=100'
+ * would return the transactions:
+ * "9415045541E182F508ED9D397F60621600DB594A43139FEE94BA99E20F11D832" and
+ * "9373C96652A81CA777C4623D4C5205A070CFC89C7067DC8AB0B0C4F6BD098168" on both
+ * page 6 and page 7.
+ *
  * @param {*} listTrx An array of transactions to be filtered
- * @param {*} hashGetter A function which returns the hash for an element
- * @param {*} heightGetter A function which returns the block height for an element
  */
 function filterRepeatedTransactions(listTrx) {
   const hashesCurrentBlock = new Set();
@@ -222,7 +228,7 @@ function filterRepeatedTransactions(listTrx) {
  * @param {*} listTrx An array of trades to be filtered
 
  */
- function filterRepeatedTrade(listTrx) {
+function filterRepeatedTrade(listTrx) {
   let index = 1;
 
   while (index < listTrx.length) {

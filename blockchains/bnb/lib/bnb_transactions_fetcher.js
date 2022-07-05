@@ -1,7 +1,7 @@
 "use strict";
 const { logger } = require('../../../lib/logger')
-const {getLastBlockTimestamp, getLastTradesBlockTimestamp}  = require('./utils')
-const {fetchTimeInterval} = require('./fetch_transactions')
+const { getLastBlockTimestamp, getLastTradesBlockTimestamp } = require('./utils')
+const { fetchTimeInterval } = require('./fetch_transactions')
 const constants = require("./constants")
 
 
@@ -61,9 +61,8 @@ class BNBTransactionsFetcher {
     }
 
     this.lastBlockTimestamp = this.bnbTradesMode ?
-    await getLastTradesBlockTimestamp(metrics)
-    :
-    await getLastBlockTimestamp(metrics);
+      await getLastTradesBlockTimestamp(metrics) :
+      await getLastBlockTimestamp(metrics);
 
     // Check again if the end interval is possible now
     return this.tryGetNextInterval()
@@ -71,7 +70,7 @@ class BNBTransactionsFetcher {
 
   async tryFetchTransactionsNextRange(queue, metrics) {
     const nextRange = await this.tryGetNextIntervalWithNode(metrics)
-    this.isUpToDateWithBlockchain = ! nextRange.result
+    this.isUpToDateWithBlockchain = !nextRange.result
     if (!nextRange.result) {
       // Unable to move forward. Blockchain has not progressed.
       logger.info(`Waiting for blockchain to reach timestamp ${nextRange.intervalFetchEnd} so we can fetch interval`)

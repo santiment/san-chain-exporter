@@ -9,19 +9,19 @@ const BLOCK_HEIGHT = 112581035
 const INTERVAL_RANGE_MSEC = 1000
 /** The transaction summary as it is returned when fetching time intervals. */
 const txWithoutChild1 = {
-    "blockHeight": BLOCK_HEIGHT - 1,
-    "code": 0,
-    "confirmBlocks": 0,
-    "fromAddr": "bnb1lm7kn7e3uq6sev04qnqayhrl6g0s4gyms5753g",
-    "hasChildren": 0,
-    "log": "Msg 0: ",
-    "memo": "",
-    "source": 0,
-    "timeStamp": 1599699350972,
-    "txAge": 392571,
-    "txFee": 0.0,
-    "txHash": "DD766B5578FF55F069C600115B5344DA29513271022D24B86F72B8360C0650C3",
-    "txType": "CANCEL_ORDER"
+  "blockHeight": BLOCK_HEIGHT - 1,
+  "code": 0,
+  "confirmBlocks": 0,
+  "fromAddr": "bnb1lm7kn7e3uq6sev04qnqayhrl6g0s4gyms5753g",
+  "hasChildren": 0,
+  "log": "Msg 0: ",
+  "memo": "",
+  "source": 0,
+  "timeStamp": 1599699350972,
+  "txAge": 392571,
+  "txFee": 0.0,
+  "txHash": "DD766B5578FF55F069C600115B5344DA29513271022D24B86F72B8360C0650C3",
+  "txType": "CANCEL_ORDER"
 }
 
 const txWithoutChild2 = {
@@ -59,13 +59,13 @@ class MockTransactionsFetcher1 {
   /**
    * @override
    */
-   getMsecInFetchRange() {
+  getMsecInFetchRange() {
     return INTERVAL_RANGE_MSEC
   }
 }
 
-describe('workLoopSimpleTest', function() {
-  it("Checking that position is being updated", async function() {
+describe('workLoopSimpleTest', function () {
+  it("Checking that position is being updated", async function () {
     const worker = new bnb_worker.worker()
     worker.init()
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher1()
@@ -84,7 +84,7 @@ describe('workLoopSimpleTest', function() {
 
   })
 
-  it("Checking that two transactions without children are passing through the work loop without modifications", async function() {
+  it("Checking that two transactions without children are passing through the work loop without modifications", async function () {
     const worker = new bnb_worker.worker()
     worker.init()
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher1()
@@ -102,8 +102,8 @@ class MockTransactionsFetcher2 {
     return [txWithoutChild2, txWithoutChild1, txWithoutChild1]
   }
 }
-describe('workLoopRepeatedTest', function() {
-  it("Checking that a repeated transaction would be removed", async function() {
+describe('workLoopRepeatedTest', function () {
+  it("Checking that a repeated transaction would be removed", async function () {
     const worker = new bnb_worker.worker()
     worker.init()
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher2()
@@ -127,8 +127,8 @@ class MockTransactionsFetcher3 {
   }
 }
 
-describe('workLoopRepeatedTest', function() {
-  it("Checking that correct sleep timeout is set", async function() {
+describe('workLoopRepeatedTest', function () {
+  it("Checking that correct sleep timeout is set", async function () {
     const worker = new bnb_worker.worker()
     worker.init()
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher3()
@@ -141,8 +141,8 @@ describe('workLoopRepeatedTest', function() {
   })
 })
 
-describe('checkBNBWorkersSetsInitRange', function() {
-  it("Checking no previous data would set historic", async function() {
+describe('checkBNBWorkersSetsInitRange', function () {
+  it("Checking no previous data would set historic", async function () {
     const worker = new bnb_worker.worker()
     const lastPosition = worker.initPosition()
 
@@ -156,9 +156,9 @@ describe('checkBNBWorkersSetsInitRange', function() {
     )
   })
 
-  it("Checking small range would be extended to 'current'", async function() {
+  it("Checking small range would be extended to 'current'", async function () {
     const worker = new bnb_worker.worker()
-    const lastPosition = worker.initPosition({fetchRangeMsec: 1})
+    const lastPosition = worker.initPosition({ fetchRangeMsec: 1 })
 
     assert.strictEqual(
       lastPosition.fetchRangeMsec,
@@ -171,9 +171,9 @@ describe('checkBNBWorkersSetsInitRange', function() {
     )
   })
 
-  it("Checking value bigger than 'current' would be preserved", async function() {
+  it("Checking value bigger than 'current' would be preserved", async function () {
     const worker = new bnb_worker.worker()
-    const lastPosition = worker.initPosition({fetchRangeMsec: constants.FETCH_INTERVAL_CURRENT_MODE_MSEC + 1})
+    const lastPosition = worker.initPosition({ fetchRangeMsec: constants.FETCH_INTERVAL_CURRENT_MODE_MSEC + 1 })
 
     assert.strictEqual(
       lastPosition.fetchRangeMsec,

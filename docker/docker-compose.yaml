@@ -52,8 +52,6 @@ services:
       # usually 172.17.0.1
       CARDANO_GRAPHQL_URL: http://172.17.0.1:3100/graphql
       BNB_CHAIN_START_MSEC: 1595549200002
-      RECEIPTS_API_METHOD: "eth_getBlockReceipts"
-      BNB_MODE: ${BNB_MODE:-transactions}
     ports:
       # port for checking health.
       - "127.0.0.1:3000:3000"
