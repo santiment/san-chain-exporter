@@ -43,13 +43,15 @@ function sendTrxQuery(trxId, queue, metrics) {
   })
 }
 
-function getNumPagesToIterate(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode) {
+function assertNumPagesCorrectness(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode) {
   if (typeof firstPageResult === 'undefined' ||
     (bnbTradesMode && firstPageResult.trade === 'undefined') ||
     (!bnbTradesMode && firstPageResult.txArray === 'undefined')) {
     throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec)
   }
+}
 
+function getNumPagesToIterate(firstPageResult, bnbTradesMode) {
   return bnbTradesMode ?
     Math.ceil(firstPageResult.total / constants.NUM_TRADE_ROWS_FETCH) :
     Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL)
@@ -69,7 +71,8 @@ async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponse
       // On the first request, check how many pages we would need to get
       const firstPageResult = await promiseResult;
 
-      pagesToIterate = getNumPagesToIterate(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode)
+      assertNumPagesCorrectness(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode)
+      pagesToIterate = getNumPagesToIterate(firstPageResult, bnbTradesMode)
 
       let intervalString = `${startTimeMsec}-${endTimeMsec}`
       logger.info(`Interval ${intervalString} has ${pagesToIterate} pages`);
