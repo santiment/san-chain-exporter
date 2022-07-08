@@ -1,7 +1,7 @@
 "use strict";
 const { logger } = require('../../../lib/logger')
-const {getLastBlockTimestamp} = require('./utils')
-const {fetchTimeInterval} = require('./fetch_transactions')
+const { getLastBlockTimestamp, getLastTradesBlockTimestamp } = require('./utils')
+const { fetchTimeInterval } = require('./fetch_transactions')
 const constants = require("./constants")
 
 
@@ -9,7 +9,7 @@ const constants = require("./constants")
  * A class wrapping the tools for fetching transactions. It holds as state the position of the last fetch.
  */
 class BNBTransactionsFetcher {
-  constructor(lastIntervalFetchEnd, msecInFetchRange) {
+  constructor(lastIntervalFetchEnd, msecInFetchRange, bnbTradesMode = false) {
     // The timestamp of the last block produced. Will be reduced with real value.
     this.lastBlockTimestamp = 0
     /**
@@ -20,6 +20,7 @@ class BNBTransactionsFetcher {
     this.intervalFetchStart = 0
     this.intervalFetchEnd = lastIntervalFetchEnd
     this.isUpToDateWithBlockchain = false
+    this.bnbTradesMode = bnbTradesMode
   }
 
   getIntervalFetchEnd() {
@@ -59,14 +60,17 @@ class BNBTransactionsFetcher {
       return nextRange
     }
 
-    this.lastBlockTimestamp = await getLastBlockTimestamp(metrics);
+    this.lastBlockTimestamp = this.bnbTradesMode ?
+      await getLastTradesBlockTimestamp(metrics) :
+      await getLastBlockTimestamp(metrics);
+
     // Check again if the end interval is possible now
     return this.tryGetNextInterval()
   }
 
   async tryFetchTransactionsNextRange(queue, metrics) {
     const nextRange = await this.tryGetNextIntervalWithNode(metrics)
-    this.isUpToDateWithBlockchain = ! nextRange.result
+    this.isUpToDateWithBlockchain = !nextRange.result
     if (!nextRange.result) {
       // Unable to move forward. Blockchain has not progressed.
       logger.info(`Waiting for blockchain to reach timestamp ${nextRange.intervalFetchEnd} so we can fetch interval`)
@@ -77,7 +81,7 @@ class BNBTransactionsFetcher {
     logger.info(`Fetching transactions for time interval: ${nextRange.intervalFetchStart}-\
 ${nextRange.intervalFetchEnd}`);
     const fetchScheduleSuccess = await fetchTimeInterval(queue, nextRange.intervalFetchStart,
-      nextRange.intervalFetchEnd, nodeResponsePromises, metrics);
+      nextRange.intervalFetchEnd, nodeResponsePromises, metrics, this.bnbTradesMode)
 
     if (!fetchScheduleSuccess) {
       logger.info(`Can not fetch time interval. Reducing interval size from ${this.msecInFetchRange} msec to \
@@ -93,12 +97,18 @@ ${Math.floor(this.msecInFetchRange / 2)} msec`)
 ${nodeResponsePromises.length - 1} requests.`)
       const blockResults = await Promise.all(nodeResponsePromises);
       for (let blockResultsIndex = 0; blockResultsIndex < blockResults.length; ++blockResultsIndex) {
-        trxResults.push(...blockResults[blockResultsIndex].txArray);
+        if (this.bnbTradesMode) {
+          trxResults.push(...blockResults[blockResultsIndex].trade)
+        }
+        else {
+          trxResults.push(...blockResults[blockResultsIndex].txArray)
+        }
       }
+
       logger.info(`${trxResults.length} transactions fetched.`)
     }
     catch (exception) {
-      logger.error(exception);
+      logger.error(exception.message);
       return []
     }
 
