@@ -189,6 +189,7 @@ class CardanoWorker extends BaseWorker {
       const fromBlock = this.lastExportedBlock + 1
       transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock)
       if (transactions.length == 0) {
+        this.lastExportedBlock = this.lastConfirmedBlock
         return []
       }
     }
