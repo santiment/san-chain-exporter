@@ -111,13 +111,14 @@ class CardanoWorker extends BaseWorker {
   }
 
   async getTransactions(blockNumber, lastConfirmedBlock) {
+    logger.info(`Getting transactions for interval ${blockNumber} - ${lastConfirmedBlock}`)
     const response = await this.sendRequest(`
     {
       transactions(
         where: {
           block: { epoch: { number: { _is_null: false } } }
           _and: [{ block: { number: { _gte: ${blockNumber} } } },
-                 { block: { number: { _lt: ${lastConfirmedBlock} } } }]
+                 { block: { number: { _lte: ${lastConfirmedBlock} } } }]
         }
         order_by: { includedAt: asc }
       ) {
@@ -188,6 +189,7 @@ class CardanoWorker extends BaseWorker {
       const fromBlock = this.lastExportedBlock + 1
       transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock)
       if (transactions.length == 0) {
+        this.lastExportedBlock = this.lastConfirmedBlock
         return []
       }
     }
