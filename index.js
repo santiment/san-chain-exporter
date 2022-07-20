@@ -54,13 +54,13 @@ class Main {
 
       const _this = this
       if (this.shouldWork) {
-        setTimeout(function() {_this.workLoop()}, _this.worker.sleepTimeMsec)
+        setTimeout(function () { _this.workLoop() }, _this.worker.sleepTimeMsec)
       }
       else {
         this.exporter.disconnect()
       }
     }
-    catch(ex) {
+    catch (ex) {
       console.error("Error in exporter work loop: ", ex)
       throw ex
     }
@@ -99,7 +99,7 @@ class Main {
     const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS
     if (isExportTimeoutExceeded) {
       const errorMessage = `Time from the last export ${timeFromLastExport}ms exceeded limit ` +
-        `${constants.EXPORT_TIMEOUT_MLS}ms.`
+        `${constants.EXPORT_TIMEOUT_MLS}ms. Node last block is ${this.worker.lastConfirmedBlock}.`
       return Promise.reject(errorMessage)
     } else {
       return Promise.resolve()
@@ -108,7 +108,7 @@ class Main {
 
   healthcheck() {
     return this.healthcheckKafka()
-    .then(() => this.healthcheckExportTimeout())
+      .then(() => this.healthcheckExportTimeout())
   }
 }
 
@@ -116,9 +116,9 @@ const main = new Main()
 main.init().then(() => {
   main.workLoop()
 })
-.catch((ex) => {
-  console.error("Error initializing exporter: ", ex)
-})
+  .catch((ex) => {
+    console.error("Error initializing exporter: ", ex)
+  })
 
 process.on('SIGINT', () => {
   main.stop()
@@ -131,11 +131,11 @@ module.exports = async (request, response) => {
   switch (req.pathname) {
     case '/healthcheck':
       return main.healthcheck()
-          .then(() => send(response, 200, "ok"))
-          .catch((err) => {
-            logger.error(`Healthcheck failed: ${err.toString()}`)
-            send(response, 500, err.toString())
-          })
+        .then(() => send(response, 200, "ok"))
+        .catch((err) => {
+          logger.error(`Healthcheck failed: ${err.toString()}`)
+          send(response, 500, err.toString())
+        })
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
       return send(response, 200, await metrics.register.metrics())
