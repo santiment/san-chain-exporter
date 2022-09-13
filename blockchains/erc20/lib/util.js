@@ -7,7 +7,7 @@ function stableSort(array, sortFunc) {
 
   array.sort(function(a,b){
     let sortResult = sortFunc(a,b);
-    if(sortResult != 0) {
+    if (sortResult !== 0) {
       return sortResult;
     }
     else {
@@ -19,5 +19,6 @@ function stableSort(array, sortFunc) {
 }
 
 module.exports = {
-  decodeAddress, stableSort
+  decodeAddress,
+  stableSort
 };

@@ -1,18 +1,18 @@
 /* jslint es6 */
-"use strict";
+'use strict';
 const got = require('got');
-const uuidv1 = require('uuid/v1')
-const BaseWorker = require("../../lib/worker_base")
-const constants = require("./lib/constants")
-const util = require("./lib/util")
-const { logger } = require('../../lib/logger')
+const uuidv1 = require('uuid/v1');
+const BaseWorker = require('../../lib/worker_base');
+const constants = require('./lib/constants');
+const util = require('./lib/util');
+const { logger } = require('../../lib/logger');
 
-const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || "http://localhost:3100/graphql"
-const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || "30000")
+const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || 'http://localhost:3100/graphql';
+const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
 
 class CardanoWorker extends BaseWorker {
   constructor() {
-    super()
+    super();
   }
 
   async sendRequest(query) {
@@ -25,20 +25,20 @@ class CardanoWorker extends BaseWorker {
         },
         responseType: 'json',
         timeout: DEFAULT_TIMEOUT_MSEC
-      }).json()
+      }).json();
     }
     catch (error) {
-      throw new Error(`Error sending request to Cardano GraphQL: ${error.message}`)
+      throw new Error(`Error sending request to Cardano GraphQL: ${error.message}`);
     }
   }
 
   async getCurrentBlock() {
-    const response = await this.sendRequest(`{ cardano { tip { number } } }`)
+    const response = await this.sendRequest('{ cardano { tip { number } } }');
 
     if (response.data === null) {
-      throw new Error('Error getting Cardano current block number')
+      throw new Error('Error getting Cardano current block number');
     }
-    return response.data.cardano.tip.number
+    return response.data.cardano.tip.number;
   }
 
   async getGenesisTransactionsPage(offset) {
@@ -73,45 +73,45 @@ class CardanoWorker extends BaseWorker {
           }
         }
       }
-    `)
+    `);
 
     if (response.data === null) {
-      throw new Error(`Error getting transactions for genesis block offset: ${offset} limit: ${limit}`)
+      throw new Error(`Error getting transactions for genesis block offset: ${offset}`);
     }
 
     return response.data.transactions;
   }
 
   async getGenesisTransactions() {
-    let current_offset = 0
-    const transactionsMerged = []
-    let transactionsBatch = []
+    let current_offset = 0;
+    const transactionsMerged = [];
+    let transactionsBatch = [];
 
     do {
-      transactionsBatch = await this.getGenesisTransactionsPage(current_offset)
-      transactionsMerged.push(...transactionsBatch)
-      current_offset += transactionsBatch.length
+      transactionsBatch = await this.getGenesisTransactionsPage(current_offset);
+      transactionsMerged.push(...transactionsBatch);
+      current_offset += transactionsBatch.length;
     }
-    while (transactionsBatch.length > 0)
+    while (transactionsBatch.length > 0);
 
-    logger.info(`Extracted ${transactionsMerged.length} genesis transactions`)
-    return transactionsMerged
+    logger.info(`Extracted ${transactionsMerged.length} genesis transactions`);
+    return transactionsMerged;
   }
 
   // Genesis transfers have block number set to 'null'. For our computation purposes we need some block number.
   // We set it to 0.
   setBlockZeroForGenesisTransfers(transactions) {
     transactions.forEach(transaction => {
-      if (transaction.block.number != null) {
+      if (transaction.block.number) {
         throw new Error(`Unexpected block number ${transaction.block.number} for genesis transaction
-        ${transaction.hash}`)
+        ${transaction.hash}`);
       }
-      transaction.block.number = 0
-    })
+      transaction.block.number = 0;
+    });
   }
 
   async getTransactions(blockNumber, lastConfirmedBlock) {
-    logger.info(`Getting transactions for interval ${blockNumber} - ${lastConfirmedBlock}`)
+    logger.info(`Getting transactions for interval ${blockNumber} - ${lastConfirmedBlock}`);
     const response = await this.sendRequest(`
     {
       transactions(
@@ -144,17 +144,17 @@ class CardanoWorker extends BaseWorker {
         }
 
       }
-    }`)
+    }`);
 
     if (response.data === null) {
-      throw new Error(`Error getting transactions for current block number ${blockNumber}`)
+      throw new Error(`Error getting transactions for current block number ${blockNumber}`);
     }
 
     return response.data.transactions;
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS
+    this.lastConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
   }
 
   async work() {
@@ -165,47 +165,47 @@ class CardanoWorker extends BaseWorker {
 
       // On the previous cycle we closed the gap to the head of the blockchain.
       // Check if there are new blocks now.
-      const newConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS
-      if (newConfirmedBlock == this.lastConfirmedBlock) {
+      const newConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
+      if (newConfirmedBlock === this.lastConfirmedBlock) {
         // The Node has not progressed
-        return []
+        return [];
       }
-      this.lastConfirmedBlock = newConfirmedBlock
+      this.lastConfirmedBlock = newConfirmedBlock;
     }
     else {
       // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
-      this.sleepTimeMsec = 0
+      this.sleepTimeMsec = 0;
     }
 
-    let transactions = null
+    let transactions = null;
     if (this.lastExportedBlock < 0) {
       transactions = await this.getGenesisTransactions();
-      if (transactions.length == 0) {
-        throw new Error('Error getting Cardano genesis transactions')
+      if (transactions.length === 0) {
+        throw new Error('Error getting Cardano genesis transactions');
       }
-      this.setBlockZeroForGenesisTransfers(transactions)
+      this.setBlockZeroForGenesisTransfers(transactions);
     }
     else {
-      const fromBlock = this.lastExportedBlock + 1
-      transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock)
-      if (transactions.length == 0) {
-        this.lastExportedBlock = this.lastConfirmedBlock
-        return []
+      const fromBlock = this.lastExportedBlock + 1;
+      transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
+      if (transactions.length === 0) {
+        this.lastExportedBlock = this.lastConfirmedBlock;
+        return [];
       }
     }
 
-    transactions = util.discardNotCompletedBlock(transactions)
-    util.verifyAllBlocksComplete(transactions)
+    transactions = util.discardNotCompletedBlock(transactions);
+    util.verifyAllBlocksComplete(transactions);
 
     for (let i = 0; i < transactions.length; i++) {
-      transactions[i].primaryKey = this.lastPrimaryKey + i + 1
+      transactions[i].primaryKey = this.lastPrimaryKey + i + 1;
     }
 
-    this.lastExportTime = Date.now()
-    this.lastExportedBlock = transactions[transactions.length - 1].block.number
-    this.lastPrimaryKey += transactions.length
+    this.lastExportTime = Date.now();
+    this.lastExportedBlock = transactions[transactions.length - 1].block.number;
+    this.lastPrimaryKey += transactions.length;
 
-    return transactions
+    return transactions;
   }
 }
 
@@ -213,6 +213,4 @@ class CardanoWorker extends BaseWorker {
 
 module.exports = {
   worker: CardanoWorker
-}
-
-
+};

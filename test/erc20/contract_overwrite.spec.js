@@ -1,16 +1,16 @@
 /*jshint esversion: 6 */
-const assert = require("assert")
-const rewire = require('rewire')
-const Web3 = require('web3')
+const assert = require('assert');
+const rewire = require('rewire');
+const Web3 = require('web3');
 
-const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
-const {contractEditor} = require("../../blockchains/erc20/lib/contract_overwrite")
-const contract_overwrite = rewire("../../blockchains/erc20/lib/contract_overwrite")
-const web3 = new Web3()
+const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
+const {contractEditor} = require('../../blockchains/erc20/lib/contract_overwrite');
+const contract_overwrite = rewire('../../blockchains/erc20/lib/contract_overwrite');
+const web3 = new Web3();
 
-const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f'
-const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f'
-const SNXContractReplacer = 'snx_contract'
+const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f';
+const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f';
+const SNXContractReplacer = 'snx_contract';
 
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -29,7 +29,7 @@ const rawEventNotSNX = {
   transactionLogIndex: '0x0',
   type: 'mined',
   id: 'log_5bc3b124'
-}
+};
 
 const rawEventSNXLegacy = {
   address: SNXContractLegacy,
@@ -48,7 +48,7 @@ const rawEventSNXLegacy = {
   transactionLogIndex: '0x0',
   type: 'mined',
   id: 'log_d2b36f7f'
-}
+};
 
 const rawEventSNXNew = {
   address: SNXContractNew,
@@ -67,109 +67,109 @@ const rawEventSNXNew = {
   transactionLogIndex: '0x0',
   type: 'mined',
   id: 'log_b1dfdac6'
-}
+};
 
 const decodedEventNotSNX = {
-  "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-  "blockNumber": 10449812,
-  "timestamp": 0,
-  "transactionHash": "0x0bdd08bd9af129373d2b8011775d3d8b0588e30f45b0f3c1b7d85d689d05c42b",
-  "logIndex": 122,
-  "to": "0xd49e06c1ed4925af893a503bfcb9cff947e7679e",
-  "from": "0x5a5d5d0cde67e18f00e5d08ad7890858a6ee62bc",
-  "value": 103000000,
-  "valueExactBase36": "1pbnb4"
-}
+  'contract': '0xdac17f958d2ee523a2206206994597c13d831ec7',
+  'blockNumber': 10449812,
+  'timestamp': 0,
+  'transactionHash': '0x0bdd08bd9af129373d2b8011775d3d8b0588e30f45b0f3c1b7d85d689d05c42b',
+  'logIndex': 122,
+  'to': '0xd49e06c1ed4925af893a503bfcb9cff947e7679e',
+  'from': '0x5a5d5d0cde67e18f00e5d08ad7890858a6ee62bc',
+  'value': 103000000,
+  'valueExactBase36': '1pbnb4'
+};
 
 const decodedEventSNXLegacy = {
-  "contract": SNXContractLegacy,
-  "blockNumber": 9785855,
-  "timestamp": 0,
-  "transactionHash": "0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030",
-  "logIndex": 70,
-  "to": "0xe5379a734c4e6d505634ddefc3f9d0ff8d7bb171",
-  "from": "0x20312e96b1a0568ac31c6630844a962383cc66c2",
-  "value": 103604731090000000000,
-  "valueExactBase36": "lv51o1db8270g"
-}
+  'contract': SNXContractLegacy,
+  'blockNumber': 9785855,
+  'timestamp': 0,
+  'transactionHash': '0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030',
+  'logIndex': 70,
+  'to': '0xe5379a734c4e6d505634ddefc3f9d0ff8d7bb171',
+  'from': '0x20312e96b1a0568ac31c6630844a962383cc66c2',
+  'value': 103604731090000000000,
+  'valueExactBase36': 'lv51o1db8270g'
+};
 
-const correctedEventSNXLegacy = JSON.parse(JSON.stringify(decodedEventSNXLegacy))
-correctedEventSNXLegacy.contract = SNXContractReplacer
+const correctedEventSNXLegacy = JSON.parse(JSON.stringify(decodedEventSNXLegacy));
+correctedEventSNXLegacy.contract = SNXContractReplacer;
 
 const decodedEventSNXNew = {
-  "contract": SNXContractNew,
-  "blockNumber": 10449853,
-  "timestamp": 0,
-  "transactionHash": "0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb",
-  "logIndex": 158,
-  "to": "0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be",
-  "from": "0xea5f6f8167a60f671cc02b074b6ac581153472c9",
-  "value": 1.81e+21,
-  "valueExactBase36": "alzj4rdbzkcq9s"
-}
+  'contract': SNXContractNew,
+  'blockNumber': 10449853,
+  'timestamp': 0,
+  'transactionHash': '0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb',
+  'logIndex': 158,
+  'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
+  'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
+  'value': 1.81e+21,
+  'valueExactBase36': 'alzj4rdbzkcq9s'
+};
 
-const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew))
-correctedEventSNXNew.contract = SNXContractReplacer
+const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew));
+correctedEventSNXNew.contract = SNXContractReplacer;
 
-fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
-  return 0
-})
+fetch_events.__set__('getBlockTimestamp', async function (web3, blockNumber) {
+  return 0;
+});
 
 describe('contract manipulations', function() {
-  it("decode contract addresses", async function() {
-    const decodeEvents = fetch_events.__get__('decodeEvents')
+  it('decode contract addresses', async function() {
+    const decodeEvents = fetch_events.__get__('decodeEvents');
     const decodedEvents = await decodeEvents(web3,
         [rawEventNotSNX,
           rawEventSNXLegacy,
           rawEventSNXNew
-        ])
+        ]);
 
     assert.deepStrictEqual(
       decodedEvents,
         [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
-    )
-  })
+    );
+  });
 
-  it("change contract addresses deep copy", async function() {
-    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
-    const editedEvents = contractEditor.extractChangedContractAddresses(inputEvents)
+  it('change contract addresses deep copy', async function() {
+    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
+    const editedEvents = contractEditor.extractChangedContractAddresses(inputEvents);
 
     assert.deepStrictEqual(
         editedEvents,
         [correctedEventSNXLegacy, correctedEventSNXNew]
-    )
-  })
+    );
+  });
 
-  it("change contract addresses shallow copy", async function() {
-    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
-    contractEditor.changeContractAddresses(inputEvents)
+  it('change contract addresses shallow copy', async function() {
+    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
+    contractEditor.changeContractAddresses(inputEvents);
 
     assert.deepStrictEqual(
         inputEvents,
         [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
-    )
-  })
+    );
+  });
 
-  it("input events are not modified on contract edit and deep copy", async function() {
-    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
-    const inputEventsCopy = JSON.stringify(inputEvents)
-    contractEditor.extractChangedContractAddresses(inputEvents)
+  it('input events are not modified on contract edit and deep copy', async function() {
+    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
+    const inputEventsCopy = JSON.stringify(inputEvents);
+    contractEditor.extractChangedContractAddresses(inputEvents);
 
     // Test that input has not been modified in any way. We use JSON.stringify again to build same JSON structure.
-    assert.deepStrictEqual(JSON.stringify(inputEvents), inputEventsCopy)
-  })
+    assert.deepStrictEqual(JSON.stringify(inputEvents), inputEventsCopy);
+  });
 
-  it("test getPastEventsExactContracts correctly concatenates events", async function() {
-    contract_overwrite.__set__("getPastEvents", function () {
-      return ["a", "b", "c"]
-    })
-    contract_overwrite.contractEditor.contractsOverwriteArray = ["contract1", "contract2"]
+  it('test getPastEventsExactContracts correctly concatenates events', async function() {
+    contract_overwrite.__set__('getPastEvents', function () {
+      return ['a', 'b', 'c'];
+    });
+    contract_overwrite.contractEditor.contractsOverwriteArray = ['contract1', 'contract2'];
 
-    let result = await contract_overwrite.contractEditor.getPastEventsExactContracts()
+    let result = await contract_overwrite.contractEditor.getPastEventsExactContracts();
     assert.deepStrictEqual(
       result,
-      ["a", "b", "c", "a", "b", "c"]
-  )
-  })
+      ['a', 'b', 'c', 'a', 'b', 'c']
+  );
+  });
 
-})
+});

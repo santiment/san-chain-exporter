@@ -53,7 +53,7 @@ async function decodeEventBasicInfo(web3, event, blockTimestamps) {
  * Used by all ERC20 tokens
  **/
 async function decodeTransferEvent(web3, event, blockTimestamps) {
-  if (event['topics'].length != 3) {
+  if (event['topics'].length !== 3) {
     return null;
   }
 
@@ -61,7 +61,7 @@ async function decodeTransferEvent(web3, event, blockTimestamps) {
 
   // Custom burn event for QNT token
   let to = decodeAddress(event['topics'][2]);
-  if (to.toLowerCase() == QNT_contract && event['address'].toLowerCase() == QNT_contract) {
+  if (to.toLowerCase() === QNT_contract && event['address'].toLowerCase() === QNT_contract) {
     result.to = BURN_ADDRESS;
   } else {
     result.to = to;
@@ -78,7 +78,7 @@ async function decodeTransferEvent(web3, event, blockTimestamps) {
  * We assume only the case where the address is indexed and the value is not
  **/
 async function decodeBurnEvent(web3, event, blockTimestamps) {
-  if (event['topics'].length != 2) {
+  if (event['topics'].length !== 2) {
     return null;
   }
 
@@ -96,7 +96,7 @@ async function decodeBurnEvent(web3, event, blockTimestamps) {
  * We assume only the case where the address is indexed and the value is not
  **/
 async function decodeMintEvent(web3, event, blockTimestamps) {
-  if (event['topics'].length != 2) {
+  if (event['topics'].length !== 2) {
     return null;
   }
 
@@ -114,8 +114,8 @@ async function decodeMintEvent(web3, event, blockTimestamps) {
  * Only for BNB
  **/
 async function decodeBNBFreezeEvent(web3, event, blockTimestamps) {
-  if (event['address'].toLowerCase() != BNB_contract
-      || event['topics'].length != 2) {
+  if (event['address'].toLowerCase() !== BNB_contract
+      || event['topics'].length !== 2) {
     return null;
   }
 
@@ -133,8 +133,8 @@ async function decodeBNBFreezeEvent(web3, event, blockTimestamps) {
  * Only for BNB
  **/
 async function decodeBNBUnfreezeEvent(web3, event, blockTimestamps) {
-  if (event['address'].toLowerCase() != BNB_contract
-      || event['topics'].length != 2) {
+  if (event['address'].toLowerCase() !== BNB_contract
+      || event['topics'].length !== 2) {
     return null;
   }
 
@@ -152,8 +152,8 @@ async function decodeBNBUnfreezeEvent(web3, event, blockTimestamps) {
  * Only for WETH
  **/
 async function decodeWETHDepositEvent(web3, event, blockTimestamps) {
-  if (event['address'].toLowerCase() != WETH_contract
-      || event['topics'].length != 2) {
+  if (event['address'].toLowerCase() !== WETH_contract
+      || event['topics'].length !== 2) {
     return null;
   }
 
@@ -171,8 +171,8 @@ async function decodeWETHDepositEvent(web3, event, blockTimestamps) {
  * Only for WETH
  **/
 async function decodeWETHWithdrawalEvent(web3, event, blockTimestamps) {
-  if (event['address'].toLowerCase() != WETH_contract
-      || event['topics'].length != 2) {
+  if (event['address'].toLowerCase() !== WETH_contract
+      || event['topics'].length !== 2) {
     return null;
   }
 
@@ -259,7 +259,7 @@ function filterEvents(events) {
 // returns an array of arrays - all events in one transaction are grouped together
 // assumes that all events in one transaction are next to one another in the log
 function* getEventsByTransaction(events) {
-  if (0 == events.length) {
+  if (events.length === 0) {
     return;
   }
   let curTransactionHash = events[0].transactionHash;
@@ -267,7 +267,7 @@ function* getEventsByTransaction(events) {
   for (let i = 0;i < events.length; i++) {
     let event = events[i];
     if(event.transactionHash) {
-      if(event.transactionHash != curTransactionHash) {
+      if(event.transactionHash !== curTransactionHash) {
         if(curTransactionEvents.length > 0) {
           yield curTransactionEvents;
 
@@ -290,31 +290,31 @@ function filterTransactionEvents(eventsInTransaction) {
   const mintEvents = [];
   const burnEvents = [];
   eventsInTransaction.forEach((event) => {
-    if(event.from == MINT_ADDRESS) {
+    if(event.from === MINT_ADDRESS) {
       mintEvents.push(event);
     }
-    else if(event.to == BURN_ADDRESS) {
+    else if(event.to === BURN_ADDRESS) {
       burnEvents.push(event);
     }
   });
 
   const result = [];
   eventsInTransaction.forEach((event) => {
-    if(event.from == ZERO_ADDRESS) {
+    if(event.from === ZERO_ADDRESS) {
       const exists = mintEvents.some((mintEvent) =>
-        mintEvent.contract == event.contract
-        && mintEvent.to == event.to
-        && mintEvent.valueExactBase36 == event.valueExactBase36);
+        mintEvent.contract === event.contract
+        && mintEvent.to === event.to
+        && mintEvent.valueExactBase36 === event.valueExactBase36);
       if(!exists) {
         result.push(event);
       }
     }
-    else if(event.to == ZERO_ADDRESS) {
+    else if(event.to === ZERO_ADDRESS) {
       const exists = burnEvents.some((burnEvent) =>
-        burnEvent.contract == event.contract
-        && burnEvent.from == event.from
-        && burnEvent.valueExactBase36 == event.valueExactBase36);
-      if(!exists) {
+        burnEvent.contract === event.contract
+        && burnEvent.from === event.from
+        && burnEvent.valueExactBase36 === event.valueExactBase36);
+      if (!exists) {
         result.push(event);
       }
     }

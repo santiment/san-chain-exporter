@@ -7,10 +7,10 @@
  * of the MIT license.  See the LICENSE.txt file for details.
  */
 
-const { Exporter } = require('../lib/kafka_storage')
-const Kafka = require("node-rdkafka")
-const {storeEvents} = require('../lib/store_events')
-const KAFKA_URL = process.env.KAFKA_URL || "localhost:9092";
+const { Exporter } = require('../lib/kafka_storage');
+const Kafka = require('node-rdkafka');
+const {storeEvents} = require('../lib/store_events');
+const KAFKA_URL = process.env.KAFKA_URL || 'localhost:9092';
 
 class TestConsumer {
   constructor(topic, num_expected) {
@@ -37,7 +37,7 @@ class TestConsumer {
       consumer.on('data', function(m) {
         num_received++;
         result.push(m);
-        if (num_received == num_expected) {
+        if (num_received === num_expected) {
           resolve(result);
         }
       });
@@ -55,9 +55,9 @@ class TestConsumer {
       consumer.on('subscribed', function() {
         consumer.consume();
         resolve();
-      })
+      });
       consumer.on('warning', function (err) {
-        console.log("Warning: ", err);
+        console.log('Warning: ', err);
       });
     });
 
@@ -73,13 +73,13 @@ class TestConsumer {
   }
 
   disconnect(done) {
-    this.consumer.disconnect(done)
+    this.consumer.disconnect(done);
   }
 }
 
 async function sendMessagesInTransaction(exporter) {
-  await exporter.initTransactions()
-  await exporter.beginTransaction()
+  await exporter.initTransactions();
+  await exporter.beginTransaction();
 
   // At this point the exporter is connected.
   // We send one message just to create the topic.
@@ -87,41 +87,41 @@ async function sendMessagesInTransaction(exporter) {
     timestamp: 10000000,
     iso_date: new Date().toISOString(),
     key: 1
-  }, "key")
+  }, 'key');
 
   await exporter.commitTransaction();
 }
 
 describe('Producer transactions', function() {
-  let exporter
-  let testConsumer
-  let num_messages_test = 3
+  let exporter;
+  let testConsumer;
+  let num_messages_test = 3;
 
   // This is done only to create the test topic.
   before( function(done) {
     this.timeout(5000);
-    exporter = new Exporter('erc20-producer-transactions-test', true)
+    exporter = new Exporter('erc20-producer-transactions-test', true);
     exporter.connect().then(function () {
       exporter.subscribeDeliveryReports(function (err) {
         if(err) {
           throw err;
         }
         exporter.disconnect(function () {
-          done()
-        })
-      })
+          done();
+        });
+      });
 
-      sendMessagesInTransaction(exporter)
-    })
+      sendMessagesInTransaction(exporter);
+    });
   });
 
   beforeEach(function(done) {
     this.timeout(20000);
 
-    exporter = new Exporter('erc20-producer-transactions-test', true)
+    exporter = new Exporter('erc20-producer-transactions-test', true);
     exporter.connect().then(() => {
-      testConsumer = new TestConsumer(exporter.topicName, num_messages_test)
-      done()
+      testConsumer = new TestConsumer(exporter.topicName, num_messages_test);
+      done();
     });
   });
 
@@ -129,8 +129,8 @@ describe('Producer transactions', function() {
     this.timeout(10000);
     exporter.disconnect(() => {
       testConsumer.disconnect(function() {
-        done()
-      })
+        done();
+      });
     });
   });
 
@@ -151,30 +151,30 @@ describe('Producer transactions', function() {
           timestamp: 10000000,
           iso_date: new Date().toISOString(),
           key: 1
-        }, "key")
+        }, 'key');
       }
       await exporter.commitTransaction();
-    }, 2000)
+    }, 2000);
 
     await testConsumer.waitData();
   });
 
-  it("using the 'storeEvents' function should begin and commit a transaction", async function() {
+  it('using the \'storeEvents\' function should begin and commit a transaction', async function() {
     // We need the huge timeout because starting and closing a transaction takes around 1 sec
     this.timeout(10000);
     await exporter.initTransactions();
 
     const testEvent = {
-      "contract": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "blockNumber": 10449812,
-      "timestamp": 0,
-      "transactionHash": "0x0bdd08bd9af129373d2b8011775d3d8b0588e30f45b0f3c1b7d85d689d05c42b",
-      "logIndex": 122,
-      "to": "0xd49e06c1ed4925af893a503bfcb9cff947e7679e",
-      "from": "0x5a5d5d0cde67e18f00e5d08ad7890858a6ee62bc",
-      "value": 103000000,
-      "valueExactBase36": "1pbnb4"
-    }
+      'contract': '0xdac17f958d2ee523a2206206994597c13d831ec7',
+      'blockNumber': 10449812,
+      'timestamp': 0,
+      'transactionHash': '0x0bdd08bd9af129373d2b8011775d3d8b0588e30f45b0f3c1b7d85d689d05c42b',
+      'logIndex': 122,
+      'to': '0xd49e06c1ed4925af893a503bfcb9cff947e7679e',
+      'from': '0x5a5d5d0cde67e18f00e5d08ad7890858a6ee62bc',
+      'value': 103000000,
+      'valueExactBase36': '1pbnb4'
+    };
 
 
     await testConsumer.waitSubscribed();

@@ -1,18 +1,18 @@
-const assert = require("assert")
+const assert = require('assert');
 
-const {extendEventsWithPrimaryKey} = require("../../blockchains/erc20/lib/extend_events_key")
-const constants = require('../../blockchains/erc20/lib/constants')
+const {extendEventsWithPrimaryKey} = require('../../blockchains/erc20/lib/extend_events_key');
+const constants = require('../../blockchains/erc20/lib/constants');
 
-let inputEvent1 = {}
-let inputEvent2 = {}
+let inputEvent1 = {};
+let inputEvent2 = {};
 
 // The primary key algorithm for non overwritten events
 function calculatePrimaryKeyNonOverwrittenEvent(event) {
-  return event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + event.logIndex
+  return event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + event.logIndex;
 }
 
 function setExpectedEventPrimaryKey(event) {
-  event.primaryKey = calculatePrimaryKeyNonOverwrittenEvent(event)
+  event.primaryKey = calculatePrimaryKeyNonOverwrittenEvent(event);
 }
 
 
@@ -33,7 +33,7 @@ describe('assignPrimaryKeys', function() {
       transactionLogIndex: '0x0',
       type: 'mined',
       id: 'log_ff113a78'
-    }
+    };
 
     inputEvent2 = {
       address: '0xB8c77482e45F1F44dE1745F52C74426C631bDD52',
@@ -50,53 +50,53 @@ describe('assignPrimaryKeys', function() {
       transactionLogIndex: '0x0',
       type: 'mined',
       id: 'log_caef200c'
-    }
+    };
   });
 
-  it("assign primary keys, single event", async function() {
-    const expectedEvent = JSON.parse(JSON.stringify(inputEvent1))
-    extendEventsWithPrimaryKey([inputEvent1], [])
+  it('assign primary keys, single event', async function() {
+    const expectedEvent = JSON.parse(JSON.stringify(inputEvent1));
+    extendEventsWithPrimaryKey([inputEvent1], []);
 
-    setExpectedEventPrimaryKey(expectedEvent)
+    setExpectedEventPrimaryKey(expectedEvent);
 
-    assert.deepEqual(inputEvent1, expectedEvent)
-  })
+    assert.deepEqual(inputEvent1, expectedEvent);
+  });
 
-  it("assign primary keys, event list, overwritten are empty", async function() {
-    const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]))
-    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], [])
+  it('assign primary keys, event list, overwritten are empty', async function() {
+    const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
+    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], []);
 
-    setExpectedEventPrimaryKey(expectedEvents[0])
-    setExpectedEventPrimaryKey(expectedEvents[1])
+    setExpectedEventPrimaryKey(expectedEvents[0]);
+    setExpectedEventPrimaryKey(expectedEvents[1]);
 
-    assert.deepEqual([inputEvent1, inputEvent2], expectedEvents)
-  })
+    assert.deepEqual([inputEvent1, inputEvent2], expectedEvents);
+  });
 
-  it("assign primary keys, event list, overwritten not empty", async function() {
-    const copyEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]))
-    const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]))
-    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], copyEvents)
+  it('assign primary keys, event list, overwritten not empty', async function() {
+    const copyEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
+    const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
+    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], copyEvents);
 
-    setExpectedEventPrimaryKey(expectedEvents[0])
-    setExpectedEventPrimaryKey(expectedEvents[1])
+    setExpectedEventPrimaryKey(expectedEvents[0]);
+    setExpectedEventPrimaryKey(expectedEvents[1]);
 
-    assert.deepEqual([inputEvent1, inputEvent2], expectedEvents)
-  })
+    assert.deepEqual([inputEvent1, inputEvent2], expectedEvents);
+  });
 
-  it("assign primary keys, event list, check keys of overwritten", async function() {
-    const copyEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]))
-    const expectedEvents = JSON.parse(JSON.stringify(copyEvents))
-    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], copyEvents)
+  it('assign primary keys, event list, check keys of overwritten', async function() {
+    const copyEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
+    const expectedEvents = JSON.parse(JSON.stringify(copyEvents));
+    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], copyEvents);
 
-    const primaryKeyLastNonOverwritten = calculatePrimaryKeyNonOverwrittenEvent(inputEvent2)
+    const primaryKeyLastNonOverwritten = calculatePrimaryKeyNonOverwrittenEvent(inputEvent2);
     // Primary keys of overwritten contracts start from last non-overwritten and increase by 1
-    expectedEvents[0].primaryKey = primaryKeyLastNonOverwritten + 1
-    expectedEvents[1].primaryKey = primaryKeyLastNonOverwritten + 2
+    expectedEvents[0].primaryKey = primaryKeyLastNonOverwritten + 1;
+    expectedEvents[1].primaryKey = primaryKeyLastNonOverwritten + 2;
 
-    assert.deepEqual(copyEvents, expectedEvents)
-  })
-})
+    assert.deepEqual(copyEvents, expectedEvents);
+  });
+});
 
 module.exports = {
   setExpectedEventPrimaryKey
-}
+};

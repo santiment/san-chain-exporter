@@ -102,9 +102,7 @@ class ContractEditor {
   }
 }
 
-const contractEditor = constants.CONTRACT_MODE != 'vanilla' ? new ContractEditor() : null;
-
-
+const contractEditor = constants.CONTRACT_MODE !== 'vanilla' ? new ContractEditor() : null;
 
 module.exports = {
   contractEditor

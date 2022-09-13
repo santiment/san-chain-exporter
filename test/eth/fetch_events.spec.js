@@ -1,6 +1,6 @@
-const eth_worker =  require('../../blockchains/eth/eth_worker')
-const { injectDAOHackTransfers, DAO_HACK_ADDRESSES, DAO_HACK_FORK_BLOCK } = require('../../blockchains/eth/lib/dao_hack')
-const assert = require("assert")
+const eth_worker =  require('../../blockchains/eth/eth_worker');
+const { injectDAOHackTransfers, DAO_HACK_ADDRESSES, DAO_HACK_FORK_BLOCK } = require('../../blockchains/eth/lib/dao_hack');
+const assert = require('assert');
 
 describe('fetch past events', function() {
     const transaction = {
@@ -24,8 +24,8 @@ describe('fetch past events', function() {
         transactionIndex: '0x0',
         v: '0x1c',
         value: '0x4712d3e1aa21b20'
-    }
-    const blocks = new Map()
+    };
+    const blocks = new Map();
     blocks.set(5711193,
         {
             author: '0x829bd824b016326a401d083b33d092293333a830',
@@ -54,71 +54,71 @@ describe('fetch past events', function() {
             transactionsRoot: '0xa7df4bb8858bfc779dae9b59201561394b686cdc942a7b0728aa396f7e35f40f',
             uncles: []
         }
-    )
+    );
 
     const receipts = {
-        "0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d" :
+        '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d' :
             {
-                "blockHash": "0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56",
-                "blockNumber": "0x572559",
-                "contractAddress": null,
-                "cumulativeGasUsed": "0xdc18",
-                "from": "0x03b16ab6e23bdbeeab719d8e4c49d63674876253",
-                "gasUsed": "0xdc18",
-                "logs": [{
-                    "address": "0xb1690c08e213a35ed9bab7b318de14420fb57d8c",
-                    "blockHash": "0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56",
-                    "blockNumber": "0x572559",
-                    "data": "0x00000000000000000000000000000000000000000000000000000000000bf51800000000000000000000000000000000000000000000000004704ed9dfca173400000000000000000000000003b16ab6e23bdbeeab719d8e4c49d63674876253",
-                    "logIndex": "0x0",
-                    "removed": false,
-                    "topics": ["0x4fcc30d90a842164dd58501ab874a101a3749c3d4747139cefe7c876f4ccebd2"],
-                    "transactionHash": "0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d",
-                    "transactionIndex": "0x0",
-                    "transactionLogIndex": "0x0",
-                    "type": "mined"
+                'blockHash': '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
+                'blockNumber': '0x572559',
+                'contractAddress': null,
+                'cumulativeGasUsed': '0xdc18',
+                'from': '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
+                'gasUsed': '0xdc18',
+                'logs': [{
+                    'address': '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
+                    'blockHash': '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
+                    'blockNumber': '0x572559',
+                    'data': '0x00000000000000000000000000000000000000000000000000000000000bf51800000000000000000000000000000000000000000000000004704ed9dfca173400000000000000000000000003b16ab6e23bdbeeab719d8e4c49d63674876253',
+                    'logIndex': '0x0',
+                    'removed': false,
+                    'topics': ['0x4fcc30d90a842164dd58501ab874a101a3749c3d4747139cefe7c876f4ccebd2'],
+                    'transactionHash': '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
+                    'transactionIndex': '0x0',
+                    'transactionLogIndex': '0x0',
+                    'type': 'mined'
                 }, {
-                    "address": "0x06012c8cf97bead5deae237070f9587f8e7a266d",
-                    "blockHash": "0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56",
-                    "blockNumber": "0x572559",
-                    "data": "0x000000000000000000000000b1690c08e213a35ed9bab7b318de14420fb57d8c00000000000000000000000003b16ab6e23bdbeeab719d8e4c49d6367487625300000000000000000000000000000000000000000000000000000000000bf518",
-                    "logIndex": "0x1",
-                    "removed": false,
-                    "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
-                    "transactionHash": "0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d",
-                    "transactionIndex": "0x0",
-                    "transactionLogIndex": "0x1",
-                    "type": "mined"
+                    'address': '0x06012c8cf97bead5deae237070f9587f8e7a266d',
+                    'blockHash': '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
+                    'blockNumber': '0x572559',
+                    'data': '0x000000000000000000000000b1690c08e213a35ed9bab7b318de14420fb57d8c00000000000000000000000003b16ab6e23bdbeeab719d8e4c49d6367487625300000000000000000000000000000000000000000000000000000000000bf518',
+                    'logIndex': '0x1',
+                    'removed': false,
+                    'topics': ['0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'],
+                    'transactionHash': '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
+                    'transactionIndex': '0x0',
+                    'transactionLogIndex': '0x1',
+                    'type': 'mined'
                 }],
-                "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000001000000000000000000000000000000000000000000000000000000000000100000008000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000011000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000100080000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000",
-                "status": "0x1",
-                "to": "0xb1690c08e213a35ed9bab7b318de14420fb57d8c",
-                "transactionHash": "0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d",
-                "transactionIndex": "0x0"
+                'logsBloom': '0x00000000000000000000000000000000000000000000000000000000000000200000000000000000001000000000000000000000000000000000000000000000000000000000000100000008000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000011000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000100080000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000',
+                'status': '0x1',
+                'to': '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
+                'transactionHash': '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
+                'transactionIndex': '0x0'
             }
-    }
+    };
     const trace = {
-        "action": {
-            "callType": "call",
-            "from": "0x03b16ab6e23bdbeeab719d8e4c49d63674876253",
-            "gas": "0x13788",
-            "input": "0x454a2ab300000000000000000000000000000000000000000000000000000000000bf518",
-            "to": "0xb1690c08e213a35ed9bab7b318de14420fb57d8c",
-            "value": "0x4712d3e1aa21b20"
+        'action': {
+            'callType': 'call',
+            'from': '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
+            'gas': '0x13788',
+            'input': '0x454a2ab300000000000000000000000000000000000000000000000000000000000bf518',
+            'to': '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
+            'value': '0x4712d3e1aa21b20'
         },
-        "blockHash": "0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56",
-        "blockNumber": 5711193,
-        "result": {"gasUsed": "0x13788", "output": "0x"},
-        "subtraces": 3,
-        "traceAddress": [],
-        "transactionHash": "0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d",
-        "transactionPosition": 0,
-        "type": "call"
-    }
+        'blockHash': '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
+        'blockNumber': 5711193,
+        'result': {'gasUsed': '0x13788', 'output': '0x'},
+        'subtraces': 3,
+        'traceAddress': [],
+        'transactionHash': '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
+        'transactionPosition': 0,
+        'type': 'call'
+    };
 
     const worker = new eth_worker.worker();
-    let feeResult = null
-    let callResult = null
+    let feeResult = null;
+    let callResult = null;
 
     beforeEach(async function() {
         feeResult = {
@@ -130,7 +130,7 @@ describe('fetch past events', function() {
             timestamp: 1527814787,
             transactionHash: '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
             type: 'fee'
-        }
+        };
 
         callResult = {
             from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
@@ -142,26 +142,26 @@ describe('fetch past events', function() {
             transactionHash: '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
             transactionPosition: 0,
             type: 'call'
-        }
+        };
     });
 
 
-    it("parse transaction events", async function () {
-        const result = await worker.getPastTransactionEvents(blocks.values(), receipts)
-        const expectedResult = [feeResult]
+    it('parse transaction events', async function () {
+        const result = await worker.getPastTransactionEvents(blocks.values(), receipts);
+        const expectedResult = [feeResult];
 
-        assert.deepStrictEqual(expectedResult, result)
-    })
+        assert.deepStrictEqual(expectedResult, result);
+    });
 
-    it("parse transfer events", async function () {
-        const result = await worker.getPastTransferEvents([trace], blocks)
-        const expectedResult = [callResult]
+    it('parse transfer events', async function () {
+        const result = await worker.getPastTransferEvents([trace], blocks);
+        const expectedResult = [callResult];
 
-        assert.deepStrictEqual(expectedResult, result)
-    })
+        assert.deepStrictEqual(expectedResult, result);
+    });
 
-    it("add genesis events", async function () {
-        const result = await worker.getPastEvents(0, 1, [trace], blocks, receipts)
+    it('add genesis events', async function () {
+        const result = await worker.getPastEvents(0, 1, [trace], blocks, receipts);
 
         const firstGenesisEvent = {
             from: 'GENESIS',
@@ -172,37 +172,37 @@ describe('fetch past events', function() {
             timestamp: 1438269973,
             transactionHash: 'GENESIS_000d836201318ec6899a67540690382780743280',
             type: 'genesis'
-        }
+        };
 
 
-        assert.deepStrictEqual(firstGenesisEvent, result[0])
-    })
+        assert.deepStrictEqual(firstGenesisEvent, result[0]);
+    });
 
-    it("genesis events ordering", async function () {
-        const result = await worker.getPastEvents(0, 1, [trace], blocks, receipts)
+    it('genesis events ordering', async function () {
+        const result = await worker.getPastEvents(0, 1, [trace], blocks, receipts);
 
-        const genesisEventsInserted = 8894
-        assert.strictEqual(result.length, genesisEventsInserted + 2)
-        assert.deepStrictEqual(callResult, result[genesisEventsInserted])
-        assert.deepStrictEqual(feeResult, result[genesisEventsInserted + 1])
-    })
+        const genesisEventsInserted = 8894;
+        assert.strictEqual(result.length, genesisEventsInserted + 2);
+        assert.deepStrictEqual(callResult, result[genesisEventsInserted]);
+        assert.deepStrictEqual(feeResult, result[genesisEventsInserted + 1]);
+    });
 
-    it("DAO hack events", async function () {
-        const result = await worker.getPastEvents(DAO_HACK_FORK_BLOCK - 1, DAO_HACK_FORK_BLOCK + 1, [trace], blocks, receipts)
-        const expectedEvents = DAO_HACK_ADDRESSES.length + 2
+    it('DAO hack events', async function () {
+        const result = await worker.getPastEvents(DAO_HACK_FORK_BLOCK - 1, DAO_HACK_FORK_BLOCK + 1, [trace], blocks, receipts);
+        const expectedEvents = DAO_HACK_ADDRESSES.length + 2;
 
-        assert.deepStrictEqual(expectedEvents, result.length)
-    })
+        assert.deepStrictEqual(expectedEvents, result.length);
+    });
 
-    it( "DAO hack events ordering", async function () {
+    it( 'DAO hack events ordering', async function () {
         // Test that DAO hack events are inserted in between the others
-        feeResult.blockNumber = DAO_HACK_FORK_BLOCK - 1
-        callResult.blockNumber = DAO_HACK_FORK_BLOCK - 1
+        feeResult.blockNumber = DAO_HACK_FORK_BLOCK - 1;
+        callResult.blockNumber = DAO_HACK_FORK_BLOCK - 1;
 
-        const eventsResult = [feeResult, callResult]
-        injectDAOHackTransfers(eventsResult)
+        const eventsResult = [feeResult, callResult];
+        injectDAOHackTransfers(eventsResult);
 
-        assert.deepStrictEqual(feeResult, eventsResult[0])
-        assert.deepStrictEqual(callResult, eventsResult[1])
-    })
-})
+        assert.deepStrictEqual(feeResult, eventsResult[0]);
+        assert.deepStrictEqual(callResult, eventsResult[1]);
+    });
+});

@@ -63,7 +63,7 @@ class TimestampsManager {
 
   async getBlockTimestamp(web3, blockNumber) {
     const timestampStore = this.getTimestampFromStore(blockNumber);
-    if (timestampStore != DATA_MISSING) {
+    if (timestampStore !== DATA_MISSING) {
       return timestampStore;
     }
 

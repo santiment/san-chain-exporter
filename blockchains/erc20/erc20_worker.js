@@ -4,7 +4,7 @@ const { logger } = require('../../lib/logger');
 const constants = require('./lib/constants');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
 let contractEditor = null;
-if (constants.CONTRACT_MODE != 'vanilla') {
+if (constants.CONTRACT_MODE !== 'vanilla') {
   contractEditor = require('./lib/contract_overwrite').contractEditor;
 }
 const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events');
@@ -26,14 +26,14 @@ class ERC20Worker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastConfirmedBlock == this.lastExportedBlock) {
+    if (this.lastConfirmedBlock === this.lastExportedBlock) {
       // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
       this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
       // On the previous cycle we closed the gap to the head of the blockchain.
       // Check if there are new blocks now.
       const newConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-      if (newConfirmedBlock == this.lastConfirmedBlock) {
+      if (newConfirmedBlock === this.lastConfirmedBlock) {
         // The Node has not progressed
         return [];
       }
@@ -49,13 +49,13 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     let overwritten_events = [];
-    if ('extract_exact_overwrite' == constants.CONTRACT_MODE) {
+    if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       events = await contractEditor.getPastEventsExactContracts(this.web3, this.lastExportedBlock + 1, toBlock);
       contractEditor.changeContractAddresses(events);
     }
     else {
       events = await getPastEvents(this.web3, this.lastExportedBlock + 1, toBlock);
-      if ('extract_all_append' == constants.CONTRACT_MODE) {
+      if ('extract_all_append' === constants.CONTRACT_MODE) {
         overwritten_events = contractEditor.extractChangedContractAddresses(events);
       }
     }

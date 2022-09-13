@@ -6,7 +6,7 @@ const { logger } = require('../../../lib/logger');
 
 function transactionOrder(a, b) {
   const blockDif =  a.blockNumber - b.blockNumber;
-  if (blockDif != 0) {
+  if (blockDif !== 0) {
     return blockDif;
   }
   else {
