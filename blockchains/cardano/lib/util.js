@@ -11,7 +11,7 @@ function discardNotCompletedBlock(transactions) {
     --index;
   }
 
-  if (transactions[index + 1].block.transactionsCount !== transactions.length - index - 1) {
+  if (transactions[index + 1].block.transactionsCount !== (transactions.length - index - 1)) {
     if (index < 0) {
       throw new Error(`Single extracted block is partial. Exporter would not be able to progress.
           Block number is ${lastBlockNumber} it has ${transactions[0].block.transactionsCount} but only

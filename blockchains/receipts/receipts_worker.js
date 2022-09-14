@@ -8,10 +8,10 @@ const constants = require('./lib/constants');
 const BaseWorker = require('../../lib/worker_base');
 
 
-class BSCWorker extends BaseWorker {
+class ReceiptsWorker extends BaseWorker {
   constructor() {
     super();
-    logger.info(`Connecting to BSC node ${constants.NODE_URL}`);
+    logger.info(`Connecting to node ${constants.NODE_URL}`);
     this.client = jayson.client.http(constants.NODE_URL);
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
   }
@@ -67,5 +67,5 @@ class BSCWorker extends BaseWorker {
 }
 
 module.exports = {
-  worker: BSCWorker
+  worker: ReceiptsWorker
 };
