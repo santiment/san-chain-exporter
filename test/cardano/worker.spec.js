@@ -119,7 +119,7 @@ function getGenesisTransactions() {
       'block': {
         'number': null,
         'epochNo': null,
-        'transactionsCount': '2'
+        'transactionsCount': 2
       },
       'inputs': [],
       'outputs': [
@@ -137,7 +137,7 @@ function getGenesisTransactions() {
       'block': {
         'number': null,
         'epochNo': null,
-        'transactionsCount': '2'
+        'transactionsCount': 2
       },
       'inputs': [],
       'outputs': [
