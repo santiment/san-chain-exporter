@@ -20,7 +20,7 @@
   "homepage": "https://github.com/santiment/erc20_transfers_exporter#readme",
   "dependencies": {
     "bignumber.js": "^9.0.0",
-    "blockchain-utils": "git+https://github.com/santiment/blockchain-utils.git",
+    "blockchain-utils": "git+https://github.com/santiment/blockchain-utils.git#9761ff7b11c889aad2942b1ba47294bc4d705558",
     "got": "^11.8.2",
     "jayson": "^3.5.2",
     "micro": "^9.3.4",
