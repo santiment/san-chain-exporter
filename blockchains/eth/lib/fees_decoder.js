@@ -1,9 +1,9 @@
-const { computeGasExpense, computeGasExpenseBase36 } = require('./util')
-const constants = require('./constants')
+const { computeGasExpense, computeGasExpenseBase36 } = require('./util');
+const constants = require('./constants');
 
 class FeesDecoder {
   constructor(web3, web3Wrapper) {
-    this.web3Wrapper = web3Wrapper
+    this.web3Wrapper = web3Wrapper;
   }
 
   getPreLondonForkFees(transaction, block, receipts) {
@@ -15,8 +15,8 @@ class FeesDecoder {
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
       transactionHash: transaction.hash,
-      type: "fee"
-    }]
+      type: 'fee'
+    }];
   }
 
   pushBurntFee(transaction, block, receipts, result) {
@@ -29,8 +29,8 @@ class FeesDecoder {
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
       transactionHash: transaction.hash,
-      type: "fee_burnt"
-    })
+      type: 'fee_burnt'
+    });
   }
 
   /**
@@ -44,7 +44,7 @@ class FeesDecoder {
    * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
    **/
   pushMinerFee(transaction, block, receipts, result) {
-    const tipMinerPerGas = transaction.gasPrice - block.baseFeePerGas
+    const tipMinerPerGas = transaction.gasPrice - block.baseFeePerGas;
       if (tipMinerPerGas > 0) {
         result.push({
           from: transaction.from,
@@ -55,34 +55,34 @@ class FeesDecoder {
           blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
           timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
           transactionHash: transaction.hash,
-          type: "fee"
-        })
+          type: 'fee'
+        });
       }
   }
 
   getPostLondonForkFees(transaction, block, receipts) {
-    const result = []
-    this.pushBurntFee(transaction, block, receipts, result)
-    this.pushMinerFee(transaction, block, receipts, result)
+    const result = [];
+    this.pushBurntFee(transaction, block, receipts, result);
+    this.pushMinerFee(transaction, block, receipts, result);
 
-    return result
+    return result;
   }
 
   getFeesFromTransactionsInBlock(block, receipts) {
-    const result = []
+    const result = [];
     block.transactions.forEach((transaction) => {
-      const blockNumber = this.web3Wrapper.parseHexToNumber(block.number)
+      const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       const feeTransfers =
         blockNumber >= constants.LONDON_FORK_BLOCK ?
         this.getPostLondonForkFees(transaction, block, receipts) :
-        this.getPreLondonForkFees(transaction, block, receipts)
+        this.getPreLondonForkFees(transaction, block, receipts);
 
-      result.push(...feeTransfers)
-    })
-    return result
+      result.push(...feeTransfers);
+    });
+    return result;
   }
 }
 
 module.exports = {
   FeesDecoder
-}
+};
