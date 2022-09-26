@@ -1,6 +1,6 @@
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || "100")
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || "3")
-const NODE_URL =  process.env.NODE_URL || process.env.PARITY_URL || "http://localhost:8545/"
+const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || "http://localhost:8545/"
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || "30")
 const BURN_ADDRESS = "burn"
 const LONDON_FORK_BLOCK = 12965000
@@ -8,6 +8,7 @@ const LONDON_FORK_BLOCK = 12965000
 // a method called 'eth_getBlockReceipts'. If we are deploying against Erigon, we need to overwrite this variable
 // through the deploy.
 const RECEIPTS_API_METHOD = process.env.RECEIPTS_API_METHOD || "parity_getBlockReceipts"
+
 
 module.exports = {
     BLOCK_INTERVAL,

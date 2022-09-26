@@ -1,15 +1,15 @@
-const eth_worker =  require('../../blockchains/eth/eth_worker')
+const eth_worker = require('../../blockchains/eth/eth_worker')
 const assert = require("assert")
 const v8 = require('v8');
 
-describe('Test worker', function() {
+describe('Test worker', function () {
     const worker = new eth_worker.worker();
     let feeResult = null
     let callResult = null
     let feeResultWithPrimaryKey = null
     let callResultWithPrimaryKey = null
 
-    beforeEach(function() {
+    beforeEach(function () {
         feeResult = {
             from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
             to: '0x829bd824b016326a401d083b33d092293333a830',
@@ -35,9 +35,11 @@ describe('Test worker', function() {
 
         feeResultWithPrimaryKey = v8.deserialize(v8.serialize(feeResult))
         feeResultWithPrimaryKey.primaryKey = 1
+        feeResultWithPrimaryKey.san_version = 2
 
         callResultWithPrimaryKey = v8.deserialize(v8.serialize(callResult))
         callResultWithPrimaryKey.primaryKey = 2
+        callResultWithPrimaryKey.san_version = 2
     });
 
 

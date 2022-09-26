@@ -1,25 +1,26 @@
 const Web3 = require('web3')
 const jayson = require('jayson/promise');
 const { filterErrors } = require('blockchain-utils/eth')
-const constants = require('./lib/constants')
+const eth_constants = require('./lib/constants')
+const global_constants = require('../../lib/constants')
 const { logger } = require('../../lib/logger')
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack')
 const { getGenesisTransfers } = require('./lib/genesis_transfers')
 const { transactionOrder, stableSort } = require('./lib/util')
 const BaseWorker = require('../../lib/worker_base')
 const Web3Wrapper = require('./lib/web3_wrapper')
-const {decodeTransferTrace} = require('./lib/decode_transfers')
-const {FeesDecoder} = require('./lib/fees_decoder')
+const { decodeTransferTrace } = require('./lib/decode_transfers')
+const { FeesDecoder } = require('./lib/fees_decoder')
 
 
 class ETHWorker extends BaseWorker {
   constructor() {
     super()
 
-    logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`)
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL))
+    logger.info(`Connecting to Ethereum node ${eth_constants.NODE_URL}`)
+    this.web3 = new Web3(new Web3.providers.HttpProvider(eth_constants.NODE_URL))
     this.web3Wrapper = new Web3Wrapper(this.web3)
-    this.ethClient = jayson.client.http(constants.NODE_URL)
+    this.ethClient = jayson.client.http(eth_constants.NODE_URL)
     this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper)
   }
 
@@ -62,7 +63,7 @@ class ETHWorker extends BaseWorker {
     const responses = []
 
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
+      const req = this.ethClient.request(eth_constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false)
       responses.push(this.ethClient.request([req]))
     }
 
@@ -105,7 +106,7 @@ class ETHWorker extends BaseWorker {
     let events = []
     if (fromBlock == 0) {
       logger.info("Adding the GENESIS transfers")
-      events.push(... getGenesisTransfers(this.web3))
+      events.push(...getGenesisTransfers(this.web3))
     }
 
     events.push(... await this.getPastTransferEvents(traces, blocks))
@@ -144,11 +145,11 @@ class ETHWorker extends BaseWorker {
   async work() {
     if (this.lastConfirmedBlock == this.lastExportedBlock) {
       // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
-      this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+      this.sleepTimeMsec = eth_constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
       // On the previous cycle we closed the gap to the head of the blockchain.
       // Check if there are new blocks now.
-      const newConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS
+      const newConfirmedBlock = await this.web3.eth.getBlockNumber() - eth_constants.CONFIRMATIONS
       if (newConfirmedBlock == this.lastConfirmedBlock) {
         // The Node has not progressed
         return []
@@ -160,7 +161,7 @@ class ETHWorker extends BaseWorker {
       this.sleepTimeMsec = 0
     }
 
-    const toBlock = Math.min(this.lastExportedBlock + constants.BLOCK_INTERVAL, this.lastConfirmedBlock)
+    const toBlock = Math.min(this.lastExportedBlock + eth_constants.BLOCK_INTERVAL, this.lastConfirmedBlock)
     const fromBlock = this.lastExportedBlock + 1
 
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
@@ -171,6 +172,7 @@ class ETHWorker extends BaseWorker {
       stableSort(events, transactionOrder)
       for (let i = 0; i < events.length; i++) {
         events[i].primaryKey = this.lastPrimaryKey + i + 1
+        events[i][global_constants.SAN_VERSION_KEY] = global_constants.SAN_VERSION
       }
 
       this.lastPrimaryKey += events.length
@@ -183,7 +185,7 @@ class ETHWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS
+    this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - eth_constants.CONFIRMATIONS
   }
 
 }
