@@ -1,7 +1,7 @@
-"use strict";
-const { logger } = require('../../../lib/logger')
-const utils = require('./utils')
-const constants = require("./constants")
+'use strict';
+const { logger } = require('../../../lib/logger');
+const utils = require('./utils');
+const constants = require('./constants');
 
 
 function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) {
@@ -12,10 +12,10 @@ function sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, met
       startTime: startTimeMsec,
       endTime: endTimeMsec
     };
-    const serverUri = constants.SERVER_URL + "txs"
+    const serverUri = constants.SERVER_URL + 'txs';
 
-    return await utils.sendRequest(queryString, serverUri, metrics)
-  })
+    return await utils.sendRequest(queryString, serverUri, metrics);
+  });
 }
 
 function sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) {
@@ -26,10 +26,10 @@ function sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, q
       start: startTimeMsec,
       end: endTimeMsec,
       total: 1
-    }
+    };
 
-    return await utils.sendRequest(queryString, constants.SERVER_URL, metrics)
-  })
+    return await utils.sendRequest(queryString, constants.SERVER_URL, metrics);
+  });
 }
 
 function sendTrxQuery(trxId, queue, metrics) {
@@ -37,44 +37,44 @@ function sendTrxQuery(trxId, queue, metrics) {
     const queryString = {
       txHash: trxId
     };
-    const serverUri = constants.SERVER_URL + "tx"
+    const serverUri = constants.SERVER_URL + 'tx';
 
-    return await utils.sendRequest(queryString, serverUri, metrics)
-  })
+    return await utils.sendRequest(queryString, serverUri, metrics);
+  });
 }
 
 function assertNumPagesCorrectness(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode) {
   if (typeof firstPageResult === 'undefined' ||
     (bnbTradesMode && firstPageResult.trade === 'undefined') ||
     (!bnbTradesMode && firstPageResult.txArray === 'undefined')) {
-    throw ("Error in fetch interval ", startTimeMsec, " - ", endTimeMsec)
+    throw ('Error in fetch interval ', startTimeMsec, ' - ', endTimeMsec);
   }
 }
 
 function getNumPagesToIterate(firstPageResult, bnbTradesMode) {
   return bnbTradesMode ?
     Math.ceil(firstPageResult.total / constants.NUM_TRADE_ROWS_FETCH) :
-    Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL)
+    Math.ceil(firstPageResult.txNums / constants.MAX_NUM_ROWS_TIME_INTERVAL);
 
 }
 
 async function fetchTimeInterval(queue, startTimeMsec, endTimeMsec, nodeResponsePromises, metrics, bnbTradesMode) {
   // On the first iteration update with the exact number
   let pagesToIterate = constants.BNB_API_MAX_PAGE;
-  const startPage = bnbTradesMode ? 0 : 1
+  const startPage = bnbTradesMode ? 0 : 1;
   for (let pageIndex = startPage; pageIndex <= pagesToIterate; ++pageIndex) {
     let promiseResult = bnbTradesMode ?
       sendBNBTradesTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics) :
-      sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics)
+      sendTimeIntervalQuery(startTimeMsec, endTimeMsec, pageIndex, queue, metrics);
 
     if (startPage === pageIndex) {
       // On the first request, check how many pages we would need to get
       const firstPageResult = await promiseResult;
 
-      assertNumPagesCorrectness(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode)
-      pagesToIterate = getNumPagesToIterate(firstPageResult, bnbTradesMode)
+      assertNumPagesCorrectness(firstPageResult, startTimeMsec, endTimeMsec, bnbTradesMode);
+      pagesToIterate = getNumPagesToIterate(firstPageResult, bnbTradesMode);
 
-      let intervalString = `${startTimeMsec}-${endTimeMsec}`
+      let intervalString = `${startTimeMsec}-${endTimeMsec}`;
       logger.info(`Interval ${intervalString} has ${pagesToIterate} pages`);
 
       if (pagesToIterate > constants.BNB_API_MAX_PAGE) {
@@ -115,7 +115,7 @@ async function fetchTransactionWithChildren(queue, parentTrx, subTrxMap, metrics
 async function replaceParentTransactionsWithChildren(queue, baseTransactions, metrics) {
   const responsePromises = [];
   // A map storing parent trx id to an array of children transactions
-  let subTrxMap = {}
+  let subTrxMap = {};
   // Go over all base transactions and populate above map.
   for (const baseTrx of baseTransactions) {
     if (baseTrx.hasChildren > 0) {
@@ -250,4 +250,4 @@ module.exports = {
   replaceParentTransactionsWithChildren,
   filterRepeatedTransactions,
   filterRepeatedTrade
-}
+};

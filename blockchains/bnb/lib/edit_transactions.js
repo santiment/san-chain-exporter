@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 
 function getTransactionsWithKeys(inputTransactions) {
@@ -16,15 +16,15 @@ function getTransactionsWithKeys(inputTransactions) {
     else {
       ++trxIndexInLastBlock;
     }
-    trx.primaryKey = lastBlockSent.toString() + "-" + trxIndexInLastBlock;
+    trx.primaryKey = lastBlockSent.toString() + '-' + trxIndexInLastBlock;
 
     result.push(trx);
   }
 
-  return result
+  return result;
 }
 
 
 module.exports = {
   getTransactionsWithKeys
-}
+};

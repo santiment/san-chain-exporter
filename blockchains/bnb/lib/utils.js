@@ -1,8 +1,8 @@
-"use strict";
+'use strict';
 
-const { logger } = require('../../../lib/logger')
-const constants = require("./constants")
-const got = require('got')
+const { logger } = require('../../../lib/logger');
+const constants = require('./constants');
+const got = require('got');
 
 
 /**
@@ -15,7 +15,7 @@ async function readLastBlock(metrics) {
     rows: 1
   };
 
-  const serverUri = constants.SERVER_URL + "txs";
+  const serverUri = constants.SERVER_URL + 'txs';
   return sendRequest(queryString, serverUri, metrics);
 }
 
@@ -25,9 +25,9 @@ async function sendRequest(query, serverUri, metrics) {
   const result = await got.get(serverUri, {
     searchParams: query,
     resolveBodyOnly: true
-  })
+  });
 
-  return JSON.parse(result)
+  return JSON.parse(result);
 }
 
 /**
@@ -39,7 +39,7 @@ async function getLastBlockTimestamp(metrics) {
 
   const lastNodeTimestamp = lastBlock.txArray[0].timeStamp;
   logger.info(`Node synced up until block: ${lastBlockNumber}, timestamp: ${lastNodeTimestamp}`);
-  return lastNodeTimestamp
+  return lastNodeTimestamp;
 }
 
 async function readLastTrade(metrics) {
@@ -49,25 +49,25 @@ async function readLastTrade(metrics) {
     rows: 1
   };
 
-  const serverUri = constants.SERVER_URL + "?limit=1";
-  return sendRequest(queryString, serverUri, metrics)
+  const serverUri = constants.SERVER_URL + '?limit=1';
+  return sendRequest(queryString, serverUri, metrics);
 }
 
 /**
  * Get the timestamp of the last block produced by the Trades Node.
  */
 async function getLastTradesBlockTimestamp(metrics) {
-  const lastTrade = await readLastTrade(metrics)
+  const lastTrade = await readLastTrade(metrics);
 
   const lastNodeTimestamp = lastTrade.trade[0].time;
-  const lastBlockNumber = lastTrade.trade[0].blockHeight
+  const lastBlockNumber = lastTrade.trade[0].blockHeight;
 
-  logger.info(`Node synced up until block ${lastBlockNumber}, timestamp: ${lastNodeTimestamp}`)
-  return lastNodeTimestamp
+  logger.info(`Node synced up until block ${lastBlockNumber}, timestamp: ${lastNodeTimestamp}`);
+  return lastNodeTimestamp;
 }
 
 module.exports = {
   getLastBlockTimestamp,
   getLastTradesBlockTimestamp,
   sendRequest
-}
+};

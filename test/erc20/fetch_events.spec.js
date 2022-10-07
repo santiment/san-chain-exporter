@@ -1,17 +1,17 @@
-const assert = require("assert")
-const rewire = require('rewire')
-const Web3 = require('web3')
+const assert = require('assert');
+const rewire = require('rewire');
+const Web3 = require('web3');
 
-const fetch_events = rewire("../../blockchains/erc20/lib/fetch_events")
-const web3 = new Web3()
+const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
+const web3 = new Web3();
 
 const blockTimestamps = {
-  "3798720": 1496241767,
-  "3978360": 1499265391,
-  "5987277": 1531930765,
-  "7011054": 1546639212,
-  "7207279": 1549899997
-}
+  '3798720': 1496241767,
+  '3978360': 1499265391,
+  '5987277': 1531930765,
+  '7011054': 1546639212,
+  '7207279': 1549899997
+};
 
 const rawEvents = [
   // bat mint
@@ -153,7 +153,7 @@ const rawEvents = [
     transactionLogIndex: '0x2',
     type: 'mined',
     id: 'log_adcff8b4' }
-]
+];
 
 const decodedEvents = [
   // bat mint
@@ -236,7 +236,7 @@ const decodedEvents = [
     to: '0x0000000000000000000000000000000000000000',
     value: 2.924819e+22,
     valueExactBase36: '4rgm1aauy6roni8' }
-]
+];
 
 const filteredEvents = [
   // bat mint
@@ -299,111 +299,111 @@ const filteredEvents = [
     to: 'burn',
     value: 2.924819e+22,
     valueExactBase36: '4rgm1aauy6roni8' }
-]
+];
 
-fetch_events.__set__("getRawEvents", async function () {
-  return rawEvents
-})
+fetch_events.__set__('getRawEvents', async function () {
+  return rawEvents;
+});
 
-fetch_events.__set__("getBlockTimestamp", async function (web3, blockNumber) {
-  return blockTimestamps[blockNumber.toString()]
-})
+fetch_events.__set__('getBlockTimestamp', async function (web3, blockNumber) {
+  return blockTimestamps[blockNumber.toString()];
+});
 
 describe('decodeEvents', function() {
-  it("decodes the events fetched from the ethereum node", async function() {
-    const decodeEvents = fetch_events.__get__('decodeEvents')
-    const result = await decodeEvents(web3, rawEvents)
+  it('decodes the events fetched from the ethereum node', async function() {
+    const decodeEvents = fetch_events.__get__('decodeEvents');
+    const result = await decodeEvents(web3, rawEvents);
     assert.deepEqual(
       result,
       decodedEvents
-    )
-  })
-})
+    );
+  });
+});
 
 describe('filterEvents', function() {
-  it("filters out the unneeded events", async function() {
-    const filterEvents = fetch_events.__get__('filterEvents')
-    const result = await filterEvents(decodedEvents)
+  it('filters out the unneeded events', async function() {
+    const filterEvents = fetch_events.__get__('filterEvents');
+    const result = await filterEvents(decodedEvents);
     assert.deepEqual(
       result,
       filteredEvents
-    )
-  })
-})
+    );
+  });
+});
 
 describe('getPastEvents', function() {
-  it("fetches and parses events from the ethereum node", async function() {
-    const getPastEvents = fetch_events.__get__('getPastEvents')
-    const result = await getPastEvents(web3, 0, 0)
+  it('fetches and parses events from the ethereum node', async function() {
+    const getPastEvents = fetch_events.__get__('getPastEvents');
+    const result = await getPastEvents(web3, 0, 0);
     assert.deepEqual(
       result,
       filteredEvents
-    )
-  })
-})
+    );
+  });
+});
 
 describe('getEventsByTransactionTest', function () {
-  const getEventsByTransaction = fetch_events.__get__('getEventsByTransaction')
+  const getEventsByTransaction = fetch_events.__get__('getEventsByTransaction');
 
   const decodedEvent0 = {
-    "contract": "0xeb9951021698b42e4399f9cbb6267aa35f82d59d",
-    "blockNumber": 5010901,
-    "timestamp": 1517479091,
-    "transactionHash": "0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3",
-    "logIndex": 0,
-    "from": "mint",
-    "to": "0x97623428a891542df710be9589093c9f3d2b60d3",
-    "value": 500000000000000000000,
-    "valueExactBase36": "2xirk7k6w3mt4w"
-  }
+    'contract': '0xeb9951021698b42e4399f9cbb6267aa35f82d59d',
+    'blockNumber': 5010901,
+    'timestamp': 1517479091,
+    'transactionHash': '0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3',
+    'logIndex': 0,
+    'from': 'mint',
+    'to': '0x97623428a891542df710be9589093c9f3d2b60d3',
+    'value': 500000000000000000000,
+    'valueExactBase36': '2xirk7k6w3mt4w'
+  };
 
   const decodedEvent1 = {
-    "contract": "0xeb9951021698b42e4399f9cbb6267aa35f82d59d",
-    "blockNumber": 5010901,
-    "timestamp": 1517479091,
-    "transactionHash": "0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3",
-    "logIndex": 1,
-    "to": "0x97623428a891542df710be9589093c9f3d2b60d3",
-    "from": "0x0000000000000000000000000000000000000000",
-    "value": 500000000000000000000,
-    "valueExactBase36": "2xirk7k6w3mt4w"
-  }
+    'contract': '0xeb9951021698b42e4399f9cbb6267aa35f82d59d',
+    'blockNumber': 5010901,
+    'timestamp': 1517479091,
+    'transactionHash': '0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3',
+    'logIndex': 1,
+    'to': '0x97623428a891542df710be9589093c9f3d2b60d3',
+    'from': '0x0000000000000000000000000000000000000000',
+    'value': 500000000000000000000,
+    'valueExactBase36': '2xirk7k6w3mt4w'
+  };
 
   const decodedEvent2 = {
-    "contract": "0xeb9951021698b42e4399f9cbb6267aa35f82d59d",
-    "blockNumber": 5010901,
-    "timestamp": 1517479091,
-    "transactionHash": "0xaab6e97a908f937ffba0690e6ad07053c6a4e822bab08342602204861f66b4b8",
-    "logIndex": 3,
-    "from": "mint",
-    "to": "0xc94698ffa0e74a35707eef8d6f847130c2008df3",
-    "value": 1e+21,
-    "valueExactBase36": "5v1j4f4ds79m9s"
-  }
+    'contract': '0xeb9951021698b42e4399f9cbb6267aa35f82d59d',
+    'blockNumber': 5010901,
+    'timestamp': 1517479091,
+    'transactionHash': '0xaab6e97a908f937ffba0690e6ad07053c6a4e822bab08342602204861f66b4b8',
+    'logIndex': 3,
+    'from': 'mint',
+    'to': '0xc94698ffa0e74a35707eef8d6f847130c2008df3',
+    'value': 1e+21,
+    'valueExactBase36': '5v1j4f4ds79m9s'
+  };
 
-  it("groups together two events for the same transaction", async function() {
-    const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent1])
-    const result = Array.from(iterPerTransaction)
+  it('groups together two events for the same transaction', async function() {
+    const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent1]);
+    const result = Array.from(iterPerTransaction);
 
-    assert.strictEqual(1, result.length)
-    assert.deepStrictEqual(result[0], [decodedEvent0, decodedEvent1])
-  })
+    assert.strictEqual(1, result.length);
+    assert.deepStrictEqual(result[0], [decodedEvent0, decodedEvent1]);
+  });
 
-  it("separates two events from different transactions", async function() {
-    const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent2])
-    const result = Array.from(iterPerTransaction)
+  it('separates two events from different transactions', async function() {
+    const iterPerTransaction = getEventsByTransaction([decodedEvent0, decodedEvent2]);
+    const result = Array.from(iterPerTransaction);
 
-    assert.strictEqual(2, result.length)
-    assert.deepStrictEqual(result[0], [decodedEvent0])
-    assert.deepStrictEqual(result[1], [decodedEvent2])
-  })
+    assert.strictEqual(2, result.length);
+    assert.deepStrictEqual(result[0], [decodedEvent0]);
+    assert.deepStrictEqual(result[1], [decodedEvent2]);
+  });
 
-  it("ensures grouping and separation of events works properly", async function() {
-    const iterPerTransaction = getEventsByTransaction([decodedEvent2, decodedEvent0, decodedEvent1])
-    const result = Array.from(iterPerTransaction)
+  it('ensures grouping and separation of events works properly', async function() {
+    const iterPerTransaction = getEventsByTransaction([decodedEvent2, decodedEvent0, decodedEvent1]);
+    const result = Array.from(iterPerTransaction);
 
-    assert.strictEqual(2, result.length)
-    assert.deepStrictEqual(result[0], [decodedEvent2])
-    assert.deepStrictEqual(result[1], [decodedEvent0, decodedEvent1])
-  })
-})
+    assert.strictEqual(2, result.length);
+    assert.deepStrictEqual(result[0], [decodedEvent2]);
+    assert.deepStrictEqual(result[1], [decodedEvent0, decodedEvent1]);
+  });
+});
