@@ -73,7 +73,7 @@ class FeesDecoder {
     block.transactions.forEach((transaction) => {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       const feeTransfers =
-        blockNumber >= constants.LONDON_FORK_BLOCK ?
+        constants.IS_ETH && blockNumber >= constants.LONDON_FORK_BLOCK ?
         this.getPostLondonForkFees(transaction, block, receipts) :
         this.getPreLondonForkFees(transaction, block, receipts);
 
