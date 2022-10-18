@@ -1,3 +1,5 @@
+/* eslint-disable quotes */
+// For this file we want to use double quotes as returned by the Node
 const assert = require('assert');
 
 const util = require('../../blockchains/cardano/lib/util');
@@ -80,38 +82,59 @@ function getTransactionsFullBlock() {
   ];
 }
 
-describe('discardNotCompletedBlock Test', function() {
-  it('test partial last block discarded', async function() {
+function getTransactionQuotedInteger() {
+  return [{
+    "includedAt": "2022-10-18T17:34:59Z",
+    "blockIndex": 23,
+    "fee": 183805,
+    "hash": "aedf3fc194ca46fd9830f4b12100ffa40fc82df6ca4e69b0a7d509016dacaea0",
+    "block":
+    {
+      'number': 7900386,
+      'epochNo': 370,
+      // eslint-disable-next-line quotes
+      'transactionsCount': "1"
+    }
+  }];
+}
+
+describe('discardNotCompletedBlock Test', function () {
+  it('test partial last block discarded', async function () {
     const transactions = getTransactionsPartialLastBlock();
     const result = util.discardNotCompletedBlock(transactions);
     assert.deepStrictEqual(result, transactions.slice(0, 2));
   });
 
-  it('test one partial block exception', async function() {
+  it('test one partial block exception', async function () {
     const transactions = getTransactionsOnePartialBlock();
-    assert.throws(function() {util.discardNotCompletedBlock(transactions);}, Error);
+    assert.throws(function () { util.discardNotCompletedBlock(transactions); }, Error);
   });
 
-  it('test full block is not altered', async function() {
+  it('test full block is not altered', async function () {
     const transactions = getTransactionsFullBlock();
     const result = util.discardNotCompletedBlock(transactions);
     assert.deepStrictEqual(result, transactions);
   });
 });
 
-describe('verifyAllBlocksComplete Test', function() {
-  it('test throw on partial last block', async function() {
+describe('verifyAllBlocksComplete Test', function () {
+  it('test throw on partial last block', async function () {
     const transactions = getTransactionsPartialLastBlock();
-    assert.throws(function() {util.verifyAllBlocksComplete(transactions);}, Error);
+    assert.throws(function () { util.verifyAllBlocksComplete(transactions); }, Error);
   });
 
-  it('test throw on partial single block', async function() {
+  it('test throw on partial single block', async function () {
     const transactions = getTransactionsOnePartialBlock();
-    assert.throws(function() {util.verifyAllBlocksComplete(transactions);}, Error);
+    assert.throws(function () { util.verifyAllBlocksComplete(transactions); }, Error);
   });
 
-  it('test verify passes on full block', async function() {
+  it('test verify passes on full block', async function () {
     const transactions = getTransactionsFullBlock();
+    util.verifyAllBlocksComplete(transactions);
+  });
+
+  it('verify that we handle integer returned as string', async function () {
+    const transactions = getTransactionQuotedInteger();
     util.verifyAllBlocksComplete(transactions);
   });
 });
