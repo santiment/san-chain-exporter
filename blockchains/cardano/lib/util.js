@@ -24,28 +24,34 @@ function discardNotCompletedBlock(transactions) {
   return transactions;
 }
 
+function verifyBlockComplete(blockNumber, transactionsSeen, transactionsExpected) {
+  const transactionsExpectedCasted = (typeof transactionsExpected === 'string') ?
+    parseInt(transactionsExpected, 10) : transactionsExpected;
+
+  if (transactionsSeen !== transactionsExpectedCasted) {
+    let strMessage = `Block ${blockNumber} should have ${transactionsExpected}`;
+    strMessage += ` transactions but we extracted ${transactionsSeen}`;
+    throw new Error(strMessage);
+  }
+}
+
 function verifyAllBlocksComplete(transactions) {
   let lastBlockNumber = transactions[0].block.number;
   let transactionsInBlock = 1;
 
   for (let i = 1; i < transactions.length; i++) {
     if (transactions[i].block.number !== lastBlockNumber) {
-      // Check that all transactions are extracted
-      if (transactionsInBlock !== transactions[i - 1].block.transactionsCount) {
-        throw new Error(`The block ${lastBlockNumber} has ${transactions[i - 1].block.transactionsCount}
-            transactions but we extracted ${transactionsInBlock} transactions`);
-      }
+      // We have finished iterating transactions from the previous block. Check that all transactions are extracted.
+      const lastBlock = transactions[i - 1].block;
+      verifyBlockComplete(lastBlock.number, transactionsInBlock, lastBlock.transactionsCount);
       transactionsInBlock = 0;
       lastBlockNumber = transactions[i].block.number;
     }
     ++transactionsInBlock;
   }
 
-  const expectedTrxInLastBlock = transactions[transactions.length - 1].block.transactionsCount;
-  if (expectedTrxInLastBlock !== transactionsInBlock) {
-    throw new Error(`The block ${lastBlockNumber} has ${expectedTrxInLastBlock}
-          transactions but we extracted ${transactionsInBlock} transactions`);
-  }
+  const lastBlock = transactions[transactions.length - 1].block;
+  verifyBlockComplete(lastBlock.number, transactionsInBlock, lastBlock.transactionsCount);
 }
 
 module.exports = {
