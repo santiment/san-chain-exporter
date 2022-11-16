@@ -9,10 +9,12 @@ const { logger } = require('../../lib/logger');
 
 const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || 'http://localhost:3100/graphql';
 const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
+const CARDANO_NODE_API_RETRIES = parseInt(process.env.CARDANO_NODE_API_RETRIES || '3');
 
 class CardanoWorker extends BaseWorker {
   constructor() {
     super();
+    this.retryAttempt = 0;
   }
 
   async sendRequest(query) {
@@ -158,44 +160,62 @@ class CardanoWorker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastExportedBlock >= this.lastConfirmedBlock - 1) {
-      // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
-      // The last confirmed block may be partial and would not be exported. Allow for one block gap.
-      this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+    // We are allowing retry attempts. If have entered here as result of a retry attempt, do not calculate new
+    // intervals - instead try out the last one.
+    if (0 === this.retryAttempt) {
+      if (this.lastExportedBlock >= this.lastConfirmedBlock - 1) {
+        // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
+        // The last confirmed block may be partial and would not be exported. Allow for one block gap.
+        this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
-      // On the previous cycle we closed the gap to the head of the blockchain.
-      // Check if there are new blocks now.
-      const newConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
-      if (newConfirmedBlock === this.lastConfirmedBlock) {
-        // The Node has not progressed
-        return [];
+        // On the previous cycle we closed the gap to the head of the blockchain.
+        // Check if there are new blocks now.
+        const newConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
+        if (newConfirmedBlock === this.lastConfirmedBlock) {
+          // The Node has not progressed
+          return [];
+        }
+        this.lastConfirmedBlock = newConfirmedBlock;
       }
-      this.lastConfirmedBlock = newConfirmedBlock;
+      else {
+        // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
+        this.sleepTimeMsec = 0;
+      }
     }
-    else {
-      // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
-      this.sleepTimeMsec = 0;
-    }
+
 
     let transactions = null;
-    if (this.lastExportedBlock < 0) {
-      transactions = await this.getGenesisTransactions();
-      if (transactions.length === 0) {
-        throw new Error('Error getting Cardano genesis transactions');
+    try {
+      if (this.lastExportedBlock < 0) {
+        transactions = await this.getGenesisTransactions();
+        if (transactions.length === 0) {
+          throw new Error('Error getting Cardano genesis transactions');
+        }
+        this.setBlockZeroForGenesisTransfers(transactions);
       }
-      this.setBlockZeroForGenesisTransfers(transactions);
+      else {
+        const fromBlock = this.lastExportedBlock + 1;
+        transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
+        if (transactions.length === 0) {
+          this.lastExportedBlock = this.lastConfirmedBlock;
+          return [];
+        }
+      }
+
+      transactions = util.discardNotCompletedBlock(transactions);
+      util.verifyAllBlocksComplete(transactions);
+      this.retryAttempt = 0;
     }
-    else {
-      const fromBlock = this.lastExportedBlock + 1;
-      transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
-      if (transactions.length === 0) {
-        this.lastExportedBlock = this.lastConfirmedBlock;
+    catch (error) {
+      if (this.retryAttempt > CARDANO_NODE_API_RETRIES) {
+        throw new Error(`Error sending request to Cardano GraphQL: ${error.message}`);
+      }
+      else {
+        logger.warn(`Error sending request to Cardano GraphQL: ${error.message}`);
+        this.retryAttempt += 1;
         return [];
       }
     }
-
-    transactions = util.discardNotCompletedBlock(transactions);
-    util.verifyAllBlocksComplete(transactions);
 
     for (let i = 0; i < transactions.length; i++) {
       transactions[i].primaryKey = this.lastPrimaryKey + i + 1;
