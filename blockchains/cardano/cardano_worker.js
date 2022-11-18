@@ -163,9 +163,10 @@ class CardanoWorker extends BaseWorker {
     // If we have entered here as result of a retry attempt, do not calculate new intervals,
     // instead try out the last one.
     if (0 === this.retryAttempt) {
-      if (this.lastExportedBlock >= this.lastConfirmedBlock - 1) {
+      if (this.lastExportedBlock >= this.lastConfirmedBlock - 2) {
         // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
-        // The last confirmed block may be partial and would not be exported. Allow for one block gap.
+        // The last confirmed block may be partial and would not be exported. Allow for two block gap as the last
+        // block may have been incomplete and we did not extract it on the last iteration.
         this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
         logger.info(`Sleep time set to ${constants.LOOP_INTERVAL_CURRENT_MODE_SEC}, current mode`);
         // On the previous cycle we closed the gap to the head of the blockchain.
