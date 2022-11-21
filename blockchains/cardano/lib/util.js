@@ -7,17 +7,20 @@ const { logger } = require('../../../lib/logger');
 function discardNotCompletedBlock(transactions) {
   const lastBlockNumber = transactions[transactions.length - 1].block.number;
   let index = transactions.length - 2;
+  // Go backwards looking for first occurrence of next to last block
   while (index >= 0 && transactions[index].block.number === lastBlockNumber) {
     --index;
   }
 
-  if (transactions[index + 1].block.transactionsCount !== (transactions.length - index - 1)) {
+  const numExpectedTransactionsLastBlock = transactions[index + 1].block.transactionsCount;
+  const numSeenTransactionsLastBlock = transactions.length - index - 1;
+  if (numExpectedTransactionsLastBlock !== numSeenTransactionsLastBlock) {
     if (index < 0) {
       throw new Error(`Single extracted block is partial. Exporter would not be able to progress.
-          Block number is ${lastBlockNumber} it has ${transactions[0].block.transactionsCount} but only
-          ${transactions.length - 1} were extracted.`);
+          Block number ${lastBlockNumber} has ${transactions[0].block.transactionsCount} but only
+          ${transactions.length} were extracted.`);
     }
-    logger.debug(`Removing ${transactions.length - index - 1} transactions from partial block ${lastBlockNumber}`);
+    logger.debug(`Removing ${transactions.length - index - 2} transactions from partial block ${lastBlockNumber}`);
     return transactions.slice(0, index + 1);
   }
 
