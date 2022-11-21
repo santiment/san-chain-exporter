@@ -16,6 +16,10 @@ function discardNotCompletedBlock(transactions) {
   const numSeenTransactionsLastBlock = transactions.length - index - 1;
   if (numExpectedTransactionsLastBlock !== numSeenTransactionsLastBlock) {
     if (index < 0) {
+      if (typeof numSeenTransactionsLastBlock !== typeof numExpectedTransactionsLastBlock) {
+        throw new Error(`Single extracted block is partial. Exporter would not be able to progress.`)
+      }
+
       throw new Error(`Single extracted block is partial. Exporter would not be able to progress.
           Block number ${lastBlockNumber} has ${transactions[0].block.transactionsCount} but only
           ${transactions.length} were extracted.`);
