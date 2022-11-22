@@ -158,16 +158,19 @@ class CardanoWorker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastExportedBlock >= this.lastConfirmedBlock - 1) {
+    const fromBlock = this.lastExportedBlock + 1;
+    if (fromBlock >= this.lastConfirmedBlock - 2) {
       // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
       // The last confirmed block may be partial and would not be exported. Allow for one block gap.
       this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
       // On the previous cycle we closed the gap to the head of the blockchain.
-      // Check if there are new blocks now.
+      // Check if there are new blocks now. We want an interval of at least 2 blocks. For some reason the Cardano Node
+      // API would return a partial last block. The same would not happen if the same block is fetched as part of 2
+      // block interval.
       const newConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
-      if (newConfirmedBlock === this.lastConfirmedBlock) {
-        // The Node has not progressed
+      if (newConfirmedBlock < fromBlock + 2) {
+        // The Node has not progressed enough
         return [];
       }
       this.lastConfirmedBlock = newConfirmedBlock;
@@ -186,7 +189,6 @@ class CardanoWorker extends BaseWorker {
       this.setBlockZeroForGenesisTransfers(transactions);
     }
     else {
-      const fromBlock = this.lastExportedBlock + 1;
       transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
       if (transactions.length === 0) {
         this.lastExportedBlock = this.lastConfirmedBlock;
