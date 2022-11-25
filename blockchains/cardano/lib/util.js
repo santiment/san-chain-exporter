@@ -12,13 +12,13 @@ function discardNotCompletedBlock(transactions) {
     --index;
   }
 
-  const numExpectedTransactionsLastBlock = transactions[index + 1].block.transactionsCount;
+  const numExpectedTransactionsLastBlock = parseInt(transactions[index + 1].block.transactionsCount, 10);
   const numSeenTransactionsLastBlock = transactions.length - index - 1;
   if (numExpectedTransactionsLastBlock !== numSeenTransactionsLastBlock) {
     if (index < 0) {
-      throw new Error(`Single extracted block is partial. Exporter would not be able to progress.
-          Block number ${lastBlockNumber} has ${transactions[0].block.transactionsCount} but only
-          ${transactions.length} were extracted.`);
+      const errorMessage = 'Single extracted block is partial. Exporter would not be able to progress. Block number ' +
+        `${lastBlockNumber} has ${numExpectedTransactionsLastBlock} but ${numSeenTransactionsLastBlock} were extracted.`;
+      throw new Error(errorMessage);
     }
     logger.debug(`Removing ${transactions.length - index - 2} transactions from partial block ${lastBlockNumber}`);
     return transactions.slice(0, index + 1);
