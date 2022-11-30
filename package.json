@@ -20,7 +20,6 @@
   "homepage": "https://github.com/santiment/erc20_transfers_exporter#readme",
   "dependencies": {
     "bignumber.js": "^9.0.0",
-    "blockchain-utils": "git+https://github.com/santiment/blockchain-utils.git#9761ff7b11c889aad2942b1ba47294bc4d705558",
     "got": "^11.8.2",
     "jayson": "^3.5.2",
     "micro": "^9.3.4",
@@ -30,7 +29,9 @@
     "p-queue": "^7.2.0",
     "prom-client": "^13.1.0",
     "segfault-handler": "^1.3.0",
-    "web3": "^1.2.11"
+    "web3": "^1.2.11",
+    "lodash": "^4.17.21",
+    "trie-prefix-tree": "^1.5.1"
   },
   "devDependencies": {
     "eslint": "^7.8.1",

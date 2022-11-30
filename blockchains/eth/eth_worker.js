@@ -1,6 +1,6 @@
 const Web3 = require('web3');
 const jayson = require('jayson/promise');
-const { filterErrors } = require('blockchain-utils/eth');
+const { filterErrors } = require('./lib/filter_errors');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
@@ -105,7 +105,7 @@ class ETHWorker extends BaseWorker {
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
-      events.push(... getGenesisTransfers(this.web3));
+      events.push(...getGenesisTransfers(this.web3));
     }
 
     events.push(... await this.getPastTransferEvents(traces, blocks));
