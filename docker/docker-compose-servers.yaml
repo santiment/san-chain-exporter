@@ -1,0 +1,40 @@
+version: "3.7"
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    #logging:
+    #  driver: none
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: WARN
+    network_mode: "host"
+    healthcheck:
+      test: nc -z localhost 2181 || exit 1
+      interval: 3s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+  kafka:
+    image: confluentinc/cp-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      # Those settings are supposed to decrease the logging but for some reason do not get applied
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'localhost:2181'
+      KAFKA_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    #logging:
+    #  driver: none
+    network_mode: "host"

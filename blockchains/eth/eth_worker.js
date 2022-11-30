@@ -28,7 +28,9 @@ class ETHWorker extends BaseWorker {
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
     }]).then((data) => {
+      console.log('Before filter errors')
       const traces = filterErrors(data['result']);
+      console.log('After filter errors')
 
       return traces
         .filter((trace) =>
@@ -105,7 +107,7 @@ class ETHWorker extends BaseWorker {
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
-      events.push(... getGenesisTransfers(this.web3));
+      events.push(...getGenesisTransfers(this.web3));
     }
 
     events.push(... await this.getPastTransferEvents(traces, blocks));
