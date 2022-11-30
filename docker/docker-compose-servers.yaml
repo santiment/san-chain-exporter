@@ -2,8 +2,6 @@ version: "3.7"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper
-    #logging:
-    #  driver: none
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: WARN
@@ -35,6 +33,7 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    #logging:
-    #  driver: none
+    # If you need to disable this container logs altogether use
+    # logging:
+    #   driver: none
     network_mode: "host"

@@ -14,11 +14,6 @@ const constants = require('./lib/constants');
 var SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
 
-function print() {
-  setTimeout(print, '3000')
-  console.log('Timeout triggered' + new Date())
-}
-
 class Main {
   constructor() {
     // To be set depending on which blockchain worker is configured on runtime
@@ -34,11 +29,8 @@ class Main {
     metrics.startCollection();
   }
 
-
   async workLoop() {
     try {
-      print();
-
       const lastRequestStartTime = new Date();
       const events = await this.worker.work();
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);

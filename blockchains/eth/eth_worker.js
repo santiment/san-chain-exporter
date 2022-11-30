@@ -28,9 +28,7 @@ class ETHWorker extends BaseWorker {
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
     }]).then((data) => {
-      console.log('Before filter errors')
       const traces = filterErrors(data['result']);
-      console.log('After filter errors')
 
       return traces
         .filter((trace) =>
