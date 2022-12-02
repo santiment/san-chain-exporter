@@ -1,5 +1,5 @@
-const trie = require('trie-prefix-tree')
-const { groupBy } = require('lodash')
+const { groupBy } = require('lodash');
+const custom_trie = require('../../../blockchains/eth/lib/custom_trie');
 
 /**
  * A function to mark children traces as erroneous if their parent is an error.
@@ -23,32 +23,17 @@ const { groupBy } = require('lodash')
  */
 function setErrors(traces) {
   // The whole computation is done per transaction
-  let txs = groupBy(traces, tx => tx.transactionHash)
-  const hashes = Object.keys(txs)
+  let txs = groupBy(traces, tx => tx.transactionHash);
+  const hashes = Object.keys(txs);
 
   hashes.forEach(hash => {
-    const txTraces = txs[hash]
+    // Traces for this transaction
+    const txTraces = txs[hash];
+    if (txTraces.length === 0) return;
 
-    const errorTraces = txTraces.filter(trace => typeof trace.error !== 'undefined')
-    if (errorTraces.length === 0) return
-
-    const traceAddresses = txTraces.map(trace => (trace.traceAddress.length > 0) ? '-1 ' + trace.traceAddress.join(' ') : '-1 ')
-    const txTrie = trie(traceAddresses)
-
-    let errAddresses = errorTraces.map(trace => {
-      const errPrefix = '-1 ' + trace.traceAddress.join(' ')
-      const children = txTrie.getPrefix(errPrefix)
-      return children
-    })
-    errAddresses = [].concat(...errAddresses)
-    txs[hash].forEach(trace => {
-      if (errAddresses.indexOf('-1 ' + trace.traceAddress.join(' ')) !== -1) {
-        trace['error'] = 'parent_error'
-      }
-    })
-  })
-  return [].concat(...Object.values(txs))
-
+    const txTrie = new custom_trie.CustomTrie(txTraces);
+    txTrie.markChildrenWithFailedParents();
+  });
 }
 
 /** Remove traces which contain no useful data. For example:
@@ -60,16 +45,16 @@ function setErrors(traces) {
  }
 */
 function filterNonActions(traces) {
-  return traces.filter(trace => typeof trace.action != 'undefined')
+  return traces.filter(trace => typeof trace.action !== 'undefined');
 }
 
 function filterErrors(traces) {
-  traces = filterNonActions(traces)
-  traces = setErrors(traces)
-  traces = traces.filter(trace => typeof trace.error === 'undefined')
-  return traces
+  traces = filterNonActions(traces);
+  setErrors(traces);
+  traces = traces.filter(trace => typeof trace.error === 'undefined');
+  return traces;
 }
 
 module.exports = {
   filterErrors
-}
+};

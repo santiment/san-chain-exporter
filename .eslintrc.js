@@ -7,7 +7,7 @@ module.exports = {
     },
     'extends': 'eslint:recommended',
     'parserOptions': {
-        'ecmaVersion': 12
+        'ecmaVersion': 13
     },
     'rules': {
         'quotes': ['error', 'single'],
