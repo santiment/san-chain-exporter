@@ -15,6 +15,7 @@ class XRPWorker extends BaseWorker {
     super();
     this.nodeURLs = constants.XRP_NODE_URLS.split(',');
     this.connections = [];
+    console.log(this.lastExportedBlock);
   }
 
   async createNewSetConnections() {
@@ -140,31 +141,26 @@ class XRPWorker extends BaseWorker {
     } else {
       this.sleepTimeMsec = 0;
     }
-    let toBlock = Math.min(this.lastExportedBlock + constants.SEND_BATCH_SIZE, this.lastConfirmedBlock);
+    const toBlock = Math.min(this.lastExportedBlock + constants.SEND_BATCH_SIZE, this.lastConfirmedBlock);
     let fromBlock = this.lastExportedBlock + 1;
 
     const requests = [];
     let transfers = [];
     logger.info(`Fetching transfers for interval ${fromBlock}:${toBlock}`);
-    while (fromBlock + requests.length <= toBlock) {
-      const ledgerToDownload = fromBlock + requests.length;
+    for (fromBlock; fromBlock <= toBlock; fromBlock++) {
       requests.push(
-        await this.fetchLedgerTransactions(this.connections[ledgerToDownload % this.connections.length], ledgerToDownload)
+        this.fetchLedgerTransactions(this.connections[fromBlock % this.connections.length], fromBlock)
       );
-      if (requests.length >= constants.SEND_BATCH_SIZE || ledgerToDownload === toBlock) {
-        const ledgers = await Promise.all(requests).map(async ({ledger, transactions}) => {
-          return { ledger, transactions, primaryKey: ledger.ledger_index };
-        });
-        this.checkAllTransactionsValid(ledgers);
-
-        this.lastExportTime = Date.now();
-        this.lastExportedBlock = toBlock;
-
-        fromBlock += ledgers.length;
-        requests.length = 0;
-        transfers = transfers.concat(ledgers);
-      }
     }
+    const ledgers = await Promise.all(requests).map(async ({ledger, transactions}) => {
+      return { ledger, transactions, primaryKey: ledger.ledger_index };
+    });
+    this.checkAllTransactionsValid(ledgers);
+
+    this.lastExportTime = Date.now();
+    this.lastExportedBlock = toBlock;
+
+    transfers = transfers.concat(ledgers);
 
     return transfers;
   }

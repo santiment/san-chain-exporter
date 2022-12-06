@@ -8,7 +8,6 @@ const CONNECTIONS_COUNT = parseInt(process.env.CONNECTIONS_COUNT || '1');
 const MAX_CONNECTION_CONCURRENCY = parseInt(process.env.MAX_CONNECTION_CONCURRENCY || '10');
 const XRP_NODE_URLS = process.env.XRP_NODE_URLS || 'wss://s2.ripple.com';
 const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5);
-const START_BLOCK = parseInt(process.env.START_BLOCK || '38129');
 const LOOP_INTERVAL_CURRENT_MODE_SEC = 1000;
 
 module.exports = {
@@ -19,6 +18,5 @@ module.exports = {
   XRP_NODE_URLS,
   EXPORT_TIMEOUT_MLS,
   CONFIRMATIONS,
-  START_BLOCK,
   LOOP_INTERVAL_CURRENT_MODE_SEC
 };
