@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "eslint": "^7.8.1",
-    "mocha": "^8.3.2",
+    "mocha": "^10.1.0",
     "rewire": "^5.0.0"
   }
 }
