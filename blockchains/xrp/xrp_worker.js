@@ -11,7 +11,7 @@ let PQueue = null;
 })();
 
 class XRPWorker extends BaseWorker {
-  constructor() { 
+  constructor() {
     super();
     this.nodeURLs = constants.XRP_NODE_URLS.split(',');
     this.connections = [];
@@ -22,7 +22,7 @@ class XRPWorker extends BaseWorker {
     if (this.nodeURLs.length === 0) {
       throw 'Error: All API URLs returned error.';
     }
-  
+
     const nodeURL = this.nodeURLs.shift();
     logger.info(`Using ${nodeURL} as XRPL API endpoint.`);
     for (let i = 0; i < constants.CONNECTIONS_COUNT; i++) {
@@ -38,7 +38,7 @@ class XRPWorker extends BaseWorker {
     }
   }
 
-  async connectionSend({connection, queue}, params) {
+  async connectionSend({ connection, queue }, params) {
     return queue.add(() => {
       return connection.request(params);
     });
@@ -65,11 +65,11 @@ class XRPWorker extends BaseWorker {
     }).then(value => value.result.ledger);
 
     assert(ledger.closed === true);
-  
+
     if (typeof ledger.transactions === 'undefined' || ledger.transactions.length === 0) {
       return { ledger: ledger, transactions: [] };
     }
-  
+
     if (ledger.transactions.length > 200) {
       logger.info(`<<< TOO MANY TXS at ledger ${ledger_index}: [[ ${ledger.transactions.length} ]], processing per-tx...`);
       let transactions = ledger.transactions.map(tx =>
@@ -82,13 +82,13 @@ class XRPWorker extends BaseWorker {
           if (error.message === 'txnNotFound') {
             return Promise.resolve(null);
           }
-  
+
           return Promise.reject(error);
         })
       );
-  
+
       transactions = await Promise.all(transactions);
-  
+
       transactions = transactions.filter(t => t);
 
       return { ledger: ledger, transactions };
@@ -100,9 +100,9 @@ class XRPWorker extends BaseWorker {
       transactions: true,
       expand: true
     }).then(value => value.result.ledger);
-  
+
     assert(result.closed === true);
-  
+
     return { ledger: ledger, transactions: result.transactions };
   }
 
@@ -112,11 +112,11 @@ class XRPWorker extends BaseWorker {
       const blockNumber = ledgers[indexLedger].ledger.ledger_index;
       for (let index = 0; index < transactions.length; index++) {
         const transaction = transactions[index];
-        if('validated' in transaction && !transaction.validated) {
+        if ('validated' in transaction && !transaction.validated) {
           logger.error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated. Aborting.`);
           process.exit(-1);
         }
-        if(!('meta' in transaction) && !('metaData' in transaction)) {
+        if (!('meta' in transaction) && !('metaData' in transaction)) {
           logger.error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field. Aborting.`);
           process.exit(-1);
         }
@@ -152,13 +152,16 @@ class XRPWorker extends BaseWorker {
         this.fetchLedgerTransactions(this.connections[fromBlock % this.connections.length], fromBlock)
       );
     }
-    const ledgers = await Promise.all(requests).map(async ({ledger, transactions}) => {
+    const ledgers = await Promise.all(requests).map(async ({ ledger, transactions }) => {
       return { ledger, transactions, primaryKey: ledger.ledger_index };
     });
     this.checkAllTransactionsValid(ledgers);
 
     this.lastExportTime = Date.now();
     this.lastExportedBlock = toBlock;
+    if (ledgers.length > 0) {
+      this.primaryKey = ledgers[ledgers.length - 1].primaryKey;
+    }
 
     transfers = transfers.concat(ledgers);
 
