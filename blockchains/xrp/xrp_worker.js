@@ -5,20 +5,15 @@ const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
 
-let PQueue = null;
-(async () => {
-  PQueue = (await import('p-queue')).default;
-})();
-
 class XRPWorker extends BaseWorker {
   constructor() {
     super();
     this.nodeURLs = constants.XRP_NODE_URLS.split(',');
     this.connections = [];
-    console.log(this.lastExportedBlock);
   }
 
   async createNewSetConnections() {
+    PQueue = (await import('p-queue')).default;
     if (this.nodeURLs.length === 0) {
       throw 'Error: All API URLs returned error.';
     }
@@ -152,7 +147,8 @@ class XRPWorker extends BaseWorker {
         this.fetchLedgerTransactions(this.connections[fromBlock % this.connections.length], fromBlock)
       );
     }
-    const ledgers = await Promise.all(requests).map(async ({ ledger, transactions }) => {
+    const resolvedRequests = await Promise.all(requests);
+    const ledgers = resolvedRequests.map(({ ledger, transactions }) => {
       return { ledger, transactions, primaryKey: ledger.ledger_index };
     });
     this.checkAllTransactionsValid(ledgers);
@@ -160,7 +156,7 @@ class XRPWorker extends BaseWorker {
     this.lastExportTime = Date.now();
     this.lastExportedBlock = toBlock;
     if (ledgers.length > 0) {
-      this.primaryKey = ledgers[ledgers.length - 1].primaryKey;
+      this.lastPrimaryKey = ledgers[ledgers.length - 1].primaryKey;
     }
 
     transfers = transfers.concat(ledgers);
