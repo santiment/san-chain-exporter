@@ -13,7 +13,7 @@ class XRPWorker extends BaseWorker {
   }
 
   async createNewSetConnections() {
-    PQueue = (await import('p-queue')).default;
+    const PQueue = (await import('p-queue')).default;
     if (this.nodeURLs.length === 0) {
       throw 'Error: All API URLs returned error.';
     }

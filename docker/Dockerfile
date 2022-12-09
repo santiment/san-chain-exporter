@@ -5,12 +5,12 @@ ENV NODE_ENV=${NODE_ENV}
 
 RUN apt-get update; \
     apt-get install -y bash \
-      g++ \
-      ca-certificates \
-      musl-dev \
-      make \
-      git \
-      python3
+    g++ \
+    ca-certificates \
+    musl-dev \
+    make \
+    git \
+    python3
 
 WORKDIR /opt
 
@@ -30,7 +30,13 @@ ENV PATH /opt/node_modules/.bin:$PATH
 
 COPY --from=builder /opt/node_modules /opt/node_modules
 
-COPY . /opt/app
+#
+# Reason for multipe COPY commands is Docker CP limitation, it copies <src> contents only not preserving the directory
+#
+COPY package.json AUTHORS LICENSE index.js /opt/app/
+COPY blockchains /opt/app/blockchains
+COPY lib/ /opt/app/lib
+COPY test /opt/app/test
 
 EXPOSE 3000
 

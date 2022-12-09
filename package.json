@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/santiment/erc20_transfers_exporter.git"
+    "url": "git+https://github.com/santiment/san-chain-exporter.git"
   },
   "author": "Santiment",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/santiment/erc20_transfers_exporter/issues"
+    "url": "https://github.com/santiment/san-chain-exporter/issues"
   },
-  "homepage": "https://github.com/santiment/erc20_transfers_exporter#readme",
+  "homepage": "https://github.com/santiment/san-chain-exporter#readme",
   "dependencies": {
     "bignumber.js": "^9.0.0",
     "got": "^11.8.2",
