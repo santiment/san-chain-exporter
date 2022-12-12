@@ -83,6 +83,7 @@ class Main {
   }
 
   stop() {
+    logger.info('Triggering exporter stop');
     this.shouldWork = false;
   }
 

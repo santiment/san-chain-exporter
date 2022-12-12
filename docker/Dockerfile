@@ -37,6 +37,7 @@ COPY package.json AUTHORS LICENSE index.js /opt/app/
 COPY blockchains /opt/app/blockchains
 COPY lib/ /opt/app/lib
 COPY test /opt/app/test
+COPY docker/wait_for_services.sh /opt/app/docker
 
 EXPOSE 3000
 

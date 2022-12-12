@@ -84,7 +84,8 @@ class XRPWorker extends BaseWorker {
 
       transactions = await Promise.all(transactions);
 
-      transactions = transactions.filter(t => t);
+      // When transactions are fetched one by one, we need to take the 'result' field
+      transactions = transactions.map(t => t.result);
 
       return { ledger: ledger, transactions };
     }
