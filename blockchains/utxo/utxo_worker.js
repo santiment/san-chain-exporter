@@ -1,7 +1,7 @@
 'use strict';
-const uuidv1 = require('uuid/v1');
+const jayson = require('jayson/promise');
+const { parseURL } = require('whatwg-url');
 const { logger } = require('../../lib/logger');
-const rp = require('request-promise-native');
 const BaseWorker = require('../../lib/worker_base');
 const {
   NODE_URL,
@@ -12,24 +12,21 @@ const {
   CONFIRMATIONS,
   LOOP_INTERVAL_CURRENT_MODE_SEC
 } = require('./lib/constants');
-
+const URL = parseURL(NODE_URL);
 
 class UtxoWorker extends BaseWorker {
   constructor() {
     super();
 
     logger.info(`Connecting to the node ${NODE_URL}`);
-    this.request = rp.defaults({
+
+    this.client = jayson.Client.http({
+      host: URL.host,
+      port: URL.port,
       method: 'POST',
-      uri: NODE_URL,
-      auth: {
-        user: RPC_USERNAME,
-        pass: RPC_PASSWORD
-      },
+      auth: RPC_USERNAME + ':' + RPC_PASSWORD,
       timeout: DEFAULT_TIMEOUT,
-      time: true,
-      gzip: true,
-      json: true
+      version: 1
     });
   }
 
@@ -39,18 +36,11 @@ class UtxoWorker extends BaseWorker {
   }
 
   async sendRequest(method, params) {
-    return this.request({
-      body: {
-        jsonrpc: '1.0',
-        id: uuidv1(),
-        method: method,
-        params: params
-      }
-    }).then(({ result, error }) => {
+    return this.client.request(method, params).then(({ result, error }) => {
       if (error) {
         return Promise.reject(error);
       }
-  
+
       return result;
     });
   }
