@@ -10,7 +10,8 @@ const {
   DEFAULT_TIMEOUT,
   DOGE,
   CONFIRMATIONS,
-  LOOP_INTERVAL_CURRENT_MODE_SEC
+  LOOP_INTERVAL_CURRENT_MODE_SEC,
+  SEND_BATCH_SIZE
 } = require('./lib/constants');
 const URL = parseURL(NODE_URL);
 
@@ -19,8 +20,7 @@ class UtxoWorker extends BaseWorker {
     super();
 
     logger.info(`Connecting to the node ${NODE_URL}`);
-
-    this.client = jayson.Client.http({
+    this.client = jayson.Client.https({
       host: URL.host,
       port: URL.port,
       method: 'POST',
@@ -94,7 +94,7 @@ class UtxoWorker extends BaseWorker {
 
       requests.push(this.fetchBlock(blockToDownload));
 
-      if (blockToDownload >= this.lastConfirmedBlock || requests.length > 50) {
+      if (blockToDownload >= this.lastConfirmedBlock || requests.length > SEND_BATCH_SIZE) {
         const blocks = await Promise.all(requests);
         this.lastExportedBlock = blockToDownload;
         logger.info(`Flushing blocks ${blocks[0].height}:${blocks[blocks.length - 1].height}`);

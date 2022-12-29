@@ -1,15 +1,15 @@
 'use strict';
-const pkg = require('./package.json');
-const { send } = require('micro');
 const url = require('url');
-const { Exporter } = require('./lib/kafka_storage');
+const { send } = require('micro');
+const pkg = require('./package.json');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
+const { Exporter } = require('./lib/kafka_storage');
 const { storeEvents } = require('./lib/store_events');
+const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
 // Dynamically initialize just the needed blockchain worker
-const worker = require(`./blockchains/${process.env.BLOCKCHAIN}/${process.env.BLOCKCHAIN}_worker`);
 const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name;
-const constants = require('./lib/constants');
+const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 
 var SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
@@ -97,10 +97,10 @@ class Main {
 
   healthcheckExportTimeout() {
     const timeFromLastExport = Date.now() - this.worker.lastExportTime;
-    const isExportTimeoutExceeded = timeFromLastExport > constants.EXPORT_TIMEOUT_MLS;
+    const isExportTimeoutExceeded = timeFromLastExport > EXPORT_TIMEOUT_MLS;
     if (isExportTimeoutExceeded) {
       const errorMessage = `Time from the last export ${timeFromLastExport}ms exceeded limit ` +
-        `${constants.EXPORT_TIMEOUT_MLS}ms. Node last block is ${this.worker.lastConfirmedBlock}.`;
+        `${EXPORT_TIMEOUT_MLS}ms. Node last block is ${this.worker.lastConfirmedBlock}.`;
       return Promise.reject(errorMessage);
     } else {
       return Promise.resolve();
