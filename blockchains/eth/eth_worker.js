@@ -23,20 +23,22 @@ class ETHWorker extends BaseWorker {
     this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper);
   }
 
+  parseEthInternalTrx(result) {
+    const traces = filterErrors(result);
+
+    return traces
+      .filter((trace) =>
+        trace['action']['value'] !== '0x0' &&
+        trace['action']['balance'] !== '0x0' &&
+        !(trace['type'] === 'call' && trace['action']['callType'] !== 'call')
+      );
+  }
+
   fetchEthInternalTrx(fromBlock, toBlock) {
     return this.ethClient.request('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
-    }]).then((data) => {
-      const traces = filterErrors(data['result']);
-
-      return traces
-        .filter((trace) =>
-          trace['action']['value'] !== '0x0' &&
-          trace['action']['balance'] !== '0x0' &&
-          !(trace['type'] === 'call' && trace['action']['callType'] !== 'call')
-        );
-    });
+    }]).then((data) => this.parseEthInternalTrx(data['result']));
   }
 
   async fetchBlocks(fromBlock, toBlock) {

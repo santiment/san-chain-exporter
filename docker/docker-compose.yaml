@@ -26,6 +26,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     logging:
       driver: none
+    depends_on:
+      - zookeeper
   exporter:
     build:
       context: ../
