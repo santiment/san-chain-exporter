@@ -45,7 +45,8 @@ function setErrors(traces) {
  }
 */
 function filterNonActions(traces) {
-  return traces.filter(trace => typeof trace.action !== 'undefined');
+  // Leave only 'truthy' action values
+  return traces.filter(trace => trace.action);
 }
 
 function filterErrors(traces) {

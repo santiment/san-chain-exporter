@@ -1,15 +1,17 @@
-const eth_worker =  require('../../blockchains/eth/eth_worker');
+const eth_worker = require('../../blockchains/eth/eth_worker');
 const assert = require('assert');
 const v8 = require('v8');
 
-describe('Test worker', function() {
+const testNullAction = require('./test_action_null.json');
+
+describe('Test worker', function () {
     const worker = new eth_worker.worker();
     let feeResult = null;
     let callResult = null;
     let feeResultWithPrimaryKey = null;
     let callResultWithPrimaryKey = null;
 
-    beforeEach(function() {
+    beforeEach(function () {
         feeResult = {
             from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
             to: '0x829bd824b016326a401d083b33d092293333a830',
@@ -57,4 +59,13 @@ describe('Test worker', function() {
         assert.deepStrictEqual(result, [feeResultWithPrimaryKey, callResultWithPrimaryKey]);
     });
 
+});
+
+describe('Test that when action is null parsing would not break', function () {
+    it('Null action should not break parsing', function () {
+        const worker = new eth_worker.worker();
+        const result = worker.parseEthInternalTrx(testNullAction);
+
+        assert.deepStrictEqual(result, []);
+    });
 });
