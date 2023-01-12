@@ -50,7 +50,7 @@ class Main {
         await storeEvents(this.exporter, events);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
-      logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}`);
+      logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
 
       const _this = this;
       if (this.shouldWork) {
