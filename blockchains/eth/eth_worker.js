@@ -19,11 +19,7 @@ class ETHWorker extends BaseWorker {
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
     this.web3Wrapper = new Web3Wrapper(this.web3);
-    if (constants.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(constants.NODE_URL);
-    } else {
-      this.ethClient = jayson.client.http(constants.NODE_URL);
-    }
+    this.ethClient = jayson.client.https(constants.NODE_URL);
     this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper);
   }
 
