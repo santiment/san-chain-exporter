@@ -1,6 +1,7 @@
 const eth_worker = require('../../blockchains/eth/eth_worker');
 const assert = require('assert');
 const v8 = require('v8');
+const constants = require('../../blockchains/eth/lib/constants');
 
 const testNullAction = require('./test_action_null.json');
 
@@ -45,7 +46,7 @@ describe('Test worker', function () {
 
     it('test primary key assignment', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        worker.lastConfirmedBlock = 1;
+        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL;
         worker.lastExportedBlock = 0;
         worker.fetchTracesBlocksAndReceipts = async function () {
             return [];

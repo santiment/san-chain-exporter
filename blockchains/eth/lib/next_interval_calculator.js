@@ -13,33 +13,32 @@ const constants = require('./constants');
  * }
  */
 async function nextIntervalCalculator(worker) {
-  if (worker.lastConfirmedBlock === worker.lastExportedBlock) {
-    // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
-    worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-
+  // Check if we are up to date with the blockchain (aka 'current mode').
+  if (worker.lastExportedBlock >= worker.lastConfirmedBlock) {
     // On the previous cycle we closed the gap to the head of the blockchain.
     // Check if there are new blocks now.
     const newConfirmedBlock = await worker.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
     if (newConfirmedBlock > worker.lastConfirmedBlock) {
       // The Node has progressed
       worker.lastConfirmedBlock = newConfirmedBlock;
-      worker.isNodeProgressed = true;
     }
-    else {
-      // The Node has not progressed or may have even go backwards
-      return { success: false };
-    }
-  }
-  else {
-    // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
-    worker.sleepTimeMsec = 0;
   }
 
-  return {
-    success: true,
-    fromBlock: worker.lastExportedBlock + 1,
-    toBlock: Math.min(worker.lastExportedBlock + constants.BLOCK_INTERVAL, worker.lastConfirmedBlock)
-  };
+  if (worker.lastExportedBlock + constants.BLOCK_INTERVAL > worker.lastConfirmedBlock) {
+    // The Node has not progressed enough to generate a new interval
+    worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+    return { success: false };
+  }
+  else {
+    // There is enough data to fetch right away
+    worker.sleepTimeMsec = 0;
+
+    return {
+      success: true,
+      fromBlock: worker.lastExportedBlock + 1,
+      toBlock: worker.lastExportedBlock + constants.BLOCK_INTERVAL
+    };
+  }
 }
 
 module.exports = {
