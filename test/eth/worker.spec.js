@@ -46,7 +46,7 @@ describe('Test worker', function () {
 
     it('test primary key assignment', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL;
+        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + 1;
         worker.lastExportedBlock = 0;
         worker.fetchTracesBlocksAndReceipts = async function () {
             return [];

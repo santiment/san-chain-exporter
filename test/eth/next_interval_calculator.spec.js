@@ -60,4 +60,22 @@ describe('Check interval not going backwards', function () {
         assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
     });
+
+    it('Node should be asked for latest block while we are waiting for BLOCK_INTERVAL of new blocks', async function () {
+        let nodeAskedCount = 0;
+        mockWeb3.eth.getBlockNumber = (function () { nodeAskedCount += 1; });
+        const worker = new eth_worker.worker();
+        worker.web3 = mockWeb3;
+
+        // Last confirmed block is bigger than last exported one, however the difference is less than BLOCK_INTERVAL
+        worker.lastExportedBlock = 5;
+        worker.lastConfirmedBlock = 6;
+
+        const resultSecond = await nextIntervalCalculator(worker);
+
+        assert.deepStrictEqual(nodeAskedCount, 1);
+        assert.deepStrictEqual(resultSecond.success, false);
+        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+
+    });
 });
