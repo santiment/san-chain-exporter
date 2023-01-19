@@ -10,6 +10,7 @@ const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
 const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { FeesDecoder } = require('./lib/fees_decoder');
+const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
 
 
 class ETHWorker extends BaseWorker {
@@ -144,30 +145,14 @@ class ETHWorker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
-      this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-
-      // On the previous cycle we closed the gap to the head of the blockchain.
-      // Check if there are new blocks now.
-      const newConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-      if (newConfirmedBlock === this.lastConfirmedBlock) {
-        // The Node has not progressed
-        return [];
-      }
-      this.lastConfirmedBlock = newConfirmedBlock;
-    }
-    else {
-      // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
-      this.sleepTimeMsec = 0;
+    const result = await nextIntervalCalculator(this);
+    if (!result.success) {
+      return [];
     }
 
-    const toBlock = Math.min(this.lastExportedBlock + constants.BLOCK_INTERVAL, this.lastConfirmedBlock);
-    const fromBlock = this.lastExportedBlock + 1;
-
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(fromBlock, toBlock);
-    const events = await this.getPastEvents(fromBlock, toBlock, traces, blocks, receipts);
+    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
+    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(result.fromBlock, result.toBlock);
+    const events = await this.getPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
 
     if (events.length > 0) {
       stableSort(events, transactionOrder);
@@ -179,7 +164,7 @@ class ETHWorker extends BaseWorker {
     }
 
     this.lastExportTime = Date.now();
-    this.lastExportedBlock = toBlock;
+    this.lastExportedBlock = result.toBlock;
 
     return events;
   }

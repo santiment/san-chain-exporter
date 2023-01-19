@@ -7,6 +7,7 @@ const Web3Wrapper = require('../eth/lib/web3_wrapper');
 const { extendEventsWithPrimaryKey } = require('../erc20/lib/extend_events_key');
 const { getPastEvents } = require('./lib/fetch_events');
 const { setGlobalTimestampManager } = require('../erc20/lib/fetch_events');
+const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
 
 
 class MaticWorker extends BaseWorker {
@@ -20,39 +21,23 @@ class MaticWorker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
-      this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-
-      // On the previous cycle we closed the gap to the head of the blockchain.
-      // Check if there are new blocks now.
-      const newConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-      if (newConfirmedBlock === this.lastConfirmedBlock) {
-        // The Node has not progressed
-        return [];
-      }
-      this.lastConfirmedBlock = newConfirmedBlock;
-    }
-    else {
-      // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
-      this.sleepTimeMsec = 0;
+    const result = nextIntervalCalculator(this);
+    if (!result.success) {
+      return [];
     }
 
-    const toBlock = Math.min(this.lastExportedBlock + constants.BLOCK_INTERVAL, this.lastConfirmedBlock);
-    const fromBlock = this.lastExportedBlock + 1;
+    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
-
-    const events = await getPastEvents(this.web3, fromBlock, toBlock);
+    const events = await getPastEvents(this.web3, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events);
-      logger.info(`Setting primary keys ${events.length} messages for blocks ${this.lastExportedBlock + 1}:${toBlock}`);
+      logger.info(`Setting primary keys ${events.length} messages for blocks ${this.fromBlock}:${result.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
     this.lastExportTime = Date.now();
-    this.lastExportedBlock = toBlock;
+    this.lastExportedBlock = result.toBlock;
     return events;
 
   }
