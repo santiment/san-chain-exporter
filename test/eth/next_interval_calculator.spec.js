@@ -4,7 +4,6 @@ const { nextIntervalCalculator } = require('../../blockchains/eth/lib/next_inter
 const assert = require('assert');
 
 
-
 describe('Check interval not going backwards', function () {
     const mockWeb3 = { eth: {} };
 
@@ -102,7 +101,7 @@ describe('Check logic when Node is ahead', function () {
         assert.deepStrictEqual(worker.sleepTimeMsec, 0);
     });
 
-    it('Node not called if if Node is ahead', async function () {
+    it('Node not called if Node is ahead', async function () {
         let nodeCalled = false;
         mockWeb3.eth.getBlockNumber = (function () { nodeCalled = true; });
         const worker = new eth_worker.worker();
@@ -113,6 +112,18 @@ describe('Check logic when Node is ahead', function () {
 
         await nextIntervalCalculator(worker);
         assert.deepStrictEqual(nodeCalled, false);
+    });
+
+    it('Block interval is not exceeded', async function () {
+        const worker = new eth_worker.worker();
+
+        worker.lastExportedBlock = 1;
+        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + constants.CONFIRMATIONS + 10;
+
+        const result = await nextIntervalCalculator(worker);
+        assert.deepStrictEqual(result.success, true);
+        assert.deepStrictEqual(result.fromBlock, 2);
+        assert.deepStrictEqual(result.toBlock, 1 + constants.BLOCK_INTERVAL);
     });
 
 });
@@ -157,6 +168,17 @@ describe('Check logic when Node is not ahead', function () {
 
         await nextIntervalCalculator(worker);
         assert.deepStrictEqual(nodeCalled, true);
+    });
+
+    it('Block interval is not exceeded', async function () {
+        mockWeb3.eth.getBlockNumber = (function () { return constants.BLOCK_INTERVAL + constants.CONFIRMATIONS + 10; });
+        const worker = new eth_worker.worker();
+        worker.web3 = mockWeb3;
+
+        const result = await nextIntervalCalculator(worker);
+        assert.deepStrictEqual(result.success, true);
+        assert.deepStrictEqual(result.fromBlock, 0);
+        assert.deepStrictEqual(result.toBlock, constants.BLOCK_INTERVAL - 1);
     });
 
 });

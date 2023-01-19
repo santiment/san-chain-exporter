@@ -47,7 +47,7 @@ async function nextIntervalCalculator(worker) {
     return {
       success: true,
       fromBlock: worker.lastExportedBlock + 1,
-      toBlock: worker.lastConfirmedBlock
+      toBlock: Math.min(worker.lastExportedBlock + constants.BLOCK_INTERVAL, worker.lastConfirmedBlock)
     };
   }
   else {
