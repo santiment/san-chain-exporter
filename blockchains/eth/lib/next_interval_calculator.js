@@ -1,8 +1,8 @@
 const constants = require('./constants');
 
 
-function isFullIntervalAvailable(worker) {
-  return worker.lastExportedBlock + constants.BLOCK_INTERVAL < worker.lastConfirmedBlock;
+function isNewBlockAvailable(worker) {
+  return worker.lastExportedBlock < worker.lastConfirmedBlock;
 }
 /**
  * Return the next interval to be fetched.
@@ -19,10 +19,10 @@ function isFullIntervalAvailable(worker) {
 async function nextIntervalCalculator(worker) {
   // Check if we need to ask the Node for new Head block. This is an optimization to skip this call when the exporter
   // is behind the last seen Head anyways.
-  const firstIntervalCheck = isFullIntervalAvailable(worker);
+  const firstIntervalCheck = isNewBlockAvailable(worker);
   if (!firstIntervalCheck) {
-    // The exporter has progress to a point where now it does not have a full BLOCK_INTERVAL to fetch.
-    // Check if the Node has extended the Head.
+    // On the previous cycle we closed the gap to the head of the blockchain.
+    // Check if there are new blocks now.
     const newConfirmedBlock = await worker.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
     if (newConfirmedBlock > worker.lastConfirmedBlock) {
       // The Node has progressed
@@ -30,7 +30,7 @@ async function nextIntervalCalculator(worker) {
     }
   }
 
-  const secondIntervalCheck = firstIntervalCheck || isFullIntervalAvailable(worker);
+  const secondIntervalCheck = firstIntervalCheck || isNewBlockAvailable(worker);
 
   if (secondIntervalCheck) {
     // There is enough data to fetch right away
@@ -47,7 +47,7 @@ async function nextIntervalCalculator(worker) {
     return {
       success: true,
       fromBlock: worker.lastExportedBlock + 1,
-      toBlock: worker.lastExportedBlock + constants.BLOCK_INTERVAL
+      toBlock: worker.lastConfirmedBlock
     };
   }
   else {

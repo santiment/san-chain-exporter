@@ -3,7 +3,6 @@ const assert = require('assert');
 const erc20_worker = rewire('../../blockchains/erc20/erc20_worker');
 const contract_overwrite = rewire('../../blockchains/erc20/lib/contract_overwrite');
 const extend_events = require('./extend_events.spec');
-const constants = require('../../blockchains/erc20/lib/constants');
 
 
 describe('Test ERC20 worker', function () {
@@ -59,7 +58,7 @@ describe('Test ERC20 worker', function () {
             return [originalEvent];
         });
         const worker = new erc20_worker.worker();
-        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + 1;
+        worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
         const result = await worker.work();
@@ -78,7 +77,7 @@ describe('Test ERC20 worker', function () {
 
         erc20_worker.__set__('contractEditor', contractEditor);
         const worker = new erc20_worker.worker();
-        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + 1;
+        worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
         const result = await worker.work();
@@ -95,7 +94,7 @@ describe('Test ERC20 worker', function () {
         });
 
         const worker = new erc20_worker.worker();
-        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + 1;
+        worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
         // In this mode the primary key is 1 more than the 'original' event
@@ -114,7 +113,7 @@ describe('Test ERC20 worker', function () {
         });
 
         const worker = new erc20_worker.worker();
-        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + 1;
+        worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
         // In this mode the primary key is 1 more than the 'original' event
