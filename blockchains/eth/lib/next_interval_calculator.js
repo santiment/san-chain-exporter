@@ -19,8 +19,8 @@ function isNewBlockAvailable(worker) {
 async function nextIntervalCalculator(worker) {
   // Check if we need to ask the Node for new Head block. This is an optimization to skip this call when the exporter
   // is behind the last seen Head anyways.
-  const firstIntervalCheck = isNewBlockAvailable(worker);
-  if (!firstIntervalCheck) {
+  const firstNewBlockCheck = isNewBlockAvailable(worker);
+  if (!firstNewBlockCheck) {
     // On the previous cycle we closed the gap to the head of the blockchain.
     // Check if there are new blocks now.
     const newConfirmedBlock = await worker.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
@@ -30,13 +30,9 @@ async function nextIntervalCalculator(worker) {
     }
   }
 
-  const secondIntervalCheck = firstIntervalCheck || isNewBlockAvailable(worker);
-
-  if (secondIntervalCheck) {
-    // There is enough data to fetch right away
-
+  if (firstNewBlockCheck || isNewBlockAvailable(worker)) {
     // If data was available without asking with Node, we are catching up and should come back straight away
-    if (firstIntervalCheck) {
+    if (firstNewBlockCheck) {
       worker.sleepTimeMsec = 0;
     }
     else {
@@ -51,7 +47,7 @@ async function nextIntervalCalculator(worker) {
     };
   }
   else {
-    // The Node has not progressed enough to generate a new interval
+    // The Node has not progressed
     worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
     return { success: false };
   }
