@@ -32,7 +32,7 @@ class MaticWorker extends BaseWorker {
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events);
-      logger.info(`Setting primary keys ${events.length} messages for blocks ${this.fromBlock}:${result.toBlock}`);
+      logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
