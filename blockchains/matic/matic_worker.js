@@ -21,7 +21,7 @@ class MaticWorker extends BaseWorker {
   }
 
   async work() {
-    const result = nextIntervalCalculator(this);
+    const result = await nextIntervalCalculator(this);
     if (!result.success) {
       return [];
     }
