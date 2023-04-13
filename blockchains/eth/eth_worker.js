@@ -11,7 +11,7 @@ const Web3Wrapper = require('./lib/web3_wrapper');
 const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { FeesDecoder } = require('./lib/fees_decoder');
 const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
-
+const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 
 class ETHWorker extends BaseWorker {
   constructor() {
@@ -26,6 +26,7 @@ class ETHWorker extends BaseWorker {
       this.ethClient = jayson.client.http(constants.NODE_URL);
     }
     this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper);
+    this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3, this.web3Wrapper);
   }
 
   parseEthInternalTrx(result) {
@@ -94,8 +95,6 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-
-
   async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
     logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`);
     const [traces, blocks] = await Promise.all([
@@ -125,7 +124,6 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-
   async getPastTransferEvents(traces, blocksMap) {
     const result = [];
 
@@ -142,6 +140,10 @@ class ETHWorker extends BaseWorker {
 
     for (const block of blocks) {
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, receipts);
+      const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
+      if (constants.IS_ETH && blockNumber >= constants.SHANGHAI_FORK_BLOCK) {
+        decoded_transactions.push(... await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
+      }
       result.push(...decoded_transactions);
     }
 
@@ -176,7 +178,6 @@ class ETHWorker extends BaseWorker {
   async init() {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
   }
-
 }
 
 module.exports = {
