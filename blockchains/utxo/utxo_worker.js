@@ -94,7 +94,7 @@ class UtxoWorker extends BaseWorker {
 
       requests.push(this.fetchBlock(blockToDownload));
 
-      if (blockToDownload >= this.lastConfirmedBlock || requests.length > SEND_BATCH_SIZE) {
+      if (blockToDownload >= this.lastConfirmedBlock || requests.length >= SEND_BATCH_SIZE) {
         const blocks = await Promise.all(requests);
         this.lastExportedBlock = blockToDownload;
         logger.info(`Flushing blocks ${blocks[0].height}:${blocks[blocks.length - 1].height}`);

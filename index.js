@@ -46,7 +46,7 @@ class Main {
       // part of the blockchain specific code.
       this.lastProcessedPosition = this.worker.getLastProcessedPosition();
 
-      if (events.length > 0) {
+      if (events && events.length > 0) {
         await storeEvents(this.exporter, events);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
@@ -83,8 +83,15 @@ class Main {
   }
 
   stop() {
-    logger.info('Triggering exporter stop');
-    this.shouldWork = false;
+    if (this.shouldWork) {
+      logger.info('Triggering graceful exporter stop');
+      this.shouldWork = false;
+    }
+    else {
+      logger.info('Exiting immediately');
+      // Stopped was already requested - exit immediately
+      process.exit();
+    }
   }
 
   healthcheckKafka() {
@@ -114,12 +121,16 @@ class Main {
 }
 
 const main = new Main();
-main.init().then(() => {
-  main.workLoop();
-})
-  .catch((ex) => {
+main.init()
+  .then(() => {
+    return main.workLoop();
+  }, (ex) => {
     console.error('Error initializing exporter: ', ex);
+  })
+  .then(null, (ex) => {
+    console.error('Error in work loop: ', ex);
   });
+
 
 process.on('SIGINT', () => {
   main.stop();
