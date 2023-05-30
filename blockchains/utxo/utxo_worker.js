@@ -11,7 +11,7 @@ const {
   DOGE,
   CONFIRMATIONS,
   LOOP_INTERVAL_CURRENT_MODE_SEC,
-  SEND_BATCH_SIZE
+  MAX_CONCURRENT_REQUESTS
 } = require('./lib/constants');
 const URL = parseURL(NODE_URL);
 
@@ -94,7 +94,7 @@ class UtxoWorker extends BaseWorker {
 
       requests.push(this.fetchBlock(blockToDownload));
 
-      if (blockToDownload >= this.lastConfirmedBlock || requests.length > SEND_BATCH_SIZE) {
+      if (blockToDownload >= this.lastConfirmedBlock || requests.length >= MAX_CONCURRENT_REQUESTS) {
         const blocks = await Promise.all(requests);
         this.lastExportedBlock = blockToDownload;
         logger.info(`Flushing blocks ${blocks[0].height}:${blocks[blocks.length - 1].height}`);

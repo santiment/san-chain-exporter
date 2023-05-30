@@ -1,4 +1,4 @@
-const SEND_BATCH_SIZE = parseInt(process.env.SEND_BATCH_SIZE || '10');
+const MAX_CONCURRENT_REQUESTS = parseInt(process.env.MAX_CONCURRENT_REQUESTS || '10');
 const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '10000');
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
 const NODE_URL = process.env.NODE_URL || 'http://litecoin.stage.san:30992';
@@ -9,7 +9,7 @@ const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURREN
 const DOGE = process.env.DOGE || 0;
 
 module.exports = {
-  SEND_BATCH_SIZE,
+  MAX_CONCURRENT_REQUESTS,
   DEFAULT_TIMEOUT,
   CONFIRMATIONS,
   RPC_USERNAME,
