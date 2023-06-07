@@ -64,7 +64,7 @@ const decodeBlock = (block) => {
   };
 };
 
-const prepareBlockTimestampsObject = async (blocks) => {
+const prepareBlockTimestampsObject = (blocks) => {
   let obj = {};
   for (const block of blocks) { obj[block.number] = block.timestamp; }
 
@@ -72,7 +72,7 @@ const prepareBlockTimestampsObject = async (blocks) => {
 };
 
 const setReceiptsTimestamp = async (receipts, timestamps) => {
-  return collection.forEach(receipts, receipt =>  receipt['timestamp'] = timestamps[receipt.blockNumber]);
+  return collection.forEach(receipts, receipt => receipt['timestamp'] = timestamps[receipt.blockNumber]);
 };
 
 module.exports = {

@@ -70,7 +70,6 @@ class ReceiptsWorker extends BaseWorker {
     }
     const decodedReceipts = receipts.map(helper.decodeReceipt);
     const decodedBlocks = blocks.map(helper.decodeBlock);
-
     const timestamps = helper.prepareBlockTimestampsObject(decodedBlocks);
 
     return helper.setReceiptsTimestamp(decodedReceipts, timestamps);
