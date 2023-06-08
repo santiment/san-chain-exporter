@@ -89,8 +89,8 @@ class UtxoWorker extends BaseWorker {
 
     const requests = [];
 
-    while (this.lastExportedBlock + requests.length <= this.lastConfirmedBlock) {
-      const blockToDownload = this.lastExportedBlock + requests.length;
+    while (this.lastExportedBlock + requests.length + 1 <= this.lastConfirmedBlock) {
+      const blockToDownload = this.lastExportedBlock + requests.length + 1;
 
       requests.push(this.fetchBlock(blockToDownload));
 
