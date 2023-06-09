@@ -87,20 +87,11 @@ class UtxoWorker extends BaseWorker {
       this.sleepTimeMsec = 0;
     }
 
-    const requests = [];
-
-    while (this.lastExportedBlock + requests.length <= this.lastConfirmedBlock) {
-      const blockToDownload = this.lastExportedBlock + requests.length;
-
-      requests.push(this.fetchBlock(blockToDownload));
-
-      if (blockToDownload >= this.lastConfirmedBlock || requests.length >= MAX_CONCURRENT_REQUESTS) {
-        const blocks = await Promise.all(requests);
-        this.lastExportedBlock = blockToDownload;
-        logger.info(`Flushing blocks ${blocks[0].height}:${blocks[blocks.length - 1].height}`);
-        return blocks;
-      }
-    }
+    const numConcurrentRequests = Math.min(MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock - this.lastExportedBlock);
+    const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + i));
+    const blocks = await Promise.all(requests);
+    this.lastExportedBlock += blocks.length;
+    return blocks;
   }
 }
 
