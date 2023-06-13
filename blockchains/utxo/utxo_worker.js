@@ -88,7 +88,7 @@ class UtxoWorker extends BaseWorker {
     }
 
     const numConcurrentRequests = Math.min(MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock - this.lastExportedBlock);
-    const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + i));
+    const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + 1 + i));
     const blocks = await Promise.all(requests);
     this.lastExportedBlock += blocks.length;
     return blocks;
