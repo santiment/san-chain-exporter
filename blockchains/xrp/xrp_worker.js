@@ -55,12 +55,14 @@ class XRPWorker extends BaseWorker {
   }
 
   async fetchLedger(connection, ledger_index, should_expand) {
-    const ledger = await this.connectionSend(connection, {
+    const result = await this.connectionSend(connection, {
       command: 'ledger',
       ledger_index: parseInt(ledger_index),
       transactions: true,
       expand: should_expand
-    }).then(value => value.result.ledger);
+    });
+
+    const ledger = result.result.ledger;
 
     assert(ledger.closed === true);
     assert(typeof ledger.transactions !== 'undefined');
