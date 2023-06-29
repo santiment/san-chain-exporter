@@ -10,7 +10,6 @@ class XRPWorker extends BaseWorker {
     super();
     this.nodeURLs = constants.XRP_NODE_URLS.split(',');
     this.connections = [];
-    this.emptyBlock = { ledger: { transactions: [] }};
     this.emptyTransactionHash = '0000000000000000000000000000000000000000000000000000000000000000';
     this.retryIntervalMs = 1000;
   }
