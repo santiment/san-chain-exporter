@@ -135,7 +135,9 @@ main.init()
 process.on('SIGINT', () => {
   main.stop();
 });
-
+process.on('SIGTERM', () => {
+  main.stop();
+});
 
 module.exports = async (request, response) => {
   const req = url.parse(request.url, true);
