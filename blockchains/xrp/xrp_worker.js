@@ -19,10 +19,10 @@ class XRPWorker extends BaseWorker {
       throw 'Error: All API URLs returned error.';
     }
 
-    const nodeURL = this.nodeURLs.shift();
-    logger.info(`Using ${nodeURL} as XRPL API endpoint.`);
     for (let i = 0; i < constants.CONNECTIONS_COUNT; i++) {
       const clientOptions = { timeout: constants.DEFAULT_WS_TIMEOUT };
+      const nodeURL = this.nodeURLs[i % this.nodeURLs.length];
+      logger.info(`Using ${nodeURL} as XRPL API endpoint.`);
       const api = new xrpl.Client(nodeURL, clientOptions);
       await api.connect();
 
