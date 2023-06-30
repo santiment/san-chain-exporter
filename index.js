@@ -143,6 +143,9 @@ main.init()
 process.on('SIGINT', () => {
   main.stop();
 });
+process.on('SIGTERM', () => {
+  main.stop();
+});
 
 
 const microHandler = async (request, response) => {
