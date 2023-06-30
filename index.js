@@ -37,8 +37,13 @@ class Main {
     });
   }
 
+  async disconnect() {
+    this.exporter.disconnect();
+    await this.microServer.close();
+  }
+
   async workLoop() {
-    try {
+    while (this.shouldWork) {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work();
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
@@ -60,24 +65,9 @@ class Main {
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
 
-      const _this = this;
       if (this.shouldWork) {
-        setTimeout(function () { _this.workLoop(); }, _this.worker.sleepTimeMsec);
+        await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));
       }
-      else {
-        this.exporter.disconnect();
-        this.microServer.close(err => {
-          if (err) {
-            logger.error('Error stopping Micro server:', err);
-          } else {
-            console.log('Micro server has been stopped');
-          }
-        });
-      }
-    }
-    catch (ex) {
-      console.error('Error in exporter work loop: ', ex);
-      throw ex;
     }
   }
 
@@ -136,18 +126,6 @@ class Main {
 }
 
 const main = new Main();
-main.init()
-  .then(() => {
-    return main.workLoop();
-  }, (ex) => {
-    console.error('Error initializing exporter: ', ex);
-  })
-  .then(() => {
-    logger.info('Bye!');
-  }, (ex) => {
-    console.error('Error in work loop: ', ex);
-  });
-
 
 process.on('SIGINT', () => {
   main.stop();
@@ -175,3 +153,21 @@ const microHandler = async (request, response) => {
       return micro.send(response, 404, 'Not found');
   }
 };
+
+(async function () {
+  try {
+    await main.init();
+  }
+  catch (ex) {
+    console.error('Error initializing exporter: ', ex);
+  }
+  try {
+    await main.workLoop();
+    await main.disconnect();
+    logger.info('Bye!');
+  }
+  catch (ex) {
+    console.error('Error in exporter work loop: ', ex);
+    throw ex;
+  }
+})();
