@@ -9,6 +9,7 @@ const MAX_CONNECTION_CONCURRENCY = parseInt(process.env.MAX_CONNECTION_CONCURREN
 const XRP_NODE_URLS = process.env.XRP_NODE_URLS || 'wss://s2.ripple.com';
 const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS || 1000 * 60 * 5);
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || '30');
+const XRP_ENDPOINT_RETRIES = parseInt(process.env.XRP_ENDPOINT_RETIRES || '100');
 
 module.exports = {
   SEND_BATCH_SIZE,
@@ -18,5 +19,6 @@ module.exports = {
   XRP_NODE_URLS,
   EXPORT_TIMEOUT_MLS,
   CONFIRMATIONS,
-  LOOP_INTERVAL_CURRENT_MODE_SEC
+  LOOP_INTERVAL_CURRENT_MODE_SEC,
+  XRP_ENDPOINT_RETRIES
 };
