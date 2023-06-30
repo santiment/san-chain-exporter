@@ -38,6 +38,7 @@ class Main {
   }
 
   async disconnect() {
+    // This call should be refactored to work with async/await
     this.exporter.disconnect();
     await this.microServer.close();
   }
