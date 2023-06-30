@@ -79,4 +79,52 @@ describe('workLoopSimpleTest', function () {
     assert.deepStrictEqual(result, expectedResult);
   });
 
+  it('should loop several times due to lack of transactions', async () => {
+    const worker = new xrp_worker.worker();
+    // The invalid block would have no transactions but a non 0 transaction_hash
+    const invalidBlock = {
+      result: {
+        ledger: {
+          transactions: [],
+          closed: true,
+          transaction_hash: "1111111111111"
+        }
+      }
+    };
+    const validEmptyBlock = {
+      result: {
+        ledger: {
+          transactions: [],
+          closed: true,
+          transaction_hash: '0'.repeat(64)
+        }
+      }
+    };
+
+    // We mock the connection send call and count how many times it is called
+    let sendCallsCount = 0;
+    // Reduce the retry interval so that tests finishes fast
+    worker.retryIntervalMs = 100;
+    worker.connectionSend = () => {
+      sendCallsCount += 1;
+      return Promise.resolve(invalidBlock);
+    };
+
+    let sendCallsCountWhileInvalid = 0;
+    // After a timeout, switch the mock function to return the vadlic block. Remember how many calls were made up until that moment.
+    setTimeout(() => {
+      sendCallsCountWhileInvalid = sendCallsCount;
+      worker.connectionSend = () => {
+        sendCallsCount += 1;
+        return Promise.resolve(validEmptyBlock);
+      };
+    }, 2 * worker.retryIntervalMs);
+
+    // This call should eventually return, once the callback returns the correct block
+    const fetchResult = await worker.fetchLedgerTransactions(null, 1)
+
+    assert.ok(sendCallsCountWhileInvalid >= 2);
+    assert.ok(sendCallsCount >= 3);
+    assert.deepStrictEqual(fetchResult, { ledger: validEmptyBlock.result.ledger, transactions: [] });
+  });
 });

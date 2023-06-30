@@ -10,6 +10,7 @@ class XRPWorker extends BaseWorker {
     super();
     this.nodeURLs = constants.XRP_NODE_URLS.split(',');
     this.connections = [];
+    this.retryIntervalMs = 1000;
   }
 
   async createNewSetConnections() {
@@ -51,55 +52,77 @@ class XRPWorker extends BaseWorker {
     this.lastConfirmedBlock = parseInt(lastValidatedLedgerData.ledger.ledger_index) - constants.CONFIRMATIONS;
   }
 
-  async fetchLedgerTransactions(connection, ledger_index) {
-    const ledger = await this.connectionSend(connection, {
-      command: 'ledger',
-      ledger_index: parseInt(ledger_index),
-      transactions: true,
-      expand: false
-    }).then(value => value.result.ledger);
-
-    assert(ledger.closed === true);
-
-    if (typeof ledger.transactions === 'undefined' || ledger.transactions.length === 0) {
-      return { ledger: ledger, transactions: [] };
+  isEmptyTransactionHash(transaction_hash) {
+    for (const char of transaction_hash) {
+      if (char !== '0') {
+        return false;
+      }
     }
+    return true;
+  }
+
+  async fetchLedger(connection, ledger_index, should_expand) {
+    for (let i = 0; i < constants.XRP_ENDPOINT_RETRIES; i++) {
+      const result = await this.connectionSend(connection, {
+        command: 'ledger',
+        ledger_index: parseInt(ledger_index),
+        transactions: true,
+        expand: should_expand
+      });
+
+      const ledger = result.result.ledger;
+
+      assert(ledger.closed === true);
+      assert(typeof ledger.transactions !== 'undefined');
+      assert(typeof ledger.transaction_hash !== 'undefined');
+
+      if (ledger.transactions.length === 0 && !this.isEmptyTransactionHash(ledger.transaction_hash)) {
+        // This block is invalid, the problem must be in the Endpoint. Wait and retry.
+        await new Promise((resolve) => setTimeout(resolve, this.retryIntervalMs));
+        logger.info(`Ledger ${ledger_index} is being retried due to invalid response`);
+      }
+      else {
+        return ledger;
+      }
+    }
+
+    throw new Error(`Error: Exhausted retry attempts for block ${ledger_index}.`);
+  }
+
+  async fetchTransactions(connection, transactions, ledger_index) {
+    const transactionsPromise = transactions.map(tx =>
+      this.connectionSend(connection, {
+        command: 'tx',
+        transaction: tx,
+        minLedgerVersion: ledger_index,
+        maxLedgerVersion: ledger_index
+      }).catch((error) => {
+        if (error.message === 'txnNotFound') {
+          return Promise.resolve(null);
+        }
+
+        return Promise.reject(error);
+      })
+    );
+
+    const resolvedTransactions = await Promise.all(transactionsPromise);
+
+    // When transactions are fetched one by one, we need to take the 'result' field
+    return resolvedTransactions.map(t => t.result);
+  }
+
+  async fetchLedgerTransactions(connection, ledger_index) {
+    const ledger = await this.fetchLedger(connection, ledger_index, false);
 
     if (ledger.transactions.length > 200) {
       logger.info(`<<< TOO MANY TXS at ledger ${ledger_index}: [[ ${ledger.transactions.length} ]], processing per-tx...`);
-      let transactions = ledger.transactions.map(tx =>
-        this.connectionSend(connection, {
-          command: 'tx',
-          transaction: tx,
-          minLedgerVersion: ledger_index,
-          maxLedgerVersion: ledger_index
-        }).catch((error) => {
-          if (error.message === 'txnNotFound') {
-            return Promise.resolve(null);
-          }
-
-          return Promise.reject(error);
-        })
-      );
-
-      transactions = await Promise.all(transactions);
-
-      // When transactions are fetched one by one, we need to take the 'result' field
-      transactions = transactions.map(t => t.result);
-
-      return { ledger: ledger, transactions };
+      const transactions = await this.fetchTransactions(connection, ledger.transactions, ledger_index);
+      return { ledger: ledger, transactions: transactions };
     }
-
-    const result = await this.connectionSend(connection, {
-      command: 'ledger',
-      ledger_index: parseInt(ledger_index),
-      transactions: true,
-      expand: true
-    }).then(value => value.result.ledger);
-
-    assert(result.closed === true);
-
-    return { ledger: ledger, transactions: result.transactions };
+    else {
+      const ledgerWithExpandedTransactions = await this.fetchLedger(connection, ledger_index, true);
+      return { ledger: ledger, transactions: ledgerWithExpandedTransactions.transactions };
+    }
   }
 
   checkAllTransactionsValid(ledgers) {
