@@ -96,7 +96,7 @@ describe('workLoopSimpleTest', function () {
         ledger: {
           transactions: [],
           closed: true,
-          transaction_hash: worker.emptyTransactionHash
+          transaction_hash: '0'.repeat(64)
         }
       }
     };
@@ -113,7 +113,7 @@ describe('workLoopSimpleTest', function () {
     let sendCallsCountWhileInvalid = 0;
     // After a timeout, switch the mock function to return the vadlic block. Remember how many calls were made up until that moment.
     setTimeout(() => {
-    sendCallsCountWhileInvalid = sendCallsCount;
+      sendCallsCountWhileInvalid = sendCallsCount;
       worker.connectionSend = () => {
         sendCallsCount += 1;
         return Promise.resolve(validEmptyBlock);
@@ -125,6 +125,6 @@ describe('workLoopSimpleTest', function () {
 
     assert.ok(sendCallsCountWhileInvalid >= 2);
     assert.ok(sendCallsCount >= 3);
-    assert.deepStrictEqual(fetchResult, {ledger: validEmptyBlock.result.ledger, transactions: []});
+    assert.deepStrictEqual(fetchResult, { ledger: validEmptyBlock.result.ledger, transactions: [] });
   });
 });
