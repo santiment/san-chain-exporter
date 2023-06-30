@@ -66,6 +66,13 @@ class Main {
       }
       else {
         this.exporter.disconnect();
+        this.microServer.close(err => {
+          if (err) {
+            logger.error('Error stopping Micro server:', err);
+          } else {
+            console.log('Micro server has been stopped');
+          }
+        });
       }
     }
     catch (ex) {
@@ -135,7 +142,9 @@ main.init()
   }, (ex) => {
     console.error('Error initializing exporter: ', ex);
   })
-  .then(null, (ex) => {
+  .then(() => {
+    logger.info('Bye!');
+  }, (ex) => {
     console.error('Error in work loop: ', ex);
   });
 
