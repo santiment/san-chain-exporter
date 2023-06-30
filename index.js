@@ -1,6 +1,6 @@
 'use strict';
 const url = require('url');
-const { send } = require('micro');
+const micro = require('micro');
 const pkg = require('./package.json');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
@@ -27,6 +27,14 @@ class Main {
     await this.exporter.initTransactions();
     await this.initWorker();
     metrics.startCollection();
+    this.microServer = micro(microHandler);
+    this.microServer.listen(3000, err => {
+      if (err) {
+        logger.error('Failed to start Micro server:', err);
+        process.exit(1);
+      }
+      logger.info('Micro Server started on port 3000');
+    });
   }
 
   async workLoop() {
@@ -137,21 +145,21 @@ process.on('SIGINT', () => {
 });
 
 
-module.exports = async (request, response) => {
+const microHandler = async (request, response) => {
   const req = url.parse(request.url, true);
 
   switch (req.pathname) {
     case '/healthcheck':
       return main.healthcheck()
-        .then(() => send(response, 200, 'ok'))
+        .then(() => micro.send(response, 200, 'ok'))
         .catch((err) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
-          send(response, 500, err.toString());
+          micro.send(response, 500, err.toString());
         });
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
-      return send(response, 200, await metrics.register.metrics());
+      return micro.send(response, 200, await metrics.register.metrics());
     default:
-      return send(response, 404, 'Not found');
+      return micro.send(response, 404, 'Not found');
   }
 };
