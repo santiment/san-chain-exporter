@@ -1,6 +1,6 @@
 'use strict';
 const url = require('url');
-const { send } = require('micro');
+const micro = require('micro');
 const pkg = require('./package.json');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
@@ -27,10 +27,24 @@ class Main {
     await this.exporter.initTransactions();
     await this.initWorker();
     metrics.startCollection();
+    this.microServer = micro(microHandler);
+    this.microServer.listen(3000, err => {
+      if (err) {
+        logger.error('Failed to start Micro server:', err);
+        process.exit(1);
+      }
+      logger.info('Micro Server started on port 3000');
+    });
+  }
+
+  async disconnect() {
+    // This call should be refactored to work with async/await
+    this.exporter.disconnect();
+    await this.microServer.close();
   }
 
   async workLoop() {
-    try {
+    while (this.shouldWork) {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work();
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
@@ -52,17 +66,9 @@ class Main {
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
 
-      const _this = this;
       if (this.shouldWork) {
-        setTimeout(function () { _this.workLoop(); }, _this.worker.sleepTimeMsec);
+        await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));
       }
-      else {
-        this.exporter.disconnect();
-      }
-    }
-    catch (ex) {
-      console.error('Error in exporter work loop: ', ex);
-      throw ex;
     }
   }
 
@@ -121,37 +127,48 @@ class Main {
 }
 
 const main = new Main();
-main.init()
-  .then(() => {
-    return main.workLoop();
-  }, (ex) => {
-    console.error('Error initializing exporter: ', ex);
-  })
-  .then(null, (ex) => {
-    console.error('Error in work loop: ', ex);
-  });
-
 
 process.on('SIGINT', () => {
   main.stop();
 });
+process.on('SIGTERM', () => {
+  main.stop();
+});
 
 
-module.exports = async (request, response) => {
+const microHandler = async (request, response) => {
   const req = url.parse(request.url, true);
 
   switch (req.pathname) {
     case '/healthcheck':
       return main.healthcheck()
-        .then(() => send(response, 200, 'ok'))
+        .then(() => micro.send(response, 200, 'ok'))
         .catch((err) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
-          send(response, 500, err.toString());
+          micro.send(response, 500, err.toString());
         });
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
-      return send(response, 200, await metrics.register.metrics());
+      return micro.send(response, 200, await metrics.register.metrics());
     default:
-      return send(response, 404, 'Not found');
+      return micro.send(response, 404, 'Not found');
   }
 };
+
+(async function () {
+  try {
+    await main.init();
+  }
+  catch (ex) {
+    console.error('Error initializing exporter: ', ex);
+  }
+  try {
+    await main.workLoop();
+    await main.disconnect();
+    logger.info('Bye!');
+  }
+  catch (ex) {
+    console.error('Error in exporter work loop: ', ex);
+    throw ex;
+  }
+})();

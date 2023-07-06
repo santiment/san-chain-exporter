@@ -111,7 +111,7 @@ describe('workLoopSimpleTest', function () {
     };
 
     let sendCallsCountWhileInvalid = 0;
-    // After a timeout, switch the mock function to return the vadlic block. Remember how many calls were made up until that moment.
+    // After a timeout, switch the mock function to return the valid block. Remember how many calls were made up until that moment.
     setTimeout(() => {
       sendCallsCountWhileInvalid = sendCallsCount;
       worker.connectionSend = () => {

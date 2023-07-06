@@ -1,6 +1,6 @@
-export KAFKA_URL=localhost:9092
-export ZOOKEEPER_URL=localhost:2181
-export NODE_URL=http://erigon-hz.stage.san:30250
+export KAFKA_URL=kafka-hz.stage.san:30911
+export ZOOKEEPER_URL=zookeeper-hz.stage.san:30921
+export NODE_URL=https://ethereum.santiment.net
 export START_BLOCK="15676731"
 export BLOCK_INTERVAL="50"
 export EXPORT_TIMEOUT_MLS=300000

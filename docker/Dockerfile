@@ -41,4 +41,4 @@ COPY docker/wait_for_services.sh /opt/app/docker/wait_for_services.sh
 
 EXPOSE 3000
 
-CMD npm start
+CMD ["node", "index.js"]
