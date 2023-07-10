@@ -153,8 +153,12 @@ class CardanoWorker extends BaseWorker {
     return response.data.transactions;
   }
 
-  async init() {
+  async setLastConfirmedBlock() {
     this.lastConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
+  }
+
+  async init() {
+    await this.setLastConfirmedBlock();
   }
 
   async work() {
@@ -168,12 +172,11 @@ class CardanoWorker extends BaseWorker {
       // Check if there are new blocks now. We want an interval of at least 2 blocks. For some reason the Cardano Node
       // API would return a partial last block. The same would not happen if the same block is fetched as part of 2
       // block interval.
-      const newConfirmedBlock = await this.getCurrentBlock() - constants.CONFIRMATIONS;
-      if (newConfirmedBlock < fromBlock + 2) {
+      await this.setLastConfirmedBlock();
+      if (this.lastConfirmedBlock < fromBlock + 2) {
         // The Node has not progressed enough
         return [];
       }
-      this.lastConfirmedBlock = newConfirmedBlock;
     }
     else {
       // We are still catching with the blockchain (aka 'historic mode'). Do not sleep after this loop.
@@ -191,7 +194,6 @@ class CardanoWorker extends BaseWorker {
     else {
       transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
       if (transactions.length === 0) {
-        this.lastExportedBlock = this.lastConfirmedBlock;
         return [];
       }
     }

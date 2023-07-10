@@ -210,16 +210,5 @@ describe('workLoopTest', function () {
     assert.deepStrictEqual(result, expected);
   });
 
-  it('test empty transactions would still move last exported marker forward', async function () {
-    cardanoWorker.getTransactions = async function () {
-      // Return empty transactions list for the specified block
-      return [];
-    };
-    cardanoWorker.lastExportedBlock = 100;
-    cardanoWorker.lastConfirmedBlock = 200;
-    await cardanoWorker.work();
-
-    assert.strictEqual(cardanoWorker.lastExportedBlock, 200);
-  });
 });
 
