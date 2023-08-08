@@ -40,7 +40,6 @@ class MaticWorker extends BaseWorker {
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
-    this.lastExportTime = Date.now();
     this.lastExportedBlock = result.toBlock;
     return events;
 

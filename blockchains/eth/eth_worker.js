@@ -169,7 +169,6 @@ class ETHWorker extends BaseWorker {
       this.lastPrimaryKey += events.length;
     }
 
-    this.lastExportTime = Date.now();
     this.lastExportedBlock = result.toBlock;
 
     return events;

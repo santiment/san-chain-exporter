@@ -47,6 +47,7 @@ class Main {
     while (this.shouldWork) {
       const lastRequestStartTime = new Date();
       const events = await this.worker.work();
+      this.worker.lastExportTime = Date.now();
       metrics.currentBlock.set(this.worker.lastConfirmedBlock);
 
       // This metric is intended to count the requests towards the Node endpoint.
