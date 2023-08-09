@@ -109,7 +109,6 @@ class ReceiptsWorker extends BaseWorker {
     logger.info(`Fetching receipts for interval ${fromBlock}:${toBlock}`);
     const receipts = await this.getReceiptsForBlocks(fromBlock, toBlock);
 
-    this.lastExportTime = Date.now();
     this.lastExportedBlock = toBlock;
 
     return receipts;

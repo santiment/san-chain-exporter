@@ -53,7 +53,6 @@ class ERC20Worker extends BaseWorker {
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
-    this.lastExportTime = Date.now();
     this.lastExportedBlock = result.toBlock;
     const resultEvents = events.concat(overwritten_events);
 

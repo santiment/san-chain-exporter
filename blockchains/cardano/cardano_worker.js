@@ -205,7 +205,6 @@ class CardanoWorker extends BaseWorker {
       transactions[i].primaryKey = this.lastPrimaryKey + i + 1;
     }
 
-    this.lastExportTime = Date.now();
     this.lastExportedBlock = transactions[transactions.length - 1].block.number;
     this.lastPrimaryKey += transactions.length;
 

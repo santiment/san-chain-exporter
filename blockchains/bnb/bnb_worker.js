@@ -92,8 +92,6 @@ class BNBWorker extends BaseWorker {
       this.lastExportedBlock = resultTransactions[resultTransactions.length - 1].blockHeight;
     }
 
-    this.lastExportTime = Date.now();
-
     // The upper limit of the load rate is enforced by p-queue.
     // If we have catched up with the chain do an extra sleep to reduce the load on the API further.
     // Also if the result is empty, this must be an error on the previous fetch

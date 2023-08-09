@@ -182,7 +182,6 @@ class XRPWorker extends BaseWorker {
     });
     this.checkAllTransactionsValid(ledgers);
 
-    this.lastExportTime = Date.now();
     this.lastExportedBlock = toBlock;
     if (ledgers.length > 0) {
       this.lastPrimaryKey = ledgers[ledgers.length - 1].primaryKey;
