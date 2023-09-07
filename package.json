@@ -4,7 +4,7 @@
   "description": "Exporter of all transfer events for a blockchain",
   "main": "index.js",
   "scripts": {
-    "test": "CONTRACT_MAPPING_FILE_PATH=test/erc20/contract_mapping/contract_mapping.json LOG_LEVEL=error CONTRACT_MODE=extract_exact_overwrite mocha --recursive --reporter spec",
+    "test": "TEST_ENV=1 CONTRACT_MAPPING_FILE_PATH=test/erc20/contract_mapping/contract_mapping.json LOG_LEVEL=error CONTRACT_MODE=extract_exact_overwrite mocha --recursive --reporter spec",
     "lint": "eslint '**/*.js'",
     "start": "node index.js"
   },
@@ -39,6 +39,7 @@
     "chai": "^4.1.2",
     "eslint": "^8.29.0",
     "mocha": "^10.1.0",
-    "rewire": "^6.0.0"
+    "rewire": "^6.0.0",
+    "sinon": "^15.2.0"
   }
 }
