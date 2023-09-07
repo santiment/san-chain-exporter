@@ -161,7 +161,8 @@ const microHandler = async (request, response) => {
     await main.init();
   }
   catch (ex) {
-    console.error('Error initializing exporter: ', ex);
+    logger.error('Error initializing exporter: ', ex);
+    throw ex;
   }
   try {
     await main.workLoop();
@@ -169,7 +170,7 @@ const microHandler = async (request, response) => {
     logger.info('Bye!');
   }
   catch (ex) {
-    console.error('Error in exporter work loop: ', ex);
+    logger.error('Error in exporter work loop: ', ex);
     throw ex;
   }
 })();
