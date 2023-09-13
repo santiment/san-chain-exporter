@@ -50,7 +50,6 @@ describe('Test ERC20 worker', function () {
         extend_events.setExpectedEventPrimaryKey(correctedEventWithPrimaryKey);
     });
 
-
     it('test the events returned when in \'vanilla\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__('constants', { CONTRACT_MODE: 'vanilla' });

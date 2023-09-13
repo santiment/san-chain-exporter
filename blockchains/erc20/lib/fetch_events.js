@@ -199,7 +199,6 @@ const decodeFunctionsMap = {
 };
 
 
-
 async function getPastEvents(web3, fromBlock, toBlock, contractAddress) {
   const events = await getRawEvents(web3, fromBlock, toBlock, contractAddress);
 

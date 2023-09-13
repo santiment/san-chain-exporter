@@ -26,6 +26,7 @@ class Main {
     await this.exporter.connect();
     await this.exporter.initTransactions();
     await this.initWorker();
+
     metrics.startCollection();
     this.microServer = micro(microHandler);
     this.microServer.listen(3000, err => {
@@ -54,7 +55,7 @@ class Main {
       // The counting is done inside the worker and we fetch the reult here.
       metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
       metrics.requestsResponseTime.observe(new Date() - lastRequestStartTime);
-      metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
+      metrics.lastExportedBlock.set(parseInt(this.worker.lastExportedBlock));
 
       // Get the position to store in Zookeeper as constructed by the worker.
       // Different workers may store different type of position so this is
@@ -74,9 +75,7 @@ class Main {
   }
 
   async initWorker() {
-    if (this.worker !== null) {
-      throw new Error('Worker is already set');
-    }
+    if (this.worker !== null) throw new Error('Worker is already set');
 
     this.worker = new worker.worker();
     await this.worker.init(this.exporter, metrics);
@@ -86,7 +85,6 @@ class Main {
     // This moves the logic of what a proper initial position is to the worker.
     this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
     await this.exporter.savePosition(this.lastProcessedPosition);
-
   }
 
   stop() {

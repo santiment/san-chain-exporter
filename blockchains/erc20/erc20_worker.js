@@ -1,16 +1,17 @@
 'use strict';
 const Web3 = require('web3');
-const { logger } = require('../../lib/logger');
 const constants = require('./lib/constants');
+const { logger } = require('../../lib/logger');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
+
 let contractEditor = null;
-if (constants.CONTRACT_MODE !== 'vanilla') {
-  contractEditor = require('./lib/contract_overwrite').contractEditor;
-}
-const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events');
-const BaseWorker = require('../../lib/worker_base');
+if (constants.CONTRACT_MODE !== 'vanilla') { contractEditor = require('./lib/contract_overwrite').contractEditor; }
+
 const { stableSort } = require('./lib/util');
+const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
+const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events');
+const { initBlocksList, initBlocksListPosition } = require('../../lib/fetch_blocks_list');
 
 
 class ERC20Worker extends BaseWorker {
@@ -24,17 +25,45 @@ class ERC20Worker extends BaseWorker {
   async init(exporter) {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
     setGlobalTimestampManager(exporter);
+
+    if (constants.EXPORT_BLOCKS_LIST) {
+      this.blocksList = await initBlocksList();
+    }
+  }
+
+  async initPosition(lastProcessedPosition) {
+    if (constants.EXPORT_BLOCKS_LIST) {
+      this.blocksListPosition = initBlocksListPosition(lastProcessedPosition, this.blocksList);
+      this.lastExportedBlock = this.blocksList[this.blocksListPosition][0];
+      this.lastPrimaryKey = parseInt(process.env.START_PRIMARY_KEY || '-1');
+    } else {
+      return super.initPosition(lastProcessedPosition);
+    }
+  }
+
+  checkBlocksListPosition() {
+    if (this.blocksListPosition < this.blocksList.length) {
+      return {
+        success: true,
+        fromBlock: this.blocksList[this.blocksListPosition][0],
+        toBlock: this.blocksList[this.blocksListPosition][1]
+      };
+    }
+    return { success: false };
   }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
+    const result = constants.EXPORT_BLOCKS_LIST ?
+      this.checkBlocksListPosition() :
+      await nextIntervalCalculator(this);
+
     if (!result.success) {
       return [];
     }
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    let events = [];
+    let events;
     let overwritten_events = [];
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       events = await contractEditor.getPastEventsExactContracts(this.web3, result.fromBlock, result.toBlock);
@@ -53,6 +82,7 @@ class ERC20Worker extends BaseWorker {
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
+    if (constants.EXPORT_BLOCKS_LIST) this.blocksListPosition++;
     this.lastExportedBlock = result.toBlock;
     const resultEvents = events.concat(overwritten_events);
 
