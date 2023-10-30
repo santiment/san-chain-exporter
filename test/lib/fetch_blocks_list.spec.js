@@ -11,6 +11,7 @@ describe('makeIntervals', () => {
 
   it('should return correct intervals 1', () => {
     const makeIntervals = fetchBlocksList.__get__('makeIntervals');
+    fetchBlocksList.__set__('EXPORT_BLOCKS_LIST_MAX_INTERVAL', 5);
     const result = makeIntervals([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(result).to.deep.equal([[1, 5], [6, 9]]);
   });
@@ -42,34 +43,5 @@ describe('initBlocksList', () => {
     const result = await fetchBlocksList.initBlocksList();
     expect(result).to.deep.equal([[1, 3], [5, 9], [11, 11], [13, 14]]);
     fetchBlocksList.__set__('getConfigMapList', getConfigMapList);
-  });
-});
-
-describe('initBlocksListPosition', () => {
-  it('should return 0 if lastProcessedPosition is undefined', () => {
-    const result = fetchBlocksList.initBlocksListPosition(undefined, [[1, 3], [5, 9], [11, 11], [13, 14]]);
-    expect(result).to.equal(0);
-  });
-
-  it('should return 0 if lastProcessedPosition is {}', () => {
-    const result = fetchBlocksList.initBlocksListPosition({}, [[1, 3], [5, 9], [11, 11], [13, 14]]);
-    expect(result).to.equal(0);
-  });
-
-  it('should throw an error if lastProcessedPosition isnt found in the blocks list', () => {
-    try {
-      fetchBlocksList.initBlocksListPosition({blockNumber: 36, privateKey: -1}, [[1, 3], [5, 9], [11, 11], [13, 14]]);
-      expect.fail('Should have thrown an error');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      expect(error.message).to.equal('Block number 36 not found in blocks list');
-    }
-  });
-
-  it('should return correct index if lastProcessedPosition is found in the blocks list', () => {
-    const test1 = fetchBlocksList.initBlocksListPosition({blockNumber: 5, privateKey: -1}, [[1, 3], [5, 9], [11, 11], [13, 14]]);
-    const test2 = fetchBlocksList.initBlocksListPosition({blockNumber: 11, privateKey: -1}, [[1, 3], [5, 9], [11, 11], [13, 14]]);
-    expect(test1).to.equal(1);
-    expect(test2).to.equal(2);
   });
 });

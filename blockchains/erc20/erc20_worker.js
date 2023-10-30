@@ -11,7 +11,7 @@ const { stableSort } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
 const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events');
-const { initBlocksList, initBlocksListPosition } = require('../../lib/fetch_blocks_list');
+const { initBlocksList } = require('../../lib/fetch_blocks_list');
 
 
 class ERC20Worker extends BaseWorker {
@@ -31,30 +31,30 @@ class ERC20Worker extends BaseWorker {
     }
   }
 
-  async initPosition(lastProcessedPosition) {
-    if (constants.EXPORT_BLOCKS_LIST) {
-      this.blocksListPosition = initBlocksListPosition(lastProcessedPosition, this.blocksList);
-      this.lastExportedBlock = this.blocksList[this.blocksListPosition][0];
-      this.lastPrimaryKey = parseInt(process.env.START_PRIMARY_KEY || '-1');
-    } else {
-      return super.initPosition(lastProcessedPosition);
-    }
-  }
-
-  checkBlocksListPosition() {
-    if (this.blocksListPosition < this.blocksList.length) {
+  getBlocksListInterval() {
+    if (this.lastExportedBlock === -1 && this.blocksList.length > 0) {
       return {
         success: true,
-        fromBlock: this.blocksList[this.blocksListPosition][0],
-        toBlock: this.blocksList[this.blocksListPosition][1]
+        fromBlock: this.blocksList[0][0],
+        toBlock: this.blocksList[0][1]
       };
     }
-    return { success: false };
+    while (this.blocksList.length > 0 && this.lastExportedBlock >= this.blocksList[0][1]) {
+      this.blocksList.shift();
+    }
+    if (this.blocksList.length === 0) {
+      return { success: false };
+    }
+    return {
+      success: true,
+      fromBlock: this.blocksList[0][0],
+      toBlock: this.blocksList[0][1]
+    };
   }
 
   async work() {
     const result = constants.EXPORT_BLOCKS_LIST ?
-      this.checkBlocksListPosition() :
+      this.getBlocksListInterval() :
       await nextIntervalCalculator(this);
 
     if (!result.success) {
@@ -82,7 +82,6 @@ class ERC20Worker extends BaseWorker {
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
-    if (constants.EXPORT_BLOCKS_LIST) this.blocksListPosition++;
     this.lastExportedBlock = result.toBlock;
     const resultEvents = events.concat(overwritten_events);
 
