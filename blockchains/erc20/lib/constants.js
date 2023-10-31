@@ -9,16 +9,15 @@ const PRIMARY_KEY_MULTIPLIER = 10000;
 // "extract_all_append" - extract all contracts, also append events with overwritten contract name
 const CONTRACT_MODES_SUPPORTED = ['vanilla', 'extract_exact_overwrite', 'extract_all_append'];
 const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
-const NODE_URL =  process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
+const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
 
 const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
-        '../../../'+process.env.CONTRACT_MAPPING_FILE_PATH :
+        '../../../' + process.env.CONTRACT_MAPPING_FILE_PATH :
         './contract_mapping/contract_mapping.json'
 );
 
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || '30');
-const USE_TIMESTAMP_MANAGER = parseInt(process.env.USE_TIMESTAMP_MANAGER || '0');
 
 function checkEnvVariables() {
     if (!CONTRACT_MODES_SUPPORTED.includes(CONTRACT_MODE)) {
@@ -35,6 +34,5 @@ module.exports = {
     CONTRACT_MODE,
     NODE_URL,
     CONTRACT_MAPPING_FILE_PATH,
-    LOOP_INTERVAL_CURRENT_MODE_SEC,
-    USE_TIMESTAMP_MANAGER
+    LOOP_INTERVAL_CURRENT_MODE_SEC
 };
