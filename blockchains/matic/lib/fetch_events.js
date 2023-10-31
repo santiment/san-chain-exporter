@@ -1,18 +1,13 @@
 'use strict';
-const { getBlockTimestamp, decodeEvents } = require('../../erc20/lib/fetch_events');
+const { decodeEvents } = require('../../erc20/lib/fetch_events');
 const { TimestampsCache } = require('../../erc20/lib/timestamps_cache');
 const { decodeAddress } = require('../../erc20/lib/util');
 
 const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 
 
-async function decodeEventBasicInfo(web3, event, blockTimestamps) {
-  let timestamp;
-  if (!blockTimestamps[event['blockNumber']]) {
-    timestamp = blockTimestamps[event['blockNumber']] = await getBlockTimestamp(web3, event['blockNumber']);
-  } else {
-    timestamp = blockTimestamps[event['blockNumber']];
-  }
+async function decodeEventBasicInfo(web3, event, timestampsCache) {
+  const timestamp = await timestampsCache.getBlockTimestamp(web3, event['blockNumber']);
 
   return {
     blockNumber: parseInt(web3.utils.hexToNumberString(event['blockNumber'])),
@@ -25,12 +20,12 @@ async function decodeEventBasicInfo(web3, event, blockTimestamps) {
 /**Transfer(address,address,uint256)
  * Used by all Polygon ERC20 tokens
  **/
-async function decodeTransferEvent(web3, event, blockTimestamps) {
+async function decodeTransferEvent(web3, event, timestampsCache) {
   if (event['topics'].length !== 4) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3, event, blockTimestamps);
+  let result = await decodeEventBasicInfo(web3, event, timestampsCache);
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
