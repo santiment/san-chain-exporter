@@ -4,8 +4,8 @@ export NODE_URL=https://ethereum.santiment.net
 export START_BLOCK="15676731"
 export BLOCK_INTERVAL="50"
 export EXPORT_TIMEOUT_MLS=300000
-export CONTRACT_MODE="vanilla"
-export BLOCKCHAIN="erc20"
+export CONTRACT_MODE="extract_exact_overwrite"
+export BLOCKCHAIN="eth"
 export KAFKA_TOPIC="erc20_exporter_test_topic"
 # If testing locally you may need to expose Kubectl service like so:
 # 'kubectl -n cardano port-forward cardano-graphql-pod-id --address 172.17.0.1 3100:3100'

@@ -36,14 +36,13 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     let overwritten_events = [];
-    const timestampsCache = new TimestampsCache();
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       events = await contractEditor.getPastEventsExactContracts(this.web3, result.fromBlock, result.toBlock,
-        timestampsCache);
+        new TimestampsCache());
       contractEditor.changeContractAddresses(events);
     }
     else {
-      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, timestampsCache);
+      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, new TimestampsCache());
       if ('extract_all_append' === constants.CONTRACT_MODE) {
         overwritten_events = contractEditor.extractChangedContractAddresses(events);
       }
