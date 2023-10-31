@@ -19,7 +19,6 @@ class TimestampsCache {
   }
 
   async getTimestampFromNode(web3, blockNumber) {
-    console.log('Getting timestamp for ', blockNumber);
     const block = await web3.eth.getBlock(blockNumber);
     return block['timestamp'];
   }
@@ -31,7 +30,7 @@ class TimestampsCache {
       return timestampStore;
     }
 
-    let timestamp = await this.getTimestampFromNode(web3, blockNumber);
+    const timestamp = await this.getTimestampFromNode(web3, blockNumber);
     this.saveTimestampInStore(blockNumber, timestamp);
 
     return timestamp;
