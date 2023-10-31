@@ -11,6 +11,7 @@ const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events
 const BaseWorker = require('../../lib/worker_base');
 const { stableSort } = require('./lib/util');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
+const { TimestampsCache } = require('./lib/timestamps_cache');
 
 
 class ERC20Worker extends BaseWorker {
@@ -21,9 +22,8 @@ class ERC20Worker extends BaseWorker {
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
   }
 
-  async init(exporter) {
+  async init() {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-    setGlobalTimestampManager(exporter);
   }
 
   async work() {
@@ -36,12 +36,14 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     let overwritten_events = [];
+    const timestampsCache = new TimestampsCache();
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
-      events = await contractEditor.getPastEventsExactContracts(this.web3, result.fromBlock, result.toBlock);
+      events = await contractEditor.getPastEventsExactContracts(this.web3, result.fromBlock, result.toBlock,
+        timestampsCache);
       contractEditor.changeContractAddresses(events);
     }
     else {
-      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock);
+      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, timestampsCache);
       if ('extract_all_append' === constants.CONTRACT_MODE) {
         overwritten_events = contractEditor.extractChangedContractAddresses(events);
       }

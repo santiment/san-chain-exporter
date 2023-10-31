@@ -1,5 +1,6 @@
 'use strict';
 const { getBlockTimestamp, decodeEvents } = require('../../erc20/lib/fetch_events');
+const { TimestampsCache } = require('../../erc20/lib/timestamps_cache');
 const { decodeAddress } = require('../../erc20/lib/util');
 
 const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
@@ -33,8 +34,8 @@ async function decodeTransferEvent(web3, event, blockTimestamps) {
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
-  result.value = parseFloat(web3.utils.hexToNumberString(event['data'].substring(0,66)));
-  result.valueExactBase36 = web3.utils.toBN(event['data'].substring(0,66)).toString(36);
+  result.value = parseFloat(web3.utils.hexToNumberString(event['data'].substring(0, 66)));
+  result.valueExactBase36 = web3.utils.toBN(event['data'].substring(0, 66)).toString(36);
 
   return result;
 }
@@ -49,7 +50,8 @@ const decodeFunctions = {
 async function getPastEvents(web3, fromBlock, toBlock) {
   const events = await getRawEvents(web3, fromBlock, toBlock);
 
-  const decodedEvents = await decodeEvents(web3, events, decodeFunctions);
+  const timestampsCache = new TimestampsCache();
+  const decodedEvents = await decodeEvents(web3, events, timestampsCache, decodeFunctions);
 
   return decodedEvents;
 }

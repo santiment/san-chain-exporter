@@ -1,73 +1,33 @@
 const assert = require('assert');
-const { TimestampsManager} = require('../../blockchains/erc20/lib/./timestamps_manager');
+const { TimestampsCache } = require('../../blockchains/erc20/lib/timestamps_cache');
 
-class ExporterMock {
-  constructor() {
-    this.exports = {};
+class TimestampsCacheMock extends TimestampsCache {
+  constructor(timestampToReturn) {
+    super();
+    this.timestampToReturn = timestampToReturn;
+    this.countCalls = 0;
   }
 
-  getLastBlockTimestamp() {
-        const result = {};
-        result.blockNumber = 100;
-        result.timestamp = 1000;
-
-        return result;
-  }
-  saveLastBlockTimestamp() {
-    return true;
+  async getTimestampFromNode() {
+    this.countCalls += 1;
+    return this.timestampToReturn;
   }
 }
 
-describe('Test Timestamps manger', function() {
-    it('test load timestamps from ZK', async function () {
-        const timestampsManager = new TimestampsManager();
-        await timestampsManager.init(new ExporterMock(true));
+describe('Test Timestamps cache', function () {
+  it('test non existing block reach node', async function () {
+    const timestampsCache = new TimestampsCacheMock(5);
 
-        const lastTimestampUsed = {};
-        lastTimestampUsed.blockNumber = 100;
-        lastTimestampUsed.timestamp = 1000;
+    assert.equal(await timestampsCache.getBlockTimestamp(null, 1), 5);
+    assert.equal(timestampsCache.countCalls, 1);
+  });
 
-        assert.deepStrictEqual(timestampsManager.lastTimestampUsed, lastTimestampUsed);
-    });
+  it('test existing block does not reach node', async function () {
+    const timestampsCache = new TimestampsCacheMock(5);
 
-    it('test increase timestamp', async function () {
-        const timestampsManager = new TimestampsManager();
-        await timestampsManager.init(new ExporterMock(true));
-
-        assert.deepStrictEqual(timestampsManager.increaseTimestampIfNeed(101, 999), 1001);
-    });
-
-    it('test existing block does not reach node', async function () {
-        const timestampsManager = new TimestampsManager();
-        await timestampsManager.init(new ExporterMock(true));
-
-        assert.deepStrictEqual(await timestampsManager.getBlockTimestamp(null, 100), 1000);
-    });
-
-    it('test block from node is corrected', async function () {
-        const timestampsManager = new TimestampsManager();
-        await timestampsManager.init(new ExporterMock(true));
-
-        timestampsManager.getTimestampFromNode = async function() {
-            return 999;
-        };
-
-        assert.deepStrictEqual(await timestampsManager.getBlockTimestamp(null, 101), 1001);
-    });
-
-    it('test correct block from node is saved', async function () {
-        const timestampsManager = new TimestampsManager();
-        await timestampsManager.init(new ExporterMock(true));
-
-        timestampsManager.getTimestampFromNode = async function() {
-            return 1001;
-        };
-
-        // This get method should save the timestamp in the internal store
-        await timestampsManager.getBlockTimestamp(null, 101);
-
-        assert.deepStrictEqual(await timestampsManager.getTimestampFromStore(101), 1001);
-    });
-
+    await timestampsCache.getBlockTimestamp(null, 1);
+    assert.equal(await timestampsCache.getBlockTimestamp(null, 1), 5);
+    assert.equal(timestampsCache.countCalls, 1);
+  });
 
 });

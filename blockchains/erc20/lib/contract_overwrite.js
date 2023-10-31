@@ -28,7 +28,7 @@ class ContractEditor {
     this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract));
 
     logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
-     `${this.contractsOverwriteArray.length} contracts will be monitored.`);
+      `${this.contractsOverwriteArray.length} contracts will be monitored.`);
     logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
   }
 
@@ -49,14 +49,14 @@ class ContractEditor {
      */
     event.value = Math.floor(event.value * multiplier);
     const bigNumber = new BigNumber(event.valueExactBase36, 36).times(multiplier).integerValue();
-    event.valueExactBase36 =bigNumber.toString(36);
+    event.valueExactBase36 = bigNumber.toString(36);
   }
 
-  async getPastEventsExactContracts(web3, fromBlock, toBlock) {
+  async getPastEventsExactContracts(web3, fromBlock, toBlock, timestampsCache) {
     let resultsAggregation = [];
 
     for (const contractOverwrite of this.contractsOverwriteArray) {
-      const events = await getPastEvents(web3, fromBlock, toBlock, contractOverwrite.oldAddresses);
+      const events = await getPastEvents(web3, fromBlock, toBlock, contractOverwrite.oldAddresses, timestampsCache);
       resultsAggregation = resultsAggregation.concat(events);
     }
 
@@ -69,7 +69,7 @@ class ContractEditor {
    * have the change applied.
    */
   changeContractAddresses(events) {
-    for(let event of events) {
+    for (let event of events) {
       for (const contractOverwrite of this.contractsOverwriteArray) {
         if (this.isContractMatchesExactList(event, contractOverwrite)) {
           this.editAddressAndAmount(event, contractOverwrite);
@@ -84,10 +84,10 @@ class ContractEditor {
    * @param events A list of events to go over and check contract address.
    * @returns A deep copy of the events which have had change applied.
    */
-   extractChangedContractAddresses(events) {
+  extractChangedContractAddresses(events) {
     const result = [];
 
-    for(let event of events) {
+    for (let event of events) {
       for (const contractOverwrite of this.contractsOverwriteArray) {
         if (this.isContractMatchesExactList(event, contractOverwrite)) {
           event = JSON.parse(JSON.stringify(event));
