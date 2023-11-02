@@ -4,7 +4,7 @@ const rewire = require('rewire');
 const Web3 = require('web3');
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
-const {contractEditor} = require('../../blockchains/erc20/lib/contract_overwrite');
+const { contractEditor } = require('../../blockchains/erc20/lib/contract_overwrite');
 const contract_overwrite = rewire('../../blockchains/erc20/lib/contract_overwrite');
 const web3 = new Web3();
 
@@ -111,46 +111,49 @@ const decodedEventSNXNew = {
 const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew));
 correctedEventSNXNew.contract = SNXContractReplacer;
 
-fetch_events.__set__('getBlockTimestamp', async function (web3, blockNumber) {
-  return 0;
-});
+class TimestampsCacheMock {
+  async getBlockTimestamp() {
+    return 0;
+  }
+}
 
-describe('contract manipulations', function() {
-  it('decode contract addresses', async function() {
+describe('contract manipulations', function () {
+  it('decode contract addresses', async function () {
     const decodeEvents = fetch_events.__get__('decodeEvents');
     const decodedEvents = await decodeEvents(web3,
-        [rawEventNotSNX,
-          rawEventSNXLegacy,
-          rawEventSNXNew
-        ]);
+      [rawEventNotSNX,
+        rawEventSNXLegacy,
+        rawEventSNXNew
+      ],
+      new TimestampsCacheMock(),);
 
     assert.deepStrictEqual(
       decodedEvents,
-        [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
+      [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew]
     );
   });
 
-  it('change contract addresses deep copy', async function() {
+  it('change contract addresses deep copy', async function () {
     const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
     const editedEvents = contractEditor.extractChangedContractAddresses(inputEvents);
 
     assert.deepStrictEqual(
-        editedEvents,
-        [correctedEventSNXLegacy, correctedEventSNXNew]
+      editedEvents,
+      [correctedEventSNXLegacy, correctedEventSNXNew]
     );
   });
 
-  it('change contract addresses shallow copy', async function() {
+  it('change contract addresses shallow copy', async function () {
     const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
     contractEditor.changeContractAddresses(inputEvents);
 
     assert.deepStrictEqual(
-        inputEvents,
-        [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
+      inputEvents,
+      [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
     );
   });
 
-  it('input events are not modified on contract edit and deep copy', async function() {
+  it('input events are not modified on contract edit and deep copy', async function () {
     const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
     const inputEventsCopy = JSON.stringify(inputEvents);
     contractEditor.extractChangedContractAddresses(inputEvents);
@@ -159,7 +162,7 @@ describe('contract manipulations', function() {
     assert.deepStrictEqual(JSON.stringify(inputEvents), inputEventsCopy);
   });
 
-  it('test getPastEventsExactContracts correctly concatenates events', async function() {
+  it('test getPastEventsExactContracts correctly concatenates events', async function () {
     contract_overwrite.__set__('getPastEvents', function () {
       return ['a', 'b', 'c'];
     });
@@ -169,7 +172,7 @@ describe('contract manipulations', function() {
     assert.deepStrictEqual(
       result,
       ['a', 'b', 'c', 'a', 'b', 'c']
-  );
+    );
   });
 
 });
