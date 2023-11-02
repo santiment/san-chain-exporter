@@ -50,7 +50,6 @@ describe('Test ERC20 worker', function () {
         extend_events.setExpectedEventPrimaryKey(correctedEventWithPrimaryKey);
     });
 
-
     it('test the events returned when in \'vanilla\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__('constants', { CONTRACT_MODE: 'vanilla' });
@@ -121,5 +120,65 @@ describe('Test ERC20 worker', function () {
         const result = await worker.work();
 
         assert.deepStrictEqual(result, [originalEvent, correctedEventWithPrimaryKey, originalEvent2]);
+    });
+
+    it('test getBlocksListInterval when ZK position not defined', async function () {
+        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
+        const worker = new erc20_worker.worker();
+        worker.blocksList = [[1, 10], [11, 20], [21, 30]];
+        worker.lastExportedBlock = -1;
+
+        const result = worker.getBlocksListInterval();
+
+        assert.deepStrictEqual(result, { success: true, fromBlock: 1, toBlock: 10 });
+        assert.deepStrictEqual(worker.blocksList, [[1, 10], [11, 20], [21, 30]]);
+    });
+
+    it('test getBlocksListInterval when ZK position is defined', async function () {
+        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
+        const worker = new erc20_worker.worker();
+        worker.blocksList = [[1, 10], [11, 20], [21, 30]];
+        worker.lastExportedBlock = 20;
+
+        const result = worker.getBlocksListInterval();
+
+        assert.deepStrictEqual(result, { success: true, fromBlock: 21, toBlock: 30 });
+        assert.deepStrictEqual(worker.blocksList, [[21, 30]]);
+    });
+
+    it('test getBlocksListInterval new iteration', async function () {
+        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
+        const worker = new erc20_worker.worker();
+        worker.blocksList = [[5, 10], [11, 20], [21, 30]];
+        worker.lastExportedBlock = 10;
+
+        const result = worker.getBlocksListInterval();
+
+        assert.deepStrictEqual(result, { success: true, fromBlock: 11, toBlock: 20 });
+        assert.deepStrictEqual(worker.blocksList, [[11, 20], [21, 30]]);
+    });
+
+    it('test getBlocksListInterval ZK defined, no more blocks', async function () {
+        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
+        const worker = new erc20_worker.worker();
+        worker.blocksList = [[5, 10], [11, 20], [21, 30]];
+        worker.lastExportedBlock = 30;
+
+        const result = worker.getBlocksListInterval();
+
+        assert.deepStrictEqual(result, { success: false });
+        assert.deepStrictEqual(worker.blocksList, []);
+    });
+
+    it('test getBlocksListInterval new iteration, no more blocks', async function () {
+        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
+        const worker = new erc20_worker.worker();
+        worker.blocksList = [[21, 30]];
+        worker.lastExportedBlock = 30;
+
+        const result = worker.getBlocksListInterval();
+
+        assert.deepStrictEqual(result, { success: false });
+        assert.deepStrictEqual(worker.blocksList, []);
     });
 });

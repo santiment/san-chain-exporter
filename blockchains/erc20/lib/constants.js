@@ -1,5 +1,6 @@
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '100');
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
+const EXPORT_BLOCKS_LIST = process.env.EXPORT_BLOCKS_LIST || false;
 // This multiplier is used to expand the space of the output primary keys.
 //This allows for the event indexes to be added to the primary key.
 const PRIMARY_KEY_MULTIPLIER = 10000;
@@ -31,6 +32,7 @@ checkEnvVariables();
 module.exports = {
     BLOCK_INTERVAL,
     CONFIRMATIONS,
+    EXPORT_BLOCKS_LIST,
     PRIMARY_KEY_MULTIPLIER,
     CONTRACT_MODE,
     NODE_URL,
