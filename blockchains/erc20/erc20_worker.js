@@ -1,17 +1,18 @@
 'use strict';
 const Web3 = require('web3');
-const { logger } = require('../../lib/logger');
 const constants = require('./lib/constants');
+const { logger } = require('../../lib/logger');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
+
 let contractEditor = null;
-if (constants.CONTRACT_MODE !== 'vanilla') {
-  contractEditor = require('./lib/contract_overwrite').contractEditor;
-}
-const { getPastEvents, setGlobalTimestampManager } = require('./lib/fetch_events');
-const BaseWorker = require('../../lib/worker_base');
+if (constants.CONTRACT_MODE !== 'vanilla') { contractEditor = require('./lib/contract_overwrite').contractEditor; }
+
 const { stableSort } = require('./lib/util');
+const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
 const { TimestampsCache } = require('./lib/timestamps_cache');
+const { getPastEvents } = require('./lib/fetch_events');
+const { initBlocksList } = require('../../lib/fetch_blocks_list');
 
 
 class ERC20Worker extends BaseWorker {
@@ -24,17 +25,45 @@ class ERC20Worker extends BaseWorker {
 
   async init() {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+
+    if (constants.EXPORT_BLOCKS_LIST) {
+      this.blocksList = await initBlocksList();
+    }
+  }
+
+  getBlocksListInterval() {
+    if (this.lastExportedBlock === -1 && this.blocksList.length > 0) {
+      return {
+        success: true,
+        fromBlock: this.blocksList[0][0],
+        toBlock: this.blocksList[0][1]
+      };
+    }
+    while (this.blocksList.length > 0 && this.lastExportedBlock >= this.blocksList[0][1]) {
+      this.blocksList.shift();
+    }
+    if (this.blocksList.length === 0) {
+      return { success: false };
+    }
+    return {
+      success: true,
+      fromBlock: this.blocksList[0][0],
+      toBlock: this.blocksList[0][1]
+    };
   }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
+    const result = constants.EXPORT_BLOCKS_LIST ?
+      this.getBlocksListInterval() :
+      await nextIntervalCalculator(this);
+
     if (!result.success) {
       return [];
     }
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    let events = [];
+    let events;
     let overwritten_events = [];
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       events = await contractEditor.getPastEventsExactContracts(this.web3, result.fromBlock, result.toBlock,

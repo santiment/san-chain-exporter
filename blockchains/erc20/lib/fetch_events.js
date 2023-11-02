@@ -175,7 +175,6 @@ const decodeFunctionsMap = {
 };
 
 
-
 async function getPastEvents(web3, fromBlock, toBlock, contractAddress, timestampsCache) {
   const events = await getRawEvents(web3, fromBlock, toBlock, contractAddress);
 
