@@ -4,7 +4,6 @@ const { parseURL } = require('whatwg-url');
 const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
 const {
-  DOGE,
   NODE_URL,
   MAX_RETRIES,
   RPC_PASSWORD,
@@ -90,13 +89,6 @@ class UtxoWorker extends BaseWorker {
 
   async fetchBlock(block_index) {
     let blockHash = await this.sendRequestWithRetry('getblockhash', [block_index]);
-    if (DOGE) {
-      let blockData = await this.sendRequestWithRetry('getblock', [blockHash, true]);
-      let transactionData = await this.getTransactionData(blockData.tx);
-      blockData['tx'] = transactionData;
-
-      return blockData;
-    }
     return await this.sendRequestWithRetry('getblock', [blockHash, 2]);
   }
 
