@@ -5,10 +5,8 @@ const pkg = require('./package.json');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
 const { Exporter } = require('./lib/kafka_storage');
-const { storeEvents } = require('./lib/store_events');
-const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
-// Dynamically initialize just the needed blockchain worker
 const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name;
+const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 
 var SegfaultHandler = require('segfault-handler');
@@ -16,18 +14,42 @@ SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
 
 class Main {
   constructor() {
-    // To be set depending on which blockchain worker is configured on runtime
     this.worker = null;
     this.shouldWork = true;
   }
 
-  async init() {
-    this.exporter = new Exporter(EXPORTER_NAME, true);
-    await this.exporter.connect();
-    await this.exporter.initTransactions();
-    await this.initWorker();
+  async initExporter(exporterName, isTransactions) {
+    const INIT_EXPORTER_ERR_MSG = 'Error when initializing exporter: ';
+    this.exporter = new Exporter(exporterName, isTransactions);
+    await this.exporter
+      .connect()
+      .then(() => this.exporter.initTransactions())
+      .catch((err) => { throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`); });
+  }
 
+  async handleInitPosition() {
+    const lastRecoveredPosition = await this.exporter.getLastPosition();
+    this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
+    await this.exporter.savePosition(this.lastProcessedPosition);
+  }
+
+  #isWorkerSet() {
+    if (this.worker) throw new Error('Worker is already set');
+  }
+
+  async initWorker() {
+    this.#isWorkerSet();
+
+    this.worker = new worker.worker();
+    await this.worker.init(this.exporter, metrics);
+    await this.handleInitPosition();
+  }
+
+  async init() {
+    await this.initExporter(EXPORTER_NAME, true);
+    await this.initWorker();
     metrics.startCollection();
+
     this.microServer = micro(microHandler);
     this.microServer.listen(3000, err => {
       if (err) {
@@ -38,32 +60,29 @@ class Main {
     });
   }
 
-  async disconnect() {
-    // This call should be refactored to work with async/await
-    this.exporter.disconnect();
-    await this.microServer.close();
+  /**
+   * The metrics are intended to monitor different aspects of the exporter's work
+   * such as the number of requests and the response time.
+  */
+  updateMetrics() {
+    metrics.currentBlock.set(this.worker.lastConfirmedBlock);
+    metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
+    metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
+    metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
   }
 
   async workLoop() {
     while (this.shouldWork) {
-      const lastRequestStartTime = new Date();
+      this.worker.lastRequestStartTime = new Date();
       const events = await this.worker.work();
+
       this.worker.lastExportTime = Date.now();
-      metrics.currentBlock.set(this.worker.lastConfirmedBlock);
 
-      // This metric is intended to count the requests towards the Node endpoint.
-      // The counting is done inside the worker and we fetch the reult here.
-      metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
-      metrics.requestsResponseTime.observe(new Date() - lastRequestStartTime);
-      metrics.lastExportedBlock.set(parseInt(this.worker.lastExportedBlock));
-
-      // Get the position to store in Zookeeper as constructed by the worker.
-      // Different workers may store different type of position so this is
-      // part of the blockchain specific code.
+      this.updateMetrics();
       this.lastProcessedPosition = this.worker.getLastProcessedPosition();
 
       if (events && events.length > 0) {
-        await storeEvents(this.exporter, events);
+        await this.exporter.storeEvents(events);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
@@ -74,17 +93,10 @@ class Main {
     }
   }
 
-  async initWorker() {
-    if (this.worker !== null) throw new Error('Worker is already set');
-
-    this.worker = new worker.worker();
-    await this.worker.init(this.exporter, metrics);
-
-    const lastRecoveredPosition = await this.exporter.getLastPosition();
-    // Provide the latest recovered from Zookeeper position to the worker. Receive the actual position to start from.
-    // This moves the logic of what a proper initial position is to the worker.
-    this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
-    await this.exporter.savePosition(this.lastProcessedPosition);
+  async disconnect() {
+    // This call should be refactored to work with async/await
+    this.exporter.disconnect();
+    await this.microServer.close();
   }
 
   stop() {
@@ -94,7 +106,6 @@ class Main {
     }
     else {
       logger.info('Exiting immediately');
-      // Stopped was already requested - exit immediately
       process.exit();
     }
   }
@@ -125,13 +136,13 @@ class Main {
   }
 }
 
-const main = new Main();
+const mainInstance = new Main();
 
 process.on('SIGINT', () => {
-  main.stop();
+  mainInstance.stop();
 });
 process.on('SIGTERM', () => {
-  main.stop();
+  mainInstance.stop();
 });
 
 
@@ -140,7 +151,7 @@ const microHandler = async (request, response) => {
 
   switch (req.pathname) {
     case '/healthcheck':
-      return main.healthcheck()
+      return mainInstance.healthcheck()
         .then(() => micro.send(response, 200, 'ok'))
         .catch((err) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
@@ -154,21 +165,24 @@ const microHandler = async (request, response) => {
   }
 };
 
-(async function () {
+async function main() {
   try {
-    await main.init();
-  }
-  catch (ex) {
-    logger.error('Error initializing exporter: ', ex);
-    throw ex;
+    await mainInstance.init();
+  } catch (err) {
+    throw new Error(`Error initializing exporter: ${err.message}`);
   }
   try {
-    await main.workLoop();
-    await main.disconnect();
+    await mainInstance.workLoop();
+    await mainInstance.disconnect();
     logger.info('Bye!');
+  } catch (err) {
+    throw new Error(`Error in exporter work loop: ${err.message}`);
   }
-  catch (ex) {
-    logger.error('Error in exporter work loop: ', ex);
-    throw ex;
-  }
-})();
+}
+
+!process.env.TEST_ENV ? main() : null;
+
+module.exports = {
+  main,
+  Main
+};
