@@ -1,7 +1,8 @@
 const rewire = require('rewire');
 const assert = require('assert');
+const sinon = require('sinon');
 const erc20_worker = rewire('../../blockchains/erc20/erc20_worker');
-const contract_overwrite = rewire('../../blockchains/erc20/lib/contract_overwrite');
+const { ContractOverwrite } = require('../../blockchains/erc20/lib/contract_overwrite');
 const extend_events = require('./extend_events.spec');
 
 
@@ -57,6 +58,9 @@ describe('Test ERC20 worker', function () {
             return [originalEvent];
         });
         const worker = new erc20_worker.worker();
+        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        await worker.init();
+
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
@@ -67,15 +71,34 @@ describe('Test ERC20 worker', function () {
 
     it('test the events returned when in \'extract_exact_overwrite\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        erc20_worker.__set__('constants', { CONTRACT_MODE: 'extract_exact_overwrite' });
-        contract_overwrite.__set__('constants', { CONTRACT_MODE: 'extract_exact_overwrite' });
-        const contractEditor = contract_overwrite.contractEditor;
-        contractEditor.getPastEventsExactContracts = async function () {
-            return [correctedEvent];
-        };
+        erc20_worker.__set__('constants', {
+            CONTRACT_MODE: 'extract_exact_overwrite',
+            CONTRACT_MAPPING_FILE_PATH: './contract_mapping/contract_mapping.json'
+        });
 
-        erc20_worker.__set__('contractEditor', contractEditor);
+        erc20_worker.__set__('getPastEvents', async function () {
+            return [originalEvent];
+        });
         const worker = new erc20_worker.worker();
+        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        await worker.init();
+
+        worker.contractsOverwriteArray = [];
+        worker.contractsOverwriteArray.push(new ContractOverwrite(
+            {
+                'old_contracts': [
+                    {
+                        'address': '0xc011a72400e58ecd99ee497cf89e3775d4bd732f',
+                        'multiplier': 1
+                    },
+                    {
+                        'address': '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f',
+                        'multiplier': 1
+                    }
+                ],
+                'new_address': 'snx_contract'
+            }
+        ));
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
@@ -86,13 +109,34 @@ describe('Test ERC20 worker', function () {
 
     it('test the events returned when in \'extract_all_append\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        erc20_worker.__set__('constants', { CONTRACT_MODE: 'extract_all_append' });
-        contract_overwrite.__set__('constants', { CONTRACT_MODE: 'extract_all_append' });
+        erc20_worker.__set__('constants', {
+            CONTRACT_MODE: 'extract_all_append',
+            CONTRACT_MAPPING_FILE_PATH: './contract_mapping/contract_mapping.json'
+        });
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
         });
 
         const worker = new erc20_worker.worker();
+        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        await worker.init();
+
+        worker.contractsOverwriteArray = [];
+        worker.contractsOverwriteArray.push(new ContractOverwrite(
+            {
+                'old_contracts': [
+                    {
+                        'address': '0xc011a72400e58ecd99ee497cf89e3775d4bd732f',
+                        'multiplier': 1
+                    },
+                    {
+                        'address': '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f',
+                        'multiplier': 1
+                    }
+                ],
+                'new_address': 'snx_contract'
+            }
+        ));
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
@@ -105,13 +149,34 @@ describe('Test ERC20 worker', function () {
 
     it('test multiple events returned when in \'extract_all_append\' mode', async function () {
         // Test that the overwritten event would be correctly ordered in between two original events
-        erc20_worker.__set__('constants', { CONTRACT_MODE: 'extract_all_append' });
-        contract_overwrite.__set__('constants', { CONTRACT_MODE: 'extract_all_append' });
+        erc20_worker.__set__('constants', {
+            CONTRACT_MODE: 'extract_all_append',
+            CONTRACT_MAPPING_FILE_PATH: './contract_mapping/contract_mapping.json'
+        });
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent, originalEvent2];
         });
 
         const worker = new erc20_worker.worker();
+        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        await worker.init();
+
+        worker.contractsOverwriteArray = [];
+        worker.contractsOverwriteArray.push(new ContractOverwrite(
+            {
+                'old_contracts': [
+                    {
+                        'address': '0xc011a72400e58ecd99ee497cf89e3775d4bd732f',
+                        'multiplier': 1
+                    },
+                    {
+                        'address': '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f',
+                        'multiplier': 1
+                    }
+                ],
+                'new_address': 'snx_contract'
+            }
+        ));
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 

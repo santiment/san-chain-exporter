@@ -3,16 +3,14 @@ const Web3 = require('web3');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
-
-let contractEditor = null;
-if (constants.CONTRACT_MODE !== 'vanilla') { contractEditor = require('./lib/contract_overwrite').contractEditor; }
-
-const { stableSort } = require('./lib/util');
+const { ContractOverwrite, editAddressAndAmount, extractChangedContractAddresses } = require('./lib/contract_overwrite');
+const { stableSort, readJsonFile } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
 const { TimestampsCache } = require('./lib/timestamps_cache');
 const { getPastEvents } = require('./lib/fetch_events');
 const { initBlocksList } = require('../../lib/fetch_blocks_list');
+
 
 
 class ERC20Worker extends BaseWorker {
@@ -28,6 +26,16 @@ class ERC20Worker extends BaseWorker {
 
     if (constants.EXPORT_BLOCKS_LIST) {
       this.blocksList = await initBlocksList();
+    }
+    console.log(JSON.stringify(constants));
+    if (constants.CONTRACT_MODE !== 'vanilla') {
+      const parsedContracts = await readJsonFile(constants.CONTRACT_MAPPING_FILE_PATH);
+
+      this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract));
+
+      logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
+        `${this.contractsOverwriteArray.length} contracts will be monitored.`);
+      logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
     }
   }
 
@@ -63,17 +71,23 @@ class ERC20Worker extends BaseWorker {
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    let events;
+    let events = [];
     let overwritten_events = [];
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
-      events = await contractEditor.getPastEventsExactContracts(this.web3, result.fromBlock, result.toBlock,
-        new TimestampsCache());
-      contractEditor.changeContractAddresses(events);
+      const timestampsCache = new TimestampsCache();
+      for (const contractOverwrite of this.contractsOverwriteArray) {
+        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, contractOverwrite.oldAddresses,
+          timestampsCache);
+        for (const event of rawEvents) {
+          editAddressAndAmount(event, contractOverwrite);
+          events.push(...rawEvents);
+        }
+      }
     }
     else {
       events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, new TimestampsCache());
       if ('extract_all_append' === constants.CONTRACT_MODE) {
-        overwritten_events = contractEditor.extractChangedContractAddresses(events);
+        overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
     }
 

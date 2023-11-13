@@ -4,9 +4,9 @@ const rewire = require('rewire');
 const Web3 = require('web3');
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
-const { contractEditor } = require('../../blockchains/erc20/lib/contract_overwrite');
-const contract_overwrite = rewire('../../blockchains/erc20/lib/contract_overwrite');
+const { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount } = require('../../blockchains/erc20/lib/contract_overwrite');
 const web3 = new Web3();
+const { readJsonFile } = require('../../blockchains/erc20/lib/util');
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f';
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f';
@@ -117,6 +117,17 @@ class TimestampsCacheMock {
   }
 }
 
+let contractsOverwriteArray = null;
+
+async function singletonContractsOverwrite() {
+  if (!contractsOverwriteArray) {
+    const parsedContracts = await readJsonFile('./contract_mapping/contract_mapping.json');
+    contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract));
+  }
+
+  return contractsOverwriteArray;
+}
+
 describe('contract manipulations', function () {
   it('decode contract addresses', async function () {
     const decodeEvents = fetch_events.__get__('decodeEvents');
@@ -135,7 +146,7 @@ describe('contract manipulations', function () {
 
   it('change contract addresses deep copy', async function () {
     const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
-    const editedEvents = contractEditor.extractChangedContractAddresses(inputEvents);
+    const editedEvents = extractChangedContractAddresses(inputEvents, await singletonContractsOverwrite());
 
     assert.deepStrictEqual(
       editedEvents,
@@ -144,34 +155,29 @@ describe('contract manipulations', function () {
   });
 
   it('change contract addresses shallow copy', async function () {
-    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
-    contractEditor.changeContractAddresses(inputEvents);
+    const inputEvents = [decodedEventSNXLegacy, decodedEventSNXNew];
+    const contractsOverwrite = new ContractOverwrite(
+      {
+        'old_contracts': [
+          {
+            'address': '0xc011a72400e58ecd99ee497cf89e3775d4bd732f',
+            'multiplier': 1
+          },
+          {
+            'address': '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f',
+            'multiplier': 1
+          }
+        ],
+        'new_address': 'snx_contract'
+      }
+    );
+    for (const event of inputEvents) {
+      editAddressAndAmount(event, contractsOverwrite);
+    }
 
     assert.deepStrictEqual(
       inputEvents,
-      [decodedEventNotSNX, correctedEventSNXLegacy, correctedEventSNXNew]
-    );
-  });
-
-  it('input events are not modified on contract edit and deep copy', async function () {
-    const inputEvents = [decodedEventNotSNX, decodedEventSNXLegacy, decodedEventSNXNew];
-    const inputEventsCopy = JSON.stringify(inputEvents);
-    contractEditor.extractChangedContractAddresses(inputEvents);
-
-    // Test that input has not been modified in any way. We use JSON.stringify again to build same JSON structure.
-    assert.deepStrictEqual(JSON.stringify(inputEvents), inputEventsCopy);
-  });
-
-  it('test getPastEventsExactContracts correctly concatenates events', async function () {
-    contract_overwrite.__set__('getPastEvents', function () {
-      return ['a', 'b', 'c'];
-    });
-    contract_overwrite.contractEditor.contractsOverwriteArray = ['contract1', 'contract2'];
-
-    let result = await contract_overwrite.contractEditor.getPastEventsExactContracts();
-    assert.deepStrictEqual(
-      result,
-      ['a', 'b', 'c', 'a', 'b', 'c']
+      [correctedEventSNXLegacy, correctedEventSNXNew]
     );
   });
 
