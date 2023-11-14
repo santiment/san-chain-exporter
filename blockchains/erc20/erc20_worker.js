@@ -19,6 +19,8 @@ class ERC20Worker extends BaseWorker {
 
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
+    this.contractsOverwriteArray = [];
+    this.contractsUnmodified = [];
   }
 
   async init() {
@@ -31,11 +33,15 @@ class ERC20Worker extends BaseWorker {
     if (constants.CONTRACT_MODE !== 'vanilla') {
       const parsedContracts = await readJsonFile(constants.CONTRACT_MAPPING_FILE_PATH);
 
-      this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract) => new ContractOverwrite(contract));
-      this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
+      if (parsedContracts.modified_contracts) {
+        this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract) => new ContractOverwrite(contract));
+      }
+      if (parsedContracts.unmodified_contracts) {
+        this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
+      }
 
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
-        `${this.contractsOverwriteArray.length} contracts will be monitored.`);
+        `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);
       logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
     }
   }

@@ -14,7 +14,7 @@ const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://local
 
 const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
-        '../../../' + process.env.CONTRACT_MAPPING_FILE_PATH :
+        process.env.CONTRACT_MAPPING_FILE_PATH :
         './contract_mapping/contract_mapping.json'
 );
 
