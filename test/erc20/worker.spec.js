@@ -73,7 +73,7 @@ describe('Test ERC20 worker', function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__('constants', {
             CONTRACT_MODE: 'extract_exact_overwrite',
-            CONTRACT_MAPPING_FILE_PATH: './contract_mapping/contract_mapping.json'
+            CONTRACT_MAPPING_FILE_PATH: './test/erc20/contract_mapping/contract_mapping.json'
         });
 
         erc20_worker.__set__('getPastEvents', async function () {
@@ -111,7 +111,7 @@ describe('Test ERC20 worker', function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         erc20_worker.__set__('constants', {
             CONTRACT_MODE: 'extract_all_append',
-            CONTRACT_MAPPING_FILE_PATH: './contract_mapping/contract_mapping.json'
+            CONTRACT_MAPPING_FILE_PATH: './test/erc20/contract_mapping/contract_mapping.json'
         });
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
@@ -151,7 +151,7 @@ describe('Test ERC20 worker', function () {
         // Test that the overwritten event would be correctly ordered in between two original events
         erc20_worker.__set__('constants', {
             CONTRACT_MODE: 'extract_all_append',
-            CONTRACT_MAPPING_FILE_PATH: './contract_mapping/contract_mapping.json'
+            CONTRACT_MAPPING_FILE_PATH: './test/erc20/contract_mapping/contract_mapping.json'
         });
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent, originalEvent2];

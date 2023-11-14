@@ -31,7 +31,8 @@ class ERC20Worker extends BaseWorker {
     if (constants.CONTRACT_MODE !== 'vanilla') {
       const parsedContracts = await readJsonFile(constants.CONTRACT_MAPPING_FILE_PATH);
 
-      this.contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract));
+      this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract) => new ContractOverwrite(contract));
+      this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
 
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length} contracts will be monitored.`);
@@ -82,6 +83,11 @@ class ERC20Worker extends BaseWorker {
           editAddressAndAmount(event, contractOverwrite);
           events.push(...rawEvents);
         }
+      }
+      for (const contractUnmodified of this.contractsUnmodified) {
+        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, contractUnmodified,
+          timestampsCache);
+        events.push(...rawEvents);
       }
     }
     else {

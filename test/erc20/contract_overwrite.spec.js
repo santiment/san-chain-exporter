@@ -121,8 +121,8 @@ let contractsOverwriteArray = null;
 
 async function singletonContractsOverwrite() {
   if (!contractsOverwriteArray) {
-    const parsedContracts = await readJsonFile('./contract_mapping/contract_mapping.json');
-    contractsOverwriteArray = parsedContracts.map((parsedContract) => new ContractOverwrite(parsedContract));
+    const parsedContracts = await readJsonFile('./test/erc20/contract_mapping/contract_mapping.json');
+    contractsOverwriteArray = parsedContracts.modified_contracts.map((parsedContract) => new ContractOverwrite(parsedContract));
   }
 
   return contractsOverwriteArray;
