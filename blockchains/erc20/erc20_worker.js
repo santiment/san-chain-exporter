@@ -90,9 +90,11 @@ class ERC20Worker extends BaseWorker {
         }
       }
 
-      const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.contractsUnmodified,
-        timestampsCache);
-      events.push(...rawEvents);
+      if (this.contractsUnmodified.length > 0) {
+        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.contractsUnmodified,
+          timestampsCache);
+        events.push(...rawEvents);
+      }
     }
     else {
       events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, new TimestampsCache());
