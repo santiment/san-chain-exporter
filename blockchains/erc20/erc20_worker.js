@@ -67,6 +67,13 @@ class ERC20Worker extends BaseWorker {
     };
   }
 
+  async throttleIfNeed(promiseQueue) {
+    if (promiseQueue.length >= constants.MAX_CONCURRENT_REQUESTS) {
+      await Promise.all(promiseQueue);
+      promiseQueue.length = 0;
+    }
+  }
+
   async work() {
     const result = constants.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
@@ -82,18 +89,25 @@ class ERC20Worker extends BaseWorker {
     let overwritten_events = [];
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       const timestampsCache = new TimestampsCache();
+      const promiseQueue = [];
       for (const contractOverwrite of this.contractsOverwriteArray) {
-        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, contractOverwrite.oldAddresses,
-          timestampsCache);
-        for (const event of rawEvents) {
-          editAddressAndAmount(event, contractOverwrite);
-          events.push(...rawEvents);
-        }
+        promiseQueue.push(getPastEvents(this.web3, result.fromBlock, result.toBlock, contractOverwrite.oldAddresses, timestampsCache)
+          .then(rawEvents => {
+            for (const event of rawEvents) {
+              editAddressAndAmount(event, contractOverwrite);
+              events.push(event);
+            }
+          }));
+        await this.throttleIfNeed(promiseQueue);
       }
       for (const contractUnmodified of this.contractsUnmodified) {
-        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, contractUnmodified,
-          timestampsCache);
-        events.push(...rawEvents);
+        promiseQueue.push(getPastEvents(this.web3, result.fromBlock, result.toBlock, contractUnmodified,
+          timestampsCache)
+          .then(rawEvents => {
+            events.push(...rawEvents);
+          })
+        );
+        await this.throttleIfNeed(promiseQueue);
       }
     }
     else {
