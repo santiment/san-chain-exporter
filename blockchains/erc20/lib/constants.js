@@ -11,7 +11,6 @@ const PRIMARY_KEY_MULTIPLIER = 10000;
 const CONTRACT_MODES_SUPPORTED = ['vanilla', 'extract_exact_overwrite', 'extract_all_append'];
 const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
 const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
-const MAX_CONCURRENT_REQUESTS = parseInt(process.env.MAX_CONCURRENT_REQUESTS || 1);
 
 const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
@@ -37,6 +36,5 @@ module.exports = {
     CONTRACT_MODE,
     NODE_URL,
     CONTRACT_MAPPING_FILE_PATH,
-    LOOP_INTERVAL_CURRENT_MODE_SEC,
-    MAX_CONCURRENT_REQUESTS
+    LOOP_INTERVAL_CURRENT_MODE_SEC
 };

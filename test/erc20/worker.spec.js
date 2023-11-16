@@ -84,6 +84,7 @@ describe('Test ERC20 worker', function () {
         await worker.init();
 
         worker.contractsOverwriteArray = [];
+        worker.contractsUnmodified = [];
         worker.contractsOverwriteArray.push(new ContractOverwrite(
             {
                 'old_contracts': [
