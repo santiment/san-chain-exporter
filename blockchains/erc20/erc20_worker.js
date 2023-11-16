@@ -11,7 +11,18 @@ const { TimestampsCache } = require('./lib/timestamps_cache');
 const { getPastEvents } = require('./lib/fetch_events');
 const { initBlocksList } = require('../../lib/fetch_blocks_list');
 
+function simpleHash(input) {
+  var hash = 0, i, chr;
 
+  if (input.length === 0) return hash;
+
+  for (i = 0; i < input.length; i++) {
+    chr = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
 
 class ERC20Worker extends BaseWorker {
   constructor() {
@@ -39,6 +50,10 @@ class ERC20Worker extends BaseWorker {
       if (parsedContracts.unmodified_contracts) {
         this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
       }
+
+      this.kafkaPartitionFunction = function (event) {
+        return simpleHash(event.contract);
+      };
 
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);

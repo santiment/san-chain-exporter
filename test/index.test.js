@@ -122,7 +122,7 @@ describe('Main', () => {
 
   it('initWorker throws an error when worker.init() fails', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter();
+    mainInstance.exporter = new Exporter('test-exporter');
 
     sinon.stub(worker.prototype, 'init').rejects(new Error('Worker init failed'));
 
@@ -136,7 +136,7 @@ describe('Main', () => {
 
   it('initWorker throws an error when handleInitPosition() fails', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter();
+    mainInstance.exporter = new Exporter('test-exporter');
     sinon.stub(worker.prototype, 'init').resolves();
 
     sinon.stub(mainInstance, 'handleInitPosition').throws(new Error('Error when initializing position'));
@@ -151,7 +151,7 @@ describe('Main', () => {
 
   it('initWorker success', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter();
+    mainInstance.exporter = new Exporter('test-exporter');
     sinon.stub(worker.prototype, 'init').resolves();
     sinon.stub(mainInstance, 'handleInitPosition').resolves();
 
@@ -178,7 +178,7 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker();
-    mainInstance.exporter = new Exporter();
+    mainInstance.exporter = new Exporter('test-exporter');
     try {
       await mainInstance.workLoop();
       expect.fail('workLoop should have thrown an error');
@@ -195,7 +195,7 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker();
-    mainInstance.exporter = new Exporter();
+    mainInstance.exporter = new Exporter('test-exporter');
     try {
       await mainInstance.workLoop();
       expect.fail('workLoop should have thrown an error');
@@ -216,7 +216,7 @@ describe('main function', () => {
     try {
       await main();
       expect.fail('main function should have thrown an error');
-    } catch(err) {
+    } catch (err) {
       assert.strictEqual(err.message, 'Error initializing exporter: Main init failed');
     }
   });
@@ -228,7 +228,7 @@ describe('main function', () => {
     try {
       await main();
       expect.fail('main function should have thrown an error');
-    } catch(err) {
+    } catch (err) {
       assert.strictEqual(err.message, 'Error in exporter work loop: Main workLoop failed');
     }
   });
@@ -241,7 +241,7 @@ describe('main function', () => {
     try {
       await main();
       expect.fail('main function should have thrown an error');
-    } catch(err) {
+    } catch (err) {
       assert.strictEqual(err.message, 'Error in exporter work loop: Main disconnect failed');
     }
   });
