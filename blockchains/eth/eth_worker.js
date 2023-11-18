@@ -12,7 +12,9 @@ const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-
+//TODO:
+//1. Retry mechanism
+//2. Maybe try Yordan's idea for synchronously fetching data and pushing it into Kafka
 
 class ETHWorker extends BaseWorker {
   constructor() {
@@ -30,6 +32,32 @@ class ETHWorker extends BaseWorker {
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3, this.web3Wrapper);
   }
 
+  async ethClientRequestWithRetry(...params) {
+    let retries = 0;
+    let retryIntervalMs = 0;
+    while (retries < constants.MAX_RETRIES) {
+      try {
+        const response = await this.ethClient.request(...params);
+        if (response.error || response.result === null) {
+          retries++;
+          retryIntervalMs += (2000 * retries);
+          logger.error(`${params[0]} failed. Reason: ${response.error}. Retrying for ${retries} time`);
+          await new Promise((resolve) => setTimeout(resolve, retryIntervalMs));
+          continue;
+        }
+        return response;
+      } catch(err) {
+        retries++;
+        retryIntervalMs += (2000 * retries);
+        logger.error(
+          `Try block in ${params[0]} failed. Reason: ${err.toString()}. Waiting ${retryIntervalMs} and retrying for ${retries} time`
+          );
+        await new Promise((resolve) => setTimeout(resolve, retryIntervalMs));
+      }
+    }
+    return Promise.reject(`${params[0]} failed after ${retries} retries`);
+  }
+
   parseEthInternalTrx(result) {
     const traces = filterErrors(result);
 
@@ -42,7 +70,7 @@ class ETHWorker extends BaseWorker {
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
-    return this.ethClient.request('trace_filter', [{
+    return this.ethClientRequestWithRetry('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
     }]).then((data) => this.parseEthInternalTrx(data['result']));
@@ -71,8 +99,8 @@ class ETHWorker extends BaseWorker {
     const responses = [];
 
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
-      responses.push(this.ethClient.request([req]));
+      const req = this.ethClientRequestWithRetry(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
+      responses.push(this.ethClientRequestWithRetry([req]));
     }
 
     const finishedRequests = await Promise.all(responses);
