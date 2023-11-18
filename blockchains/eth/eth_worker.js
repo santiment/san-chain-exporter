@@ -1,17 +1,18 @@
 const Web3 = require('web3');
 const jayson = require('jayson/promise');
-const { filterErrors } = require('./lib/filter_errors');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
-const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-const { getGenesisTransfers } = require('./lib/genesis_transfers');
-const { transactionOrder, stableSort } = require('./lib/util');
-const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
-const { decodeTransferTrace } = require('./lib/decode_transfers');
+const BaseWorker = require('../../lib/worker_base');
 const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
+const { filterErrors } = require('./lib/filter_errors');
+const { transactionOrder, stableSort } = require('./lib/util');
+const { decodeTransferTrace } = require('./lib/decode_transfers');
+const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
+const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
+const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
+
 
 class ETHWorker extends BaseWorker {
   constructor() {
@@ -108,6 +109,7 @@ class ETHWorker extends BaseWorker {
   }
 
   async getPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
+    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
@@ -151,14 +153,15 @@ class ETHWorker extends BaseWorker {
   }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
-    if (!result.success) {
-      return [];
-    }
+    const requestIntervals = await nextIntervalCalculator(this);
+    if (requestIntervals.length === 0) return [];
 
-    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(result.fromBlock, result.toBlock);
-    const events = await this.getPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
+    const events = [].concat(...await Promise.all(
+      requestIntervals.map(async (requestInterval) => {
+        const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(requestInterval.fromBlock, requestInterval.toBlock);
+        return await this.getPastEvents(requestInterval.fromBlock, requestInterval.toBlock, traces, blocks, receipts);
+      })
+    ));
 
     if (events.length > 0) {
       stableSort(events, transactionOrder);
@@ -169,8 +172,7 @@ class ETHWorker extends BaseWorker {
       this.lastPrimaryKey += events.length;
     }
 
-    this.lastExportedBlock = result.toBlock;
-
+    this.lastExportedBlock = requestIntervals[requestIntervals.length - 1].toBlock;
     return events;
   }
 
