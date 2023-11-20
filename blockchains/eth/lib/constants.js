@@ -7,7 +7,7 @@ const MAX_RETRIES = parseInt(process.env.MAX_RETRIES) || 3;
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '100');
 const RECEIPTS_API_METHOD = process.env.RECEIPTS_API_METHOD || 'eth_getBlockReceipts';
-const MAX_CONCURRENT_REQUESTS = parseInt(process.env.MAX_CONCURRENT_REQUESTS || '10');
+const MAX_CONCURRENT_REQUESTS = parseInt(process.env.MAX_CONCURRENT_REQUESTS || '1');
 const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || '30');
 

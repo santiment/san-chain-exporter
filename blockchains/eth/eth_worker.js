@@ -12,9 +12,7 @@ const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-//TODO:
-//1. Retry mechanism
-//2. Maybe try Yordan's idea for synchronously fetching data and pushing it into Kafka
+
 
 class ETHWorker extends BaseWorker {
   constructor() {
@@ -70,6 +68,7 @@ class ETHWorker extends BaseWorker {
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
+    logger.info(`Fetching internal transactions for blocks ${fromBlock}:${toBlock}`);
     return this.ethClientRequestWithRetry('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
@@ -77,6 +76,7 @@ class ETHWorker extends BaseWorker {
   }
 
   async fetchBlocks(fromBlock, toBlock) {
+    logger.info(`Fetching block info for blocks ${fromBlock}:${toBlock}`);
     const blockRequests = [];
     for (let i = fromBlock; i <= toBlock; i++) {
       blockRequests.push(
@@ -96,36 +96,35 @@ class ETHWorker extends BaseWorker {
   }
 
   async fetchReceipts(blockNumbers) {
-    const responses = [];
-
+    const batch = [];
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClientRequestWithRetry(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
-      responses.push(this.ethClientRequestWithRetry([req]));
+      batch.push(
+        this.ethClient.request(
+          constants.RECEIPTS_API_METHOD,
+          [this.web3Wrapper.parseNumberToHex(blockNumber)],
+          undefined,
+          false
+        )
+      );
     }
-
-    const finishedRequests = await Promise.all(responses);
+    const finishedRequests = await this.ethClientRequestWithRetry(batch);
     const result = {};
 
-    finishedRequests.forEach((blockResponses) => {
-      if (!blockResponses) return;
-
-      blockResponses.forEach((blockResponse) => {
-        if (blockResponse.result) {
-          blockResponse.result.forEach((receipt) => {
-            result[receipt.transactionHash] = receipt;
-          });
-        }
-        else {
-          throw new Error(JSON.stringify(blockResponse));
-        }
-      });
+    finishedRequests.forEach((response) => {
+      if (response.result) {
+        response.result.forEach((receipt) => {
+          result[receipt.transactionHash] = receipt;
+        });
+      }
+      else {
+        throw new Error(JSON.stringify(response));
+      }
     });
 
     return result;
   }
 
   async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
-    logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`);
     const [traces, blocks] = await Promise.all([
       this.fetchEthInternalTrx(fromBlock, toBlock),
       this.fetchBlocks(fromBlock, toBlock)
