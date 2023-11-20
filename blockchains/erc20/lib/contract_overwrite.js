@@ -19,6 +19,22 @@ class ContractOverwrite {
   }
 }
 
+/**
+ *
+ * @param events A list of events to go over and check contract address. Events needing contract change will
+ * have the change applied.
+ */
+function changeContractAddresses(events, contractsOverwriteArray) {
+  for (const event of events) {
+    for (const contractOverwrite of contractsOverwriteArray) {
+      if (contractOverwrite.oldAddresses.includes(event.contract)) {
+        editAddressAndAmount(event, contractOverwrite);
+        break;
+      }
+    }
+  }
+}
+
 function editAddressAndAmount(event, contractOverwrite) {
   const multiplier = contractOverwrite.mapAddressToMultiplier[event.contract];
   if (!multiplier) {
@@ -64,5 +80,6 @@ function extractChangedContractAddresses(events, contractsOverwriteArray) {
 module.exports = {
   ContractOverwrite,
   editAddressAndAmount,
-  extractChangedContractAddresses
+  extractChangedContractAddresses,
+  changeContractAddresses
 };

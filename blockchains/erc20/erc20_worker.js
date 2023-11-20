@@ -3,7 +3,7 @@ const Web3 = require('web3');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
-const { ContractOverwrite, editAddressAndAmount, extractChangedContractAddresses } = require('./lib/contract_overwrite');
+const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
 const { stableSort, readJsonFile } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
@@ -40,12 +40,13 @@ class ERC20Worker extends BaseWorker {
     if (constants.EXPORT_BLOCKS_LIST) {
       this.blocksList = await initBlocksList();
     }
-    console.log(JSON.stringify(constants));
+
     if (constants.CONTRACT_MODE !== 'vanilla') {
       const parsedContracts = await readJsonFile(constants.CONTRACT_MAPPING_FILE_PATH);
 
       if (parsedContracts.modified_contracts) {
         this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract) => new ContractOverwrite(contract));
+        this.allOldContracts = this.contractsOverwriteArray.flatMap(obj => obj.oldAddresses);
       }
       if (parsedContracts.unmodified_contracts) {
         this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
@@ -97,13 +98,8 @@ class ERC20Worker extends BaseWorker {
     let overwritten_events = [];
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       const timestampsCache = new TimestampsCache();
-      for (const contractOverwrite of this.contractsOverwriteArray) {
-        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, contractOverwrite.oldAddresses, timestampsCache);
-        for (const event of rawEvents) {
-          editAddressAndAmount(event, contractOverwrite);
-          events.push(event);
-        }
-      }
+      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.allOldContracts, timestampsCache);
+      changeContractAddresses(events, this.contractsOverwriteArray);
 
       if (this.contractsUnmodified.length > 0) {
         const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.contractsUnmodified,
