@@ -11,6 +11,11 @@ const { TimestampsCache } = require('./lib/timestamps_cache');
 const { getPastEvents } = require('./lib/fetch_events');
 const { initBlocksList } = require('../../lib/fetch_blocks_list');
 
+/**
+ * A simple non cryptographic hash function similar to Java's 'hashCode'
+ * @param input A string input
+ * @returns A 32 bit positive integer
+ */
 function simpleHash(input) {
   var hash = 0, i, chr;
 
