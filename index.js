@@ -48,9 +48,6 @@ class Main {
   async init() {
     await this.initExporter(EXPORTER_NAME, true);
     await this.initWorker();
-    if (this.worker.kafkaPartitionFunction) {
-      this.exporter.setPartitionFunction(this.worker.kafkaPartitionFunction);
-    }
     metrics.startCollection();
 
     this.microServer = micro(microHandler);

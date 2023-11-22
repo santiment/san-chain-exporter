@@ -13,8 +13,8 @@ const { initBlocksList } = require('../../lib/fetch_blocks_list');
 
 /**
  * A simple non cryptographic hash function similar to Java's 'hashCode'
- * @param input A string input
- * @returns A 32 bit positive integer
+ * @param {string} input A string input
+ * @returns {number} A 32 bit positive integer
  */
 function simpleHash(input) {
   var hash = 0, i, chr;
@@ -39,7 +39,7 @@ class ERC20Worker extends BaseWorker {
     this.contractsUnmodified = [];
   }
 
-  async init() {
+  async init(exporter) {
     this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
 
     if (constants.EXPORT_BLOCKS_LIST) {
@@ -57,9 +57,11 @@ class ERC20Worker extends BaseWorker {
         this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
       }
 
-      this.kafkaPartitionFunction = function (event) {
+      const kafkaPartitionHashFunction = function (event) {
         return simpleHash(event.contract);
       };
+
+      exporter.setHashFunction(kafkaPartitionHashFunction);
 
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);
@@ -101,8 +103,8 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     let overwritten_events = [];
+    const timestampsCache = new TimestampsCache();
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
-      const timestampsCache = new TimestampsCache();
       events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.allOldContracts, timestampsCache);
       changeContractAddresses(events, this.contractsOverwriteArray);
 
@@ -113,7 +115,7 @@ class ERC20Worker extends BaseWorker {
       }
     }
     else {
-      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, new TimestampsCache());
+      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, timestampsCache);
       if ('extract_all_append' === constants.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }

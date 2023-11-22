@@ -20,9 +20,9 @@ class ContractOverwrite {
 }
 
 /**
- *
- * @param events A list of events to go over and check contract address. Events needing contract change will
- * have the change applied.
+ * @param {object[]} events A list of events to go over and check contract address.
+ * @param {object[]} contractsOverwriteArray An array of objects specifying contract address overwrites.
+ * @returns {void} This function does not return a value. It modifies the events array in place.
  */
 function changeContractAddresses(events, contractsOverwriteArray) {
   for (const event of events) {
@@ -35,6 +35,11 @@ function changeContractAddresses(events, contractsOverwriteArray) {
   }
 }
 
+/**
+ * @param {object} event An event to be modified in place.
+ * @param {object} contractOverwrite An object specifying contract address overwrite.
+ * @returns {void} This function does not return a value. It modifies the events array in place.
+ */
 function editAddressAndAmount(event, contractOverwrite) {
   const multiplier = contractOverwrite.mapAddressToMultiplier[event.contract];
   if (!multiplier) {
@@ -55,9 +60,9 @@ function editAddressAndAmount(event, contractOverwrite) {
 }
 
 /**
- *
- * @param events A list of events to go over and check contract address.
- * @returns A deep copy of the events which have had change applied.
+ * @param {object[]} events A list of events to go over and check contract address.
+ * @param {object[]} contractsOverwriteArray An array of objects specifying contract address overwrites.
+ * @returns {object[]} A deep copy list of the events which have had change applied.
  */
 function extractChangedContractAddresses(events, contractsOverwriteArray) {
   const result = [];

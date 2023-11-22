@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const { logger } = require('../../../lib/logger');
 
 const decodeAddress = (value) => {
   return '0x' + value.substring(value.length - 40);
@@ -26,7 +27,8 @@ async function readJsonFile(filePath) {
     const parsedContracts = JSON.parse(data);
     return parsedContracts;
   } catch (err) {
-    console.error(err);
+    logger.error(err);
+    throw err;
   }
 }
 
