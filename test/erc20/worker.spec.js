@@ -81,7 +81,7 @@ describe('Test ERC20 worker', function () {
         });
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init();
+        await worker.init({});
 
         worker.contractsOverwriteArray = [];
         worker.contractsUnmodified = [];
@@ -120,7 +120,7 @@ describe('Test ERC20 worker', function () {
 
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init();
+        await worker.init({});
 
         worker.contractsOverwriteArray = [];
         worker.contractsOverwriteArray.push(new ContractOverwrite(
@@ -160,7 +160,7 @@ describe('Test ERC20 worker', function () {
 
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init();
+        await worker.init({});
 
         worker.contractsOverwriteArray = [];
         worker.contractsOverwriteArray.push(new ContractOverwrite(

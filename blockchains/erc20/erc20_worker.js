@@ -57,11 +57,7 @@ class ERC20Worker extends BaseWorker {
         this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
       }
 
-      const kafkaPartitionHashFunction = function (event) {
-        return simpleHash(event.contract);
-      };
-
-      exporter.setHashFunction(kafkaPartitionHashFunction);
+      exporter.hashFunction = (event) => simpleHash(event.contract);
 
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);
