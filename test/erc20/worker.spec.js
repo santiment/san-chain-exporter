@@ -64,7 +64,7 @@ describe('Test ERC20 worker', function () {
         });
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init();
+        await worker.init(mockExporter);
 
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;

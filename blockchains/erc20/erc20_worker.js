@@ -57,12 +57,20 @@ class ERC20Worker extends BaseWorker {
         this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
       }
 
-      await exporter.initPartitioner((event) => simpleHash(event.contract));
-
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);
       logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
     }
+
+    // Distribute events per contract per partition. Do it only for the 'exact' mode where the overall number of
+    // events is low. The distribution among topics is not uniform (maybe we need better hash function?), so for
+    // the modes where we extract all events this would result in huge size imbalance. Also we do not benefit from
+    // such ordering in those modes. Such ordering is needed only if the consumer would depend on all events for a
+    // contract being in a single source (partition).
+    const hashFunction = constants.CONTRACT_MODE === 'extract_exact_overwrite' ? (event) => simpleHash(event.contract)
+      : null;
+
+    await exporter.initPartitioner(hashFunction);
   }
 
   getBlocksListInterval() {
