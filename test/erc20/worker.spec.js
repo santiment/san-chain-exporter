@@ -5,6 +5,10 @@ const erc20_worker = rewire('../../blockchains/erc20/erc20_worker');
 const { ContractOverwrite } = require('../../blockchains/erc20/lib/contract_overwrite');
 const extend_events = require('./extend_events.spec');
 
+class MockExporter {
+    initPartitioner() {
+    }
+}
 
 describe('Test ERC20 worker', function () {
     let originalEvent = null;
@@ -15,6 +19,7 @@ describe('Test ERC20 worker', function () {
     const CONTRACT_ORIGINAL = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f';
     const NOT_OVERWRITTEN_CONTRACT = '0xd022b63ee8576fb46f5e1c5751ca3b9fe0af2a6f';
     const CONTRACT_REPLACE = 'snx_contract';
+    const mockExporter = new MockExporter();
 
     beforeEach(function () {
         originalEvent = {
@@ -81,7 +86,7 @@ describe('Test ERC20 worker', function () {
         });
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init({});
+        await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
         worker.contractsUnmodified = [];
@@ -120,7 +125,7 @@ describe('Test ERC20 worker', function () {
 
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init({});
+        await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
         worker.contractsOverwriteArray.push(new ContractOverwrite(
@@ -160,7 +165,7 @@ describe('Test ERC20 worker', function () {
 
         const worker = new erc20_worker.worker();
         sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
-        await worker.init({});
+        await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
         worker.contractsOverwriteArray.push(new ContractOverwrite(
