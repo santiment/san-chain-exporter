@@ -14,4 +14,4 @@ export KAFKA_TOPIC="erc20_exporter_test_topic"
 export CARDANO_GRAPHQL_URL=http://172.17.0.1:3100/graphql
 export BNB_CHAIN_START_MSEC=1595549200002
 export ZOOKEEPER_SESSION_TIMEOUT=20000
-
+export CONTRACT_MAPPING_FILE_PATH="./test/erc20/contract_mapping/contract_mapping.json"
