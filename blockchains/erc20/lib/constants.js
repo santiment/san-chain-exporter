@@ -11,6 +11,8 @@ const PRIMARY_KEY_MULTIPLIER = 10000;
 const CONTRACT_MODES_SUPPORTED = ['vanilla', 'extract_exact_overwrite', 'extract_all_append'];
 const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
 const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
+// Should events for a contract land in the same Kafka partition
+const EVENTS_IN_SAME_PARTITION = process.env.EVENTS_IN_SAME_PARTITION || false;
 
 const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
@@ -36,5 +38,6 @@ module.exports = {
     CONTRACT_MODE,
     NODE_URL,
     CONTRACT_MAPPING_FILE_PATH,
-    LOOP_INTERVAL_CURRENT_MODE_SEC
+    LOOP_INTERVAL_CURRENT_MODE_SEC,
+    EVENTS_IN_SAME_PARTITION
 };

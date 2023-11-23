@@ -34,6 +34,7 @@ class ERC20Worker extends BaseWorker {
     super();
 
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
+    logger.info(`Applying the following settings: ${JSON.stringify(constants)}`);
     this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
@@ -62,14 +63,7 @@ class ERC20Worker extends BaseWorker {
       logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
     }
 
-    // Distribute events per contract per partition. Do it only for the 'exact' mode where the overall number of
-    // events is low. The distribution among topics is not uniform (maybe we need better hash function?), so for
-    // the modes where we extract all events this would result in huge size imbalance. Also we do not benefit from
-    // such ordering in those modes. Such ordering is needed only if the consumer would depend on all events for a
-    // contract being in a single source (partition).
-    const hashFunction = constants.CONTRACT_MODE === 'extract_exact_overwrite' ? (event) => simpleHash(event.contract)
-      : null;
-
+    const hashFunction = constants.EVENTS_IN_SAME_PARTITION ? (event) => simpleHash(event.contract) : null;
     await exporter.initPartitioner(hashFunction);
   }
 
