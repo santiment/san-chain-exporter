@@ -19,14 +19,12 @@ class Main {
   }
 
   async initExporter(exporterName, isTransactions) {
+    const INIT_EXPORTER_ERR_MSG = 'Error when initializing exporter: ';
     this.exporter = new Exporter(exporterName, isTransactions);
-    try {
-      await this.exporter.connect();
-      await this.exporter.initTransactions();
-    }
-    catch (err) {
-      throw new Error(`Error when initializing exporter: ${err.message}`);
-    }
+    await this.exporter
+      .connect()
+      .then(() => this.exporter.initTransactions())
+      .catch((err) => { throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`); });
   }
 
   async handleInitPosition() {
