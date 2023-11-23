@@ -1,213 +1,217 @@
-[{
-    "old_contracts": [
-        {
-            "address": "0xc011a72400e58ecd99ee497cf89e3775d4bd732f",
-            "multiplier": 1
-        },
-        {
-            "address": "0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "snx_contract"
-},
 {
-    "old_contracts": [
+    "unmodified_contracts": [],
+    "modified_contracts": [
         {
-            "address": "0x57ab1e02fee23774580c119740129eac7081e9d3",
-            "multiplier": "1"
+            "old_contracts": [
+                {
+                    "address": "0xc011a72400e58ecd99ee497cf89e3775d4bd732f",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "snx_contract"
         },
         {
-            "address": "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
-            "multiplier": "1"
+            "old_contracts": [
+                {
+                    "address": "0x57ab1e02fee23774580c119740129eac7081e9d3",
+                    "multiplier": "1"
+                },
+                {
+                    "address": "0x57ab1ec28d129707052df4df418d58a2d46d5f51",
+                    "multiplier": "1"
+                }
+            ],
+            "new_address": "susd_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x1985365e9f78359a9B6AD760e32412f4a445E862",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x221657776846890989a759BA2973e427DfF5C9bB",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "reputation_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x2c5dcd12141c56fbea08e95f54f12c8b22d492eb",
+                    "multiplier": 0.000000000001
+                },
+                {
+                    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "usdc_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x985dd3d42de1e256d09e1c10f112bccb8015ad41",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x7afebbb46fdb47ed17b22ed075cde2447694fb9e",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x967da4048cD07aB37855c090aAF366e4ce1b9F48",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "ocean_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x8fB00FDeBb4E83f2C58b3bcD6732AC1B6A7b7221",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "orn_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0xbd6467a31899590474ce1e84f70594c53d628e46",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xd9ec3ff1f8be459bb9369b4e79e9ebcf7141c093",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "kai_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0xfc858154c0b2c4a3323046fb505811f110ebda57",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xa8c8CfB141A3bB59FEA1E2ea6B79b5ECBCD7b6ca",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "noia_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0xc0134b5b924c2fca106efb33c45446c466fbe03e",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x27702a26126e0b3702af63ee09ac4d1a084ef628",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "aleph_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x70a72833d6bf7f508c8224ce59ea1ef3d0ea3a38",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xdc9Ac3C20D1ed0B540dF9b1feDC10039Df13F99c",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "utrust_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x1d287cc25dad7ccaf76a26bc660c5f7c8e2a05bd",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xaea46A60368A7bD060eec7DF8CBa43b7EF41Ad85",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "fetch_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x4470bb87d77b963a013db939be332f927f2b992e",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xADE00C28244d5CE17D72E40330B1c318cD12B7c3",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "adex_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x445f51299ef3307dbd75036dd896565f5b4bf7a5",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xfeF4185594457050cC9c23980d301908FE057Bb1",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "vidt_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x2ef27bf41236bd859a95209e17a43fbd26851f92",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x7b0c06043468469967dba22d1af33d77d44056c8",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "morpheus_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0x960b236a07cf122663c4303350609a66a7b288c0",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0xa117000000f279D81A1D3cc75430fAA017FA5A2e",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "aragon_contract"
+        },
+        {
+            "old_contracts": [
+                {
+                    "address": "0xae31b85bfe62747d0836b82608b4830361a3d37a",
+                    "multiplier": 1
+                },
+                {
+                    "address": "0x91af0fbb28aba7e31403cb457106ce79397fd4e6",
+                    "multiplier": 1
+                }
+            ],
+            "new_address": "aergo_contract"
         }
-    ],
-    "new_address": "susd_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x1985365e9f78359a9B6AD760e32412f4a445E862",
-            "multiplier": 1
-        },
-        {
-            "address": "0x221657776846890989a759BA2973e427DfF5C9bB",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "reputation_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x2c5dcd12141c56fbea08e95f54f12c8b22d492eb",
-            "multiplier": 0.000000000001
-        },
-        {
-            "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "usdc_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x985dd3d42de1e256d09e1c10f112bccb8015ad41",
-            "multiplier": 1
-        },
-        {
-            "address": "0x7afebbb46fdb47ed17b22ed075cde2447694fb9e",
-            "multiplier": 1
-        },
-        {
-            "address": "0x967da4048cD07aB37855c090aAF366e4ce1b9F48",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "ocean_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x8fB00FDeBb4E83f2C58b3bcD6732AC1B6A7b7221",
-            "multiplier": 1
-        },
-        {
-            "address": "0x0258f474786ddfd37abce6df6bbb1dd5dfc4434a",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "orn_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0xbd6467a31899590474ce1e84f70594c53d628e46",
-            "multiplier": 1
-        },
-        {
-            "address": "0xd9ec3ff1f8be459bb9369b4e79e9ebcf7141c093",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "kai_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0xfc858154c0b2c4a3323046fb505811f110ebda57",
-            "multiplier": 1
-        },
-        {
-            "address": "0xa8c8CfB141A3bB59FEA1E2ea6B79b5ECBCD7b6ca",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "noia_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0xc0134b5b924c2fca106efb33c45446c466fbe03e",
-            "multiplier": 1
-        },
-        {
-            "address": "0x27702a26126e0b3702af63ee09ac4d1a084ef628",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "aleph_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x70a72833d6bf7f508c8224ce59ea1ef3d0ea3a38",
-            "multiplier": 1
-        },
-        {
-            "address": "0xdc9Ac3C20D1ed0B540dF9b1feDC10039Df13F99c",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "utrust_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x1d287cc25dad7ccaf76a26bc660c5f7c8e2a05bd",
-            "multiplier": 1
-        },
-        {
-            "address": "0xaea46A60368A7bD060eec7DF8CBa43b7EF41Ad85",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "fetch_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x4470bb87d77b963a013db939be332f927f2b992e",
-            "multiplier": 1
-        },
-        {
-            "address": "0xADE00C28244d5CE17D72E40330B1c318cD12B7c3",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "adex_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x445f51299ef3307dbd75036dd896565f5b4bf7a5",
-            "multiplier": 1
-        },
-        {
-            "address": "0xfeF4185594457050cC9c23980d301908FE057Bb1",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "vidt_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x2ef27bf41236bd859a95209e17a43fbd26851f92",
-            "multiplier": 1
-        },
-        {
-            "address": "0x7b0c06043468469967dba22d1af33d77d44056c8",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "morpheus_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0x960b236a07cf122663c4303350609a66a7b288c0",
-            "multiplier": 1
-        },
-        {
-            "address": "0xa117000000f279D81A1D3cc75430fAA017FA5A2e",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "aragon_contract"
-},
-{
-    "old_contracts": [
-        {
-            "address": "0xae31b85bfe62747d0836b82608b4830361a3d37a",
-            "multiplier": 1
-        },
-        {
-            "address": "0x91af0fbb28aba7e31403cb457106ce79397fd4e6",
-            "multiplier": 1
-        }
-    ],
-    "new_address": "aergo_contract"
-}]
-
+    ]
+}

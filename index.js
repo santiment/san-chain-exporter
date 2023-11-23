@@ -169,6 +169,7 @@ async function main() {
   try {
     await mainInstance.init();
   } catch (err) {
+    logger.error(err.stack);
     throw new Error(`Error initializing exporter: ${err.message}`);
   }
   try {
@@ -176,6 +177,7 @@ async function main() {
     await mainInstance.disconnect();
     logger.info('Bye!');
   } catch (err) {
+    logger.error(err.stack);
     throw new Error(`Error in exporter work loop: ${err.message}`);
   }
 }
