@@ -61,6 +61,7 @@ class ERC20Worker extends BaseWorker {
       logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);
       logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
+      logger.info(`Extracted unmodified contracts are: ${JSON.stringify(this.contractsUnmodified)}`);
     }
 
     const hashFunction = constants.EVENTS_IN_SAME_PARTITION ? (event) => simpleHash(event.contract) : null;
