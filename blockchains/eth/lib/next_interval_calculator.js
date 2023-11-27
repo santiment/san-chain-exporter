@@ -3,7 +3,7 @@ const constants = require('./constants');
 /**
  * A function that returns the appropriate array of intervals,
  * depending on the progress that the worker's made.
- * @param {BaseWorker} worker The worker instance.
+ * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
  * @returns {Array} An array of intervals.
  */
 async function nextIntervalCalculator(worker) {
@@ -17,7 +17,7 @@ async function nextIntervalCalculator(worker) {
   }
 
   worker.sleepTimeMsec = 0;
-  const progressDifference = this.lastConfirmedBlock - this.lastExportedBlock;
+  const progressDifference = worker.lastConfirmedBlock - worker.lastExportedBlock;
   const maxInterval = constants.MAX_CONCURRENT_REQUESTS * constants.BLOCK_INTERVAL;
   let intervalArrayLength;
   if (progressDifference < maxInterval) {
