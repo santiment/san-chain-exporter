@@ -91,33 +91,53 @@ class ERC20Worker extends BaseWorker {
   }
 
   async work() {
-    const result = constants.EXPORT_BLOCKS_LIST ?
-      this.getBlocksListInterval() :
-      await nextIntervalCalculator(this);
+    const requestIntervals = await nextIntervalCalculator(this);
+    if (requestIntervals.length === 0) return [];
 
-    if (!result.success) {
-      return [];
-    }
-
-    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
+    logger.info(
+      `Fetching transfer events for interval ${requestIntervals[0].fromBlock}:` +
+      `${requestIntervals[requestIntervals.length - 1].toBlock}`);
 
     let events = [];
     let overwritten_events = [];
     const timestampsCache = new TimestampsCache();
     if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
-        events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.allOldContracts, timestampsCache);
+        events = [].concat(...await Promise.all(
+          requestIntervals.map(async (requestInterval) => {
+            return await getPastEvents(
+              this.web3,
+              requestInterval.fromBlock,
+              requestInterval.toBlock,
+              this.allOldContracts,
+              timestampsCache);
+        })));
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
 
       if (this.contractsUnmodified.length > 0) {
-        const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.contractsUnmodified,
-          timestampsCache);
+        const rawEvents = [].concat(...await Promise.all(
+          requestIntervals.map(async (requestInterval) => {
+            return await getPastEvents(
+              this.web3,
+              requestInterval.fromBlock,
+              requestInterval.toBlock,
+              this.contractsUnmodified,
+              timestampsCache);
+        })));
         events.push(...rawEvents);
       }
     }
     else {
-      events = await getPastEvents(this.web3, result.fromBlock, result.toBlock, null, timestampsCache);
+      events = [].concat(...await Promise.all(
+        requestIntervals.map(async (requestInterval) => {
+          return await getPastEvents(
+            this.web3,
+            requestInterval.fromBlock,
+            requestInterval.toBlock,
+            null,
+            timestampsCache);
+      })));
       if ('extract_all_append' === constants.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
@@ -125,11 +145,12 @@ class ERC20Worker extends BaseWorker {
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events, overwritten_events);
-      logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
+      logger.info(`Setting primary keys ${events.length} messages for blocks ${requestIntervals[0].fromBlock}:`+
+      `${requestIntervals[requestIntervals.length - 1].toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
-    this.lastExportedBlock = result.toBlock;
+    this.lastExportedBlock = requestIntervals[requestIntervals.length - 1].toBlock;
     const resultEvents = events.concat(overwritten_events);
 
     // If overwritten events have been generated, they need to be merged into the original events
