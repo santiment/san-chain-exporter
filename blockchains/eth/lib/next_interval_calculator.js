@@ -3,6 +3,10 @@ const constants = require('./constants');
 /**
  * A function that returns the appropriate array of intervals,
  * depending on the progress that the worker's made.
+ * If the exporter's caught up, we check for a new block. We then check whether the Node
+ * returns a valid block (sometimes the Node returns an early block, like 3 for example).
+ * We don't want to get the new blocks right away, so we set a sleep variable. On the next iteration
+ * the function will return the appropriate array of intervals.
  * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
  * @returns {Array} An array of intervals.
  */
