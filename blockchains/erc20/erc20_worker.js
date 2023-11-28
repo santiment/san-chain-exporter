@@ -114,7 +114,7 @@ class ERC20Worker extends BaseWorker {
         const rawEvents = await getPastEvents(this.web3, result.fromBlock, result.toBlock, this.contractsUnmodified,
           timestampsCache);
 
-        for (let event of rawEvents) {
+        for (const event of rawEvents) {
           events.push(event);
         }
       }
