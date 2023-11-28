@@ -1,185 +1,207 @@
-const eth_worker = require('../../blockchains/eth/eth_worker');
-const constants = require('../../blockchains/eth/lib/constants');
-const { nextIntervalCalculator } = require('../../blockchains/eth/lib/next_interval_calculator');
 const assert = require('assert');
+const constants = require('../../blockchains/eth/lib/constants');
+const eth_worker = require('../../blockchains/eth/eth_worker');
+const { nextIntervalCalculator } = require('../../blockchains/eth/lib/next_interval_calculator');
 
 
 describe('Check interval not going backwards', function () {
-    const mockWeb3 = { eth: {} };
+  const mockWeb3 = { eth: {} };
 
-    it('Fetched interval should not go backwards even if Node reports old block numbers', async function () {
-        mockWeb3.eth.getBlockNumber = (function () { return 100; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
-        const result = await nextIntervalCalculator(worker);
+  it('Fetched interval should not go backwards even if Node reports old block numbers', async function () {
+    constants.BLOCK_INTERVAL = 50;
+    constants.MAX_CONCURRENT_REQUESTS = 2;
 
-        assert.deepStrictEqual(result.success, true);
-        assert.deepStrictEqual(result.fromBlock, 0);
-        assert.deepStrictEqual(result.toBlock, 100 - constants.CONFIRMATIONS);
+    mockWeb3.eth.getBlockNumber = (function () { return 100; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
+    const firstCall = await nextIntervalCalculator(worker);
 
-        // Modify the last exported block as if we have consumed this interval
-        worker.lastExportedBlock = result.toBlock;
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+    
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, [
+      { fromBlock: 0, toBlock: 49},
+      { fromBlock: 50, toBlock: 100 - constants.CONFIRMATIONS}
+    ]);
+    // Modify the last exported block as if we have consumed this interval
+    worker.lastExportedBlock = secondCall[secondCall.length - 1].toBlock;
+    
+    mockWeb3.eth.getBlockNumber = (function () { return 90; });
+    worker.web3 = mockWeb3;
 
-        // Mock the Node to report an old number
-        mockWeb3.eth.getBlockNumber = (function () { return 90; });
-        worker.web3 = mockWeb3;
+    const thirdCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(thirdCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, false);
-        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+    const fourthCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(fourthCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+  });
 
-        const resultThird = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultThird.success, false);
-        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+  it('Fetched interval should not go backwards even if saved state is invalid', async function () {
+    mockWeb3.eth.getBlockNumber = (function () { return 4; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
 
-    });
+    // Setup a situation where the exported block has exceeded the Node block
+    // Test is similar to the above but test that we already saved an old lastConfirmedBlock
+    worker.lastExportedBlock = 10;
+    worker.lastConfirmedBlock = 5;
 
-    it('Fetched interval should not go backwards even if saved state is invalid', async function () {
-        mockWeb3.eth.getBlockNumber = (function () { return 4; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
+    const firstCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
-        // Setup a situation where the exported block has exceeded the Node block
-        // Test is similar to the above but test that we already saved an old lastConfirmedBlock
-        worker.lastExportedBlock = 10;
-        worker.lastConfirmedBlock = 5;
-
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, false);
-        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
-
-    });
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+  });
 });
 
 describe('Check logic when Node is ahead', function () {
-    const mockWeb3 = { eth: {} };
+  const mockWeb3 = { eth: {} };
 
-    it('Exporter should not wait for full BLOCK_INTERVAL', async function () {
-        mockWeb3.eth.getBlockNumber = (function () { return constants.BLOCK_INTERVAL - 1; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
+  it('Exporter should not wait for full BLOCK_INTERVAL to generate an interval', async function () {
+    mockWeb3.eth.getBlockNumber = (function () { return constants.BLOCK_INTERVAL - 1; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
 
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, true);
-        assert.deepStrictEqual(resultSecond.fromBlock, 0);
-        assert.deepStrictEqual(resultSecond.toBlock, constants.BLOCK_INTERVAL - 1 - constants.CONFIRMATIONS);
-        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
-    });
+    const firstCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
-    it('Exporter would not exceed BLOCK_INTERVAL', async function () {
-        mockWeb3.eth.getBlockNumber = (function () { return constants.CONFIRMATIONS + 10; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, [{ fromBlock: 0, toBlock: constants.BLOCK_INTERVAL - 1 - constants.CONFIRMATIONS}]);
+  });
 
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, true);
-        assert.deepStrictEqual(resultSecond.fromBlock, 0);
-        assert.deepStrictEqual(resultSecond.toBlock, 10);
-        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
-    });
+  it('Exporter should not wait for full BLOCK_INTERVAL to generate multiple intervals', async function () {
+    mockWeb3.eth.getBlockNumber = (function () { return 4 * constants.BLOCK_INTERVAL - 5; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
 
-    it('Interval is correct if Node is ahead', async function () {
-        const worker = new eth_worker.worker();
+    const firstCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
-        worker.lastExportedBlock = 1;
-        worker.lastConfirmedBlock = 2;
+    constants.MAX_CONCURRENT_REQUESTS = 4;
 
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, true);
-        assert.deepStrictEqual(resultSecond.fromBlock, 2);
-        assert.deepStrictEqual(resultSecond.toBlock, 2);
-    });
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, [
+      { fromBlock: 0, toBlock: constants.BLOCK_INTERVAL - 1 },
+      { fromBlock: constants.BLOCK_INTERVAL, toBlock: 2 * constants.BLOCK_INTERVAL - 1 },
+      { fromBlock: 2 * constants.BLOCK_INTERVAL, toBlock: 3 * constants.BLOCK_INTERVAL - 1},
+      { fromBlock: 3 * constants.BLOCK_INTERVAL, toBlock: 4 * constants.BLOCK_INTERVAL - 5 - constants.CONFIRMATIONS }
+    ]);
+    constants.MAX_CONCURRENT_REQUESTS = 2;
+  });
 
-    it('No sleep time if Node is ahead', async function () {
-        const worker = new eth_worker.worker();
+  it('Exporter would not exceed BLOCK_INTERVAL', async function () {
+    mockWeb3.eth.getBlockNumber = (function () { return constants.CONFIRMATIONS + 10; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
 
-        worker.lastExportedBlock = 1;
-        worker.lastConfirmedBlock = 2;
+    const firstCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, true);
-        assert.deepStrictEqual(worker.sleepTimeMsec, 0);
-    });
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, [
+      { fromBlock: 0, toBlock: 10}]);
+  });
 
-    it('Node not called if Node is ahead', async function () {
-        let nodeCalled = false;
-        mockWeb3.eth.getBlockNumber = (function () { nodeCalled = true; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
+  it('Interval is correct if Node is ahead, no sleep time', async function () {
+    const worker = new eth_worker.worker();
 
-        worker.lastExportedBlock = 1;
-        worker.lastConfirmedBlock = 2;
+    worker.lastExportedBlock = 1;
+    worker.lastConfirmedBlock = 2;
 
-        await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(nodeCalled, false);
-    });
+    const result = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(result, [{ fromBlock: 2, toBlock: 2}]);
+    assert.deepStrictEqual(worker.sleepTimeMsec, 0);
+  });
 
-    it('Block interval is not exceeded', async function () {
-        const worker = new eth_worker.worker();
+  it('Node not called if Node is ahead', async function () {
+    let nodeCalled = false;
+    mockWeb3.eth.getBlockNumber = (function () { nodeCalled = true; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
 
-        worker.lastExportedBlock = 1;
-        worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + constants.CONFIRMATIONS + 10;
+    worker.lastExportedBlock = 1;
+    worker.lastConfirmedBlock = 2;
 
-        const result = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(result.success, true);
-        assert.deepStrictEqual(result.fromBlock, 2);
-        assert.deepStrictEqual(result.toBlock, 1 + constants.BLOCK_INTERVAL);
-    });
+    await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(nodeCalled, false);
+  });
 
+  it('Block interval is not exceeded', async function () {
+    const worker = new eth_worker.worker();
+
+    worker.lastExportedBlock = 0;
+    worker.lastConfirmedBlock = constants.BLOCK_INTERVAL + constants.CONFIRMATIONS + 10;
+    constants.MAX_CONCURRENT_REQUESTS = 1;
+
+    const result = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(result, [{ fromBlock: 1, toBlock: constants.BLOCK_INTERVAL }]);
+  });
 });
 
 describe('Check logic when Node is not ahead', function () {
-    const mockWeb3 = { eth: {} };
+  const mockWeb3 = { eth: {} };
 
-    it('Check interval is correct if Node is behind', async function () {
-        const worker = new eth_worker.worker();
-        mockWeb3.eth.getBlockNumber = (function () { return constants.CONFIRMATIONS + 10; });
-        worker.web3 = mockWeb3;
+  it('Check interval is correct if Node is behind', async function () {
+    const worker = new eth_worker.worker();
+    mockWeb3.eth.getBlockNumber = (function () { return 10 + constants.CONFIRMATIONS; });
+    worker.web3 = mockWeb3;
 
-        worker.lastExportedBlock = 2;
-        worker.lastConfirmedBlock = 1;
+    worker.lastExportedBlock = 2;
+    worker.lastConfirmedBlock = 1;
 
-        const resultSecond = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(resultSecond.success, true);
-        assert.deepStrictEqual(resultSecond.fromBlock, 3);
-        assert.deepStrictEqual(resultSecond.toBlock, 10);
-    });
+    const firstCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+    assert.deepStrictEqual(worker.lastConfirmedBlock, 10);
 
-    it('Sleep time set if Node is not ahead', async function () {
-        const worker = new eth_worker.worker();
-        mockWeb3.eth.getBlockNumber = (function () { return constants.CONFIRMATIONS + 10; });
-        worker.web3 = mockWeb3;
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, [{ fromBlock: 3, toBlock: 10 }]);
+  });
 
-        worker.lastExportedBlock = 1;
-        worker.lastConfirmedBlock = 1;
+  it('Sleep time set if Node is not ahead', async function () {
+    const worker = new eth_worker.worker();
+    mockWeb3.eth.getBlockNumber = (function () { return constants.CONFIRMATIONS + 10; });
+    worker.web3 = mockWeb3;
 
-        await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
-    });
+    worker.lastExportedBlock = 1;
+    worker.lastConfirmedBlock = 1;
 
-    it('Node gets called if Node is not ahead', async function () {
-        let nodeCalled = false;
-        mockWeb3.eth.getBlockNumber = (function () { nodeCalled = true; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
+    await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
+    assert.deepStrictEqual(worker.lastConfirmedBlock, 10);
+  });
 
-        worker.lastExportedBlock = 1;
-        worker.lastConfirmedBlock = 1;
+  it('Node gets called if Node is not ahead', async function () {
+    let nodeCalled = false;
+    mockWeb3.eth.getBlockNumber = (function () { nodeCalled = true; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
+  
+    worker.lastExportedBlock = 1;
+    worker.lastConfirmedBlock = 1;
+  
+    await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(nodeCalled, true);
+  });
 
-        await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(nodeCalled, true);
-    });
+  it('Block interval is not exceeded', async function () {
+    mockWeb3.eth.getBlockNumber = (function () { return constants.BLOCK_INTERVAL + constants.CONFIRMATIONS + 10; });
+    const worker = new eth_worker.worker();
+    worker.web3 = mockWeb3;
+  
+    const firstCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(firstCall, []);
+    assert.deepStrictEqual(worker.sleepTimeMsec, constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000);
 
-    it('Block interval is not exceeded', async function () {
-        mockWeb3.eth.getBlockNumber = (function () { return constants.BLOCK_INTERVAL + constants.CONFIRMATIONS + 10; });
-        const worker = new eth_worker.worker();
-        worker.web3 = mockWeb3;
-
-        const result = await nextIntervalCalculator(worker);
-        assert.deepStrictEqual(result.success, true);
-        assert.deepStrictEqual(result.fromBlock, 0);
-        assert.deepStrictEqual(result.toBlock, constants.BLOCK_INTERVAL - 1);
-    });
-
+    const secondCall = await nextIntervalCalculator(worker);
+    assert.deepStrictEqual(secondCall, [{ fromBlock: 0, toBlock: constants.BLOCK_INTERVAL - 1 }]);
+  });
 });
-

@@ -1,56 +1,41 @@
 const constants = require('./constants');
 
-
-function isNewBlockAvailable(worker) {
-  return worker.lastExportedBlock < worker.lastConfirmedBlock;
-}
 /**
- * Return the next interval to be fetched.
- * NOTE: this method modifies the member variables of its argument
- *
- * @param {*} worker A worker object, member variables would be modified
- * @returns An object like so:
- * {
- *  success: Boolean,
- *  fromBlock: Integer,
- *  toBlock: Integer
- * }
+ * A function that returns the appropriate array of intervals,
+ * depending on the progress that the worker's made.
+ * If the exporter's caught up, we check for a new block. We then check whether the Node
+ * returns a valid block (sometimes the Node returns an early block, like 3 for example).
+ * We don't want to get the new blocks right away, so we set a sleep variable. On the next iteration
+ * the function will return the appropriate array of intervals.
+ * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
+ * @returns {Array} An array of intervals.
  */
 async function nextIntervalCalculator(worker) {
-  // Check if we need to ask the Node for new Head block. This is an optimization to skip this call when the exporter
-  // is behind the last seen Head anyways.
-  const firstNewBlockCheck = isNewBlockAvailable(worker);
-  if (!firstNewBlockCheck) {
-    // On the previous cycle we closed the gap to the head of the blockchain.
-    // Check if there are new blocks now.
+  if (worker.lastExportedBlock >= worker.lastConfirmedBlock) {
     const newConfirmedBlock = await worker.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
-    if (newConfirmedBlock > worker.lastConfirmedBlock) {
-      // The Node has progressed
+    if (worker.lastConfirmedBlock < newConfirmedBlock) {
       worker.lastConfirmedBlock = newConfirmedBlock;
     }
-  }
-
-  if (firstNewBlockCheck || isNewBlockAvailable(worker)) {
-    // If data was available without asking with Node, we are catching up and should come back straight away
-    if (firstNewBlockCheck) {
-      worker.sleepTimeMsec = 0;
-    }
-    else {
-      // If data became available only after asking the Node, we are close to the Head, come back later
-      worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-    }
-
-    return {
-      success: true,
-      fromBlock: worker.lastExportedBlock + 1,
-      toBlock: Math.min(worker.lastExportedBlock + constants.BLOCK_INTERVAL, worker.lastConfirmedBlock)
-    };
-  }
-  else {
-    // The Node has not progressed
     worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-    return { success: false };
+    return [];
   }
+
+  worker.sleepTimeMsec = 0;
+  const progressDifference = worker.lastConfirmedBlock - worker.lastExportedBlock;
+  const maxInterval = constants.MAX_CONCURRENT_REQUESTS * constants.BLOCK_INTERVAL;
+  let intervalArrayLength;
+  if (progressDifference < maxInterval) {
+    intervalArrayLength = Math.ceil(progressDifference / constants.BLOCK_INTERVAL);
+  } else {
+    intervalArrayLength = constants.MAX_CONCURRENT_REQUESTS;
+  }
+
+  return Array.from({ length: intervalArrayLength }, (_, i) => {
+    return {
+      fromBlock: worker.lastExportedBlock + constants.BLOCK_INTERVAL * i + 1,
+      toBlock: Math.min(worker.lastExportedBlock + constants.BLOCK_INTERVAL * (i + 1), worker.lastConfirmedBlock)
+    };
+  });
 }
 
 module.exports = {

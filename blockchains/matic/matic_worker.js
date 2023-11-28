@@ -24,24 +24,31 @@ class MaticWorker extends BaseWorker {
   }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
-    if (!result.success) {
-      return [];
-    }
+    const requestIntervals = await nextIntervalCalculator(this);
+    if (requestIntervals.length === 0) return [];
 
-    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
+    logger.info(
+      `Fetching transfer events for interval ${requestIntervals[0].fromBlock}:` +
+      `${requestIntervals[requestIntervals.length - 1].toBlock}`);
 
-    const events = await getPastEvents(this.web3, result.fromBlock, result.toBlock);
+    const events = [].concat(...await Promise.all(
+      requestIntervals.map(async (requestInterval) => {
+        return await getPastEvents(
+          this.web3,
+          requestInterval.fromBlock,
+          requestInterval.toBlock);
+        })
+      ));
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events);
-      logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
+      logger.info(`Setting primary keys ${events.length} messages for blocks ${requestIntervals[0].fromBlock}:`+
+      `${requestIntervals[requestIntervals.length - 1].toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
-    this.lastExportedBlock = result.toBlock;
+    this.lastExportedBlock = requestIntervals[requestIntervals.length - 1].toBlock;
     return events;
-
   }
 
   async init() {
