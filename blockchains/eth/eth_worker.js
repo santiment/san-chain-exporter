@@ -38,15 +38,15 @@ class ETHWorker extends BaseWorker {
         const response = await this.ethClient.request(...params);
         if (response.error || response.result === null) {
           retries++;
-          retryIntervalMs += (2000 * retries);
+          retryIntervalMs += (constants.BACKOFF_RETRY_STEP * retries);
           logger.error(`${params[0]} failed. Reason: ${response.error}. Retrying for ${retries} time`);
           await new Promise((resolve) => setTimeout(resolve, retryIntervalMs));
-          continue;
+        } else {
+          return response;
         }
-        return response;
       } catch(err) {
         retries++;
-        retryIntervalMs += (2000 * retries);
+        retryIntervalMs += (constants.BACKOFF_RETRY_STEP * retries);
         logger.error(
           `Try block in ${params[0]} failed. Reason: ${err.toString()}. Waiting ${retryIntervalMs} and retrying for ${retries} time`
           );

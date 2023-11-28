@@ -6,6 +6,7 @@ const IS_ETH = parseInt(process.env.IS_ETH || '1');
 const MAX_RETRIES = parseInt(process.env.MAX_RETRIES) || 3;
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '100');
+const BACKOFF_RETRY_STEP = parseInt(process.env.BACKOFF_RETRY_STEP || '2000');
 const RECEIPTS_API_METHOD = process.env.RECEIPTS_API_METHOD || 'eth_getBlockReceipts';
 const MAX_CONCURRENT_REQUESTS = parseInt(process.env.MAX_CONCURRENT_REQUESTS || '1');
 const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
@@ -20,6 +21,7 @@ module.exports = {
   BLOCK_INTERVAL,
   ETH_WITHDRAWAL,
   LONDON_FORK_BLOCK,
+  BACKOFF_RETRY_STEP,
   SHANGHAI_FORK_BLOCK,
   RECEIPTS_API_METHOD,
   MAX_CONCURRENT_REQUESTS,
