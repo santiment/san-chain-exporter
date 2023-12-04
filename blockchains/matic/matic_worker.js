@@ -1,4 +1,4 @@
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
@@ -14,8 +14,7 @@ class MaticWorker extends BaseWorker {
     super();
 
     logger.info(`Connecting to Polygon node ${constants.NODE_URL}`);
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
-    this.web3Wrapper = new Web3Wrapper(this.web3);
+    this.web3Wrapper = new Web3Wrapper(new Web3.providers.HttpProvider(constants.NODE_URL));
     if (constants.NODE_URL.substring(0, 5) === 'https') {
       this.ethClient = jayson.client.https(constants.NODE_URL);
     } else {
@@ -31,7 +30,7 @@ class MaticWorker extends BaseWorker {
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    const events = await getPastEvents(this.web3, result.fromBlock, result.toBlock);
+    const events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events);
@@ -45,7 +44,7 @@ class MaticWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
   }
 }
 

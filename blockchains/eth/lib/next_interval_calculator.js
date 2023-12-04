@@ -23,7 +23,7 @@ async function nextIntervalCalculator(worker) {
   if (!firstNewBlockCheck) {
     // On the previous cycle we closed the gap to the head of the blockchain.
     // Check if there are new blocks now.
-    const newConfirmedBlock = await worker.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+    const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
     if (newConfirmedBlock > worker.lastConfirmedBlock) {
       // The Node has progressed
       worker.lastConfirmedBlock = newConfirmedBlock;

@@ -6,8 +6,8 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
     return {
       from: `mining_${trace['action']['rewardType']}`,
       to: trace['action']['author'],
-      value: web3Wrapper.parseValue(trace['action']['value']),
-      valueExactBase36: web3Wrapper.parseValueBase36(trace['action']['value']),
+      value: web3Wrapper.parseHexToNumber(trace['action']['value']),
+      valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
       type: trace['type']
@@ -19,12 +19,12 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
     return {
       from: trace['action']['from'],
       to: trace['result']['address'],
-      value: web3Wrapper.parseValue(trace['action']['value']),
-      valueExactBase36: web3Wrapper.parseValueBase36(trace['action']['value']),
+      value: web3Wrapper.parseHexToNumber(trace['action']['value']),
+      valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
-      transactionPosition: web3Wrapper.parseTransactionPosition(trace['transactionPosition']),
+      transactionPosition: trace['transactionPosition'],
       type: trace['type']
     };
   }
@@ -33,12 +33,12 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
     return {
       from: trace['action']['address'],
       to: trace['action']['refundAddress'],
-      value: web3Wrapper.parseBalance(trace['action']['balance']),
-      valueExactBase36: web3Wrapper.parseBalanceBase36(trace['action']['balance']),
+      value: web3Wrapper.parseHexToNumber(trace['action']['balance']),
+      valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['balance']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
-      transactionPosition: web3Wrapper.parseTransactionPosition(trace['transactionPosition']),
+      transactionPosition: trace['transactionPosition'],
       type: trace['type']
     };
   }
@@ -50,12 +50,12 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
   return {
     from: trace['action']['from'],
     to: trace['action']['to'],
-    value: web3Wrapper.parseValue(trace['action']['value']),
-    valueExactBase36: web3Wrapper.parseValueBase36(trace['action']['value']),
+    value: web3Wrapper.parseHexToNumber(trace['action']['value']),
+    valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
     blockNumber: trace['blockNumber'],
     timestamp: timestamp,
     transactionHash: trace['transactionHash'],
-    transactionPosition: web3Wrapper.parseTransactionPosition(trace['transactionPosition']),
+    transactionPosition: trace['transactionPosition'],
     type: trace['type']
   };
 }

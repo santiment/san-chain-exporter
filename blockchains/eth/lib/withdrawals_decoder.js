@@ -1,9 +1,7 @@
-const { computeGasExpense, computeGasExpenseBase36 } = require('./util');
 const constants = require('./constants');
 
 class WithdrawalsDecoder {
-  constructor(web3, web3Wrapper) {
-    this.web3 = web3;
+  constructor(web3Wrapper) {
     this.web3Wrapper = web3Wrapper;
   }
 

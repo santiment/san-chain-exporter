@@ -1,4 +1,4 @@
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
 const { filterErrors } = require('./lib/filter_errors');
 const constants = require('./lib/constants');
@@ -18,15 +18,14 @@ class ETHWorker extends BaseWorker {
     super();
 
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
-    this.web3Wrapper = new Web3Wrapper(this.web3);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
     if (constants.NODE_URL.substring(0, 5) === 'https') {
       this.ethClient = jayson.client.https(constants.NODE_URL);
     } else {
       this.ethClient = jayson.client.http(constants.NODE_URL);
     }
-    this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper);
-    this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3, this.web3Wrapper);
+    this.feesDecoder = new FeesDecoder(this.web3Wrapper);
+    this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }
 
   parseEthInternalTrx(result) {
@@ -111,14 +110,14 @@ class ETHWorker extends BaseWorker {
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
-      events.push(...getGenesisTransfers(this.web3));
+      events.push(...getGenesisTransfers(this.web3Wrapper));
     }
 
     events.push(... await this.getPastTransferEvents(traces, blocks));
     events.push(... await this.getPastTransactionEvents(blocks.values(), receipts));
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info('Adding the DAO hack transfers');
-      events = injectDAOHackTransfers(events);
+      events = injectDAOHackTransfers(events, this.web3Wrapper);
     }
 
     return events;
@@ -128,7 +127,7 @@ class ETHWorker extends BaseWorker {
     const result = [];
 
     for (let i = 0; i < traces.length; i++) {
-      const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocksMap.get(traces[i]['blockNumber']));
+      const block_timestamp = this.web3Wrapper.parseHexToNumber(blocksMap.get(traces[i]['blockNumber']));
       result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));
     }
 
@@ -175,7 +174,7 @@ class ETHWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
   }
 }
 

@@ -1,11 +1,12 @@
 'use strict';
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
 
 const helper = require('./lib/helper');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
+const Web3Wrapper = require('../eth/lib/web3_wrapper');
 
 
 class ReceiptsWorker extends BaseWorker {
@@ -13,11 +14,11 @@ class ReceiptsWorker extends BaseWorker {
     super();
     logger.info(`Connecting to node ${constants.NODE_URL}`);
     this.client = jayson.client.https(constants.NODE_URL);
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
+    this.web3Wrapper = new Web3Wrapper(new Web3.providers.HttpProvider(constants.NODE_URL);
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
   }
 
   async fetchBlockTimestamps(fromBlock, toBlock) {
@@ -26,8 +27,8 @@ class ReceiptsWorker extends BaseWorker {
       batch.push(
         this.client.request(
           constants.GET_BLOCK_ENDPOINT,
-          [this.web3.utils.numberToHex(i),
-          true],
+          [this.web3Wrapper.parseNumberToHex(i),
+            true],
           undefined,
           false
         )
@@ -62,14 +63,14 @@ class ReceiptsWorker extends BaseWorker {
     const blocks = await this.fetchBlockTimestamps(fromBlock, toBlock);
     let receipts;
 
-    if(!constants.TRANSACTION) {
+    if (!constants.TRANSACTION) {
       receipts = await this.fetchReceipts(fromBlock, toBlock);
     }
     else {
       receipts = await this.fetchReceiptsFromTransaction(blocks);
     }
-    const decodedReceipts = receipts.map(helper.decodeReceipt);
-    const decodedBlocks = blocks.map(helper.decodeBlock);
+    const decodedReceipts = receipts.map(block => helper.decodeReceipt(block, this.web3Wrapper));
+    const decodedBlocks = blocks.map(block => helper.decodeBlock(block, this.web3Wrapper));
     const timestamps = helper.prepareBlockTimestampsObject(decodedBlocks);
 
     return helper.setReceiptsTimestamp(decodedReceipts, timestamps);
@@ -81,7 +82,7 @@ class ReceiptsWorker extends BaseWorker {
       batch.push(
         this.client.request(
           constants.GET_RECEIPTS_ENDPOINT,
-          [this.web3.utils.numberToHex(i)],
+          [this.web3Wrapper.parseNumberToHex(i)],
           undefined,
           false
         )
@@ -94,7 +95,7 @@ class ReceiptsWorker extends BaseWorker {
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
       this.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
-      const newConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+      const newConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
       if (newConfirmedBlock === this.lastConfirmedBlock) {
         return [];
       }

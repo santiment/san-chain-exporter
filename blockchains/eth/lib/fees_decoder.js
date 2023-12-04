@@ -2,7 +2,7 @@ const { computeGasExpense, computeGasExpenseBase36 } = require('./util');
 const constants = require('./constants');
 
 class FeesDecoder {
-  constructor(web3, web3Wrapper) {
+  constructor(web3Wrapper) {
     this.web3Wrapper = web3Wrapper;
   }
 
@@ -45,19 +45,19 @@ class FeesDecoder {
    **/
   pushMinerFee(transaction, block, receipts, result) {
     const tipMinerPerGas = transaction.gasPrice - block.baseFeePerGas;
-      if (tipMinerPerGas > 0) {
-        result.push({
-          from: transaction.from,
-          to: block.miner,
-          value: computeGasExpense(this.web3Wrapper, tipMinerPerGas, receipts[transaction.hash].gasUsed),
-          valueExactBase36: computeGasExpenseBase36(this.web3Wrapper, tipMinerPerGas,
-            receipts[transaction.hash].gasUsed),
-          blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
-          timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
-          transactionHash: transaction.hash,
-          type: 'fee'
-        });
-      }
+    if (tipMinerPerGas > 0) {
+      result.push({
+        from: transaction.from,
+        to: block.miner,
+        value: computeGasExpense(this.web3Wrapper, tipMinerPerGas, receipts[transaction.hash].gasUsed),
+        valueExactBase36: computeGasExpenseBase36(this.web3Wrapper, tipMinerPerGas,
+          receipts[transaction.hash].gasUsed),
+        blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
+        timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
+        transactionHash: transaction.hash,
+        type: 'fee'
+      });
+    }
   }
 
   getPostLondonForkFees(transaction, block, receipts) {
@@ -74,8 +74,8 @@ class FeesDecoder {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       const feeTransfers =
         constants.IS_ETH && blockNumber >= constants.LONDON_FORK_BLOCK ?
-        this.getPostLondonForkFees(transaction, block, receipts) :
-        this.getPreLondonForkFees(transaction, block, receipts);
+          this.getPostLondonForkFees(transaction, block, receipts) :
+          this.getPreLondonForkFees(transaction, block, receipts);
 
       result.push(...feeTransfers);
     });

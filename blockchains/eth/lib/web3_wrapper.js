@@ -1,12 +1,11 @@
+const { types } = require('web3');
+
+const NUMBER_DATA_FORMAT = { bytes: types.FMT_BYTES.HEX, number: types.FMT_NUMBER.NUMBER };
 
 class Web3Wrapper {
-
     constructor(web3) {
         this.web3 = web3;
-    }
 
-    parseValueToBN(field) {
-        return this.web3.utils.toBN(field);
     }
 
     parseHexToNumberString(field) {
@@ -14,35 +13,33 @@ class Web3Wrapper {
     }
 
     parseHexToNumber(field) {
-        return this.web3.utils.hexToNumber(field);
+        const result = this.web3.utils.hexToNumber(field);
+        return result;
     }
 
     parseNumberToHex(field) {
         return this.web3.utils.numberToHex(field);
     }
 
-    parseValue(field) {
-        return parseFloat(this.parseHexToNumberString(field));
+    parseHexToBase36String(field) {
+        return BigInt(this.web3.utils.hexToNumberString(field)).toString(36);
     }
 
-    parseValueBase36(field) {
-        return this.parseValueToBN(field).toString(36);
+    async getBlockNumber() {
+        return await this.web3.eth.getBlockNumber(NUMBER_DATA_FORMAT);
     }
 
-    parseTransactionPosition(field) {
-        return this.parseHexToNumber(field);
+    async getPastLogs(queryObject) {
+        return await this.web3.eth.getPastLogs(queryObject, NUMBER_DATA_FORMAT);
     }
 
-    parseBalance(field) {
-        return parseFloat(this.parseHexToNumberString(field));
+    async getBlock(blockNumber) {
+        return await this.web3.eth.getBlock(blockNumber, false,
+            NUMBER_DATA_FORMAT);
     }
 
-    parseBalanceBase36(field) {
-        return this.parseValueBase36(field);
-    }
-
-    decodeTimestampFromBlock(block) {
-        return this.parseHexToNumber(block.timestamp);
+    etherToWei(amount) {
+        return this.web3.toWei(amount, 'ether');
     }
 }
 

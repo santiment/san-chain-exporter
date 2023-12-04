@@ -1,4 +1,3 @@
-const Web3 = require('web3');
 const lang = require('lodash/lang');
 const array = require('lodash/array');
 const object = require('lodash/object');
@@ -18,21 +17,21 @@ const parseTransactionReceipts = (responses) => {
   return receipts;
 };
 
-const decodeLog = (log) => {
+const decodeLog = (log, web3Wrapper) => {
   collection.forEach(['blockNumber', 'blockHash', 'transactionHash', 'transactionIndex'],
-  key => object.unset(log, key));
+    key => object.unset(log, key));
 
   collection.forEach(['logIndex', 'transactionLogIndex'],
-    key => log[key] = Web3.utils.hexToNumber(log[key])
+    key => log[key] = web3Wrapper.parseHexToNumber(log[key])
   );
 
   return log;
 };
 
-const columnizeLogs = (logs) => {
+const columnizeLogs = (logs, web3Wrapper) => {
   if (logs.length === 0) { return []; }
 
-  const decodedLogs = collection.map(logs, decodeLog);
+  const decodedLogs = collection.map(logs, log => decodeLog(log, web3Wrapper));
   const logKeys = object.keys(decodedLogs[0]);
   const result = {};
   collection.forEach(logKeys, key => result[`logs.${key}`] = decodedLogs.map(log => log[key]));
@@ -40,27 +39,27 @@ const columnizeLogs = (logs) => {
   return result;
 };
 
-const decodeReceipt = (receipt) => {
+const decodeReceipt = (receipt, web3Wrapper) => {
   const clonedReceipt = lang.clone(receipt);
 
   collection.forEach(['blockNumber', 'status', 'transactionIndex'],
-    key => clonedReceipt[key] = Web3.utils.hexToNumber(clonedReceipt[key])
+    key => clonedReceipt[key] = web3Wrapper.parseHexToNumber(clonedReceipt[key])
   );
 
   collection.forEach(['cumulativeGasUsed', 'gasUsed'],
-    key => clonedReceipt[key] = Web3.utils.hexToNumberString(clonedReceipt[key])
+    key => clonedReceipt[key] = web3Wrapper.parseHexToNumberString(clonedReceipt[key])
   );
 
-  object.merge(clonedReceipt, columnizeLogs(clonedReceipt['logs']));
+  object.merge(clonedReceipt, columnizeLogs(clonedReceipt['logs'], web3Wrapper));
   object.unset(clonedReceipt, 'logs');
 
   return clonedReceipt;
 };
 
-const decodeBlock = (block) => {
+const decodeBlock = (block, web3Wrapper) => {
   return {
-    timestamp: Web3.utils.hexToNumber(block.timestamp),
-    number: Web3.utils.hexToNumber(block.number)
+    timestamp: web3Wrapper.parseHexToNumber(block.timestamp),
+    number: web3Wrapper.parseHexToNumber(block.number)
   };
 };
 
@@ -80,7 +79,6 @@ module.exports = {
   parseBlocks,
   parseTransactionReceipts,
   decodeLog,
-  columnizeLogs,
   decodeReceipt,
   decodeBlock,
   prepareBlockTimestampsObject,

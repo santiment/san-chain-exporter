@@ -1,7 +1,7 @@
 const assert = require('assert');
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
-const {FeesDecoder} = require('../../blockchains/eth/lib/fees_decoder');
+const { FeesDecoder } = require('../../blockchains/eth/lib/fees_decoder');
 const constants = require('../../blockchains/eth/lib/constants');
 
 /**
@@ -30,13 +30,13 @@ const block_json_post_london_zero_priority = {
     'transactionIndex': '0x0',
     'value': '0x4290f39ca406a4',
     'type': '0x2'
-    }]
+  }]
 };
 
 /**
  * A transaction for which the miner fee is reduced by the value of 'maxFeePerGas'.
  */
- const block_json_post_london_fee_reduced_by_maxFeePerGas = {
+const block_json_post_london_fee_reduced_by_maxFeePerGas = {
   'baseFeePerGas': '0xba37423df',
   'gasLimit': '0x1caa85f',
   'gasUsed': '0x9041b5',
@@ -46,20 +46,20 @@ const block_json_post_london_zero_priority = {
   'timestamp': '0x616e7e04',
   'totalDifficulty': '0x6ec3c4e96a280cc26b8',
   'transactions': [
-  {
-    'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
-    'blockNumber': '0xcd2f91',
-    'from': '0x8ae57a027c63fca8070d1bf38622321de8004c67',
-    'gas': '0x2a6af',
-    'gasPrice': '0xbdf0eeddf',
-    'maxPriorityFeePerGas': '0x3b9aca00',
-    'maxFeePerGas': '0xBA43B7400',
-    'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-    'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
-    'transactionIndex': '0xa4',
-    'value': '0x0',
-    'type': '0x2'
-  }]
+    {
+      'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
+      'blockNumber': '0xcd2f91',
+      'from': '0x8ae57a027c63fca8070d1bf38622321de8004c67',
+      'gas': '0x2a6af',
+      'gasPrice': '0xbdf0eeddf',
+      'maxPriorityFeePerGas': '0x3b9aca00',
+      'maxFeePerGas': '0xBA43B7400',
+      'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
+      'transactionIndex': '0xa4',
+      'value': '0x0',
+      'type': '0x2'
+    }]
 };
 
 
@@ -73,21 +73,22 @@ const block_json_post_london_with_priority = {
   'timestamp': '0x616e7e04',
   'totalDifficulty': '0x6ec3c4e96a280cc26b8',
   'transactions': [
-  {
-    'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
-    'blockNumber': '0xcd2f91',
-    'from': '0x8ae57a027c63fca8070d1bf38622321de8004c67',
-    'gas': '0x2a6af',
-    'gasPrice': '0xbdf0eeddf',
-    'maxPriorityFeePerGas': '0x3b9aca00',
-    'maxFeePerGas': '0x19284a2404',
-    'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-    'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
-    'transactionIndex': '0xa4',
-    'value': '0x0',
-    'type': '0x2'
-  }
-]};
+    {
+      'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
+      'blockNumber': '0xcd2f91',
+      'from': '0x8ae57a027c63fca8070d1bf38622321de8004c67',
+      'gas': '0x2a6af',
+      'gasPrice': '0xbdf0eeddf',
+      'maxPriorityFeePerGas': '0x3b9aca00',
+      'maxFeePerGas': '0x19284a2404',
+      'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
+      'transactionIndex': '0xa4',
+      'value': '0x0',
+      'type': '0x2'
+    }
+  ]
+};
 
 const block_json_post_london_old_tx_type = {
   'baseFeePerGas': '0xf6e9b0a7f',
@@ -181,7 +182,8 @@ const block_json_pre_london = {
     'to': '0xc083e9947cf02b8ffc7d3090ae9aea72df98fd47',
     'transactionIndex': '0x0',
     'value': '0x56bc75e2d63100000'
-}]};
+  }]
+};
 
 const receipts_json_pre_london = [{
   'blockHash': '0x8e38b4dbf6b11fcc3b9dee84fb7986e29ca0a02cecd8977c161ff7333329681e',
@@ -206,110 +208,110 @@ function turnReceiptsToMap(receipts) {
   return result;
 }
 
-describe('Fees decoder test', function() {
-    let feesDecoder = null;
-    let web3 = null;
-    let web3Wrapper = null;
+describe('Fees decoder test', function () {
+  let feesDecoder = null;
+  let web3 = null;
+  let web3Wrapper = null;
 
-    beforeEach(function() {
-      web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
-      web3Wrapper = new Web3Wrapper(web3);
-      feesDecoder = new FeesDecoder(web3, web3Wrapper);
-    });
+  beforeEach(function () {
+    web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
+    web3Wrapper = new Web3Wrapper(web3);
+    feesDecoder = new FeesDecoder(web3, web3Wrapper);
+  });
 
-    it('test fees post London zero priority', async function () {
-        const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,
-          turnReceiptsToMap(receipts_json_post_london_no_priority));
+  it('test fees post London zero priority', async function () {
+    const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,
+      turnReceiptsToMap(receipts_json_post_london_no_priority));
 
-        const expected =  [{
-            from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-            to: constants.BURN_ADDRESS,
-            value: 1049725694283000,
-            valueExactBase36: 'ac3hbr9fco',
-            blockNumber: 13447057,
-            timestamp: 1634631172,
-            transactionHash: '0xc8bebc11bbe703cdfb2a1a9599221baf4f19a1e20808866346791799d2dac7a9',
-            type: 'fee_burnt'
-          }
-        ];
+    const expected = [{
+      from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+      to: constants.BURN_ADDRESS,
+      value: 1049725694283000,
+      valueExactBase36: 'ac3hbr9fco',
+      blockNumber: 13447057,
+      timestamp: 1634631172,
+      transactionHash: '0xc8bebc11bbe703cdfb2a1a9599221baf4f19a1e20808866346791799d2dac7a9',
+      type: 'fee_burnt'
+    }
+    ];
 
-        assert.deepStrictEqual(postLondonFees, expected);
-    });
+    assert.deepStrictEqual(postLondonFees, expected);
+  });
 
-    it('test fees post London with priority', async function () {
-      const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_with_priority,
-        turnReceiptsToMap(receipts_json_post_london_with_priority));
+  it('test fees post London with priority', async function () {
+    const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_with_priority,
+      turnReceiptsToMap(receipts_json_post_london_with_priority));
 
-      const expected =  [{
-          blockNumber: 13447057,
-          from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
-          timestamp: 1634631172,
-          to: 'burn',
-          transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-          type: 'fee_burnt',
-          value: 3653345337731778,
-          valueExactBase36: 'zz03ofi5du'
-        },
-        {
-          from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
-          to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-          value: 73086000000000,
-          valueExactBase36: 'pwn8tdiio',
-          blockNumber: 13447057,
-          timestamp: 1634631172,
-          transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-          type: 'fee'
-        }
-      ];
+    const expected = [{
+      blockNumber: 13447057,
+      from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
+      timestamp: 1634631172,
+      to: 'burn',
+      transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      type: 'fee_burnt',
+      value: 3653345337731778,
+      valueExactBase36: 'zz03ofi5du'
+    },
+    {
+      from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
+      to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+      value: 73086000000000,
+      valueExactBase36: 'pwn8tdiio',
+      blockNumber: 13447057,
+      timestamp: 1634631172,
+      transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      type: 'fee'
+    }
+    ];
 
-      assert.deepStrictEqual(postLondonFees, expected);
-    });
+    assert.deepStrictEqual(postLondonFees, expected);
+  });
 
-    it('test old type fees post London', async function () {
-      const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_old_tx_type,
-        turnReceiptsToMap(receipts_json_post_london_old_tx_type));
+  it('test old type fees post London', async function () {
+    const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_old_tx_type,
+      turnReceiptsToMap(receipts_json_post_london_old_tx_type));
 
-      const expected =  [{
-          blockNumber: 13318440 ,
-          from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
-          timestamp: 1632888074,
-          to: 'burn',
-          transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
-          type: 'fee_burnt',
-          value:  1391883443307000,
-          valueExactBase36: 'dpdqfcs260'
-        },
-        {
-          from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
-          to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-          value: 42000000000000,
-          valueExactBase36: 'evyj7lbeo',
-          blockNumber: 13318440,
-          timestamp: 1632888074,
-          transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
-          type: 'fee'
-        }
-      ];
+    const expected = [{
+      blockNumber: 13318440,
+      from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
+      timestamp: 1632888074,
+      to: 'burn',
+      transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
+      type: 'fee_burnt',
+      value: 1391883443307000,
+      valueExactBase36: 'dpdqfcs260'
+    },
+    {
+      from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
+      to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+      value: 42000000000000,
+      valueExactBase36: 'evyj7lbeo',
+      blockNumber: 13318440,
+      timestamp: 1632888074,
+      transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
+      type: 'fee'
+    }
+    ];
 
-      assert.deepStrictEqual(postLondonFees, expected);
-    });
+    assert.deepStrictEqual(postLondonFees, expected);
+  });
 
-    it('test fees pre London', async function () {
-      const preLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_pre_london,
-        turnReceiptsToMap(receipts_json_pre_london));
+  it('test fees pre London', async function () {
+    const preLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_pre_london,
+      turnReceiptsToMap(receipts_json_pre_london));
 
-      const expected =  [{
-          from: '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',
-          to: '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-          value: 2354887722000000,
-          valueExactBase36: 'n6qkhga2dc',
-          blockNumber: 1000000,
-          timestamp: 1455404053,
-          transactionHash: '0xea1093d492a1dcb1bef708f771a99a96ff05dcab81ca76c31940300177fcf49f',
-          type: 'fee'
-      }];
+    const expected = [{
+      from: '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',
+      to: '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+      value: 2354887722000000,
+      valueExactBase36: 'n6qkhga2dc',
+      blockNumber: 1000000,
+      timestamp: 1455404053,
+      transactionHash: '0xea1093d492a1dcb1bef708f771a99a96ff05dcab81ca76c31940300177fcf49f',
+      type: 'fee'
+    }];
 
-      assert.deepStrictEqual(preLondonFees, expected);
+    assert.deepStrictEqual(preLondonFees, expected);
   });
 
 });

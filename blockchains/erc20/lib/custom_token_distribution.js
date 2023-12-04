@@ -1,7 +1,5 @@
 /*jshint esversion: 6 */
 const fs = require('fs');
-const Web3 = require('web3');
-const web3 = new Web3();
 const path = require('path');
 
 const MINT_ADDRESS = 'mint';
@@ -26,69 +24,69 @@ function getLastRealLogIndexForBlock(transfers, blockNumber) {
   let lastLogIndex = 0;
 
   transfers.forEach((transfer) => {
-      if (transfer.blockNumber === blockNumber && transfer.logIndex > lastLogIndex) {
-          lastLogIndex = transfer.logIndex;
-      }
+    if (transfer.blockNumber === blockNumber && transfer.logIndex > lastLogIndex) {
+      lastLogIndex = transfer.logIndex;
+    }
   });
 
   return lastLogIndex;
 }
 
-function addTransfers(transfers, transfersData) {
-  let addressBalances = fs.readFileSync(path.resolve(__dirname) + '/' + transfersData.file, {encoding: 'utf8'})
+function addTransfers(transfers, transfersData, web3Wrapper) {
+  let addressBalances = fs.readFileSync(path.resolve(__dirname) + '/' + transfersData.file, { encoding: 'utf8' })
     .split('\n')
     .filter((line) => line !== 0)
     .map((line) => line.split(',').map((element) => element.trim()));
 
-    // Starting from last real value reached, increment on every newly generated transfer
+  // Starting from last real value reached, increment on every newly generated transfer
   let logIndexReached = getLastRealLogIndexForBlock(transfers, transfersData.blockNumber);
 
   addressBalances.forEach((transfer) => {
     const [sign, address, amount] = transfer;
 
-      if (amount <= 0) {
-        return;
-      }
+    if (amount <= 0) {
+      return;
+    }
 
-      let from = null;
-      let to = null;
-      let transactionHash = null;
-      if(sign > 0) {
-        from = MINT_ADDRESS;
-        to = address;
-        transactionHash = transfersData.transactionHashPrefix+'_'+MINT_ADDRESS+'_'+address;
-      }
-      else if (sign < 0) {
-        from = address;
-        to = BURN_ADDRESS;
-        transactionHash = transfersData.transactionHashPrefix+'_'+BURN_ADDRESS+'_'+address;
-      }
-      else {
-        return;
-      }
+    let from = null;
+    let to = null;
+    let transactionHash = null;
+    if (sign > 0) {
+      from = MINT_ADDRESS;
+      to = address;
+      transactionHash = transfersData.transactionHashPrefix + '_' + MINT_ADDRESS + '_' + address;
+    }
+    else if (sign < 0) {
+      from = address;
+      to = BURN_ADDRESS;
+      transactionHash = transfersData.transactionHashPrefix + '_' + BURN_ADDRESS + '_' + address;
+    }
+    else {
+      return;
+    }
 
-      ++logIndexReached;
+    ++logIndexReached;
 
-      transfers.push({
-        contract: transfersData.contract,
-        blockNumber: transfersData.blockNumber,
-        timestamp: transfersData.timestamp,
-        transactionHash: transactionHash,
-        logIndex: logIndexReached,
-        from: from,
-        to: to,
-        value: amount,
-        valueExactBase36: web3.utils.toBN(amount).toString(36)
-      });
+    transfers.push({
+      contract: transfersData.contract,
+      blockNumber: transfersData.blockNumber,
+      timestamp: transfersData.timestamp,
+      transactionHash: transactionHash,
+      logIndex: logIndexReached,
+      from: from,
+      to: to,
+      value: amount,
+      valueExactBase36: web3Wrapper.parseHexToNumber(amount).toString(36)
+    });
   });
 }
 
-exports.addCustomTokenDistribution = function(transfers, fromBlock, toBlock, contract) {
+exports.addCustomTokenDistribution = function (transfers, fromBlock, toBlock, contract, web3Wrapper) {
   customTransfersData.forEach((transfersData) => {
-      if (transfersData.blockNumber >= fromBlock
-        && transfersData.blockNumber <= toBlock
-        && (!contract || transfersData.contract === contract)) {
-          addTransfers(transfers, transfersData);
-      }
+    if (transfersData.blockNumber >= fromBlock
+      && transfersData.blockNumber <= toBlock
+      && (!contract || transfersData.contract === contract)) {
+      addTransfers(transfers, transfersData, web3Wrapper);
+    }
   });
 };
