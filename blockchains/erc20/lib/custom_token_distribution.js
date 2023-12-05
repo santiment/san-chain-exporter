@@ -32,7 +32,7 @@ function getLastRealLogIndexForBlock(transfers, blockNumber) {
   return lastLogIndex;
 }
 
-function addTransfers(transfers, transfersData, web3Wrapper) {
+function addTransfers(transfers, transfersData) {
   let addressBalances = fs.readFileSync(path.resolve(__dirname) + '/' + transfersData.file, { encoding: 'utf8' })
     .split('\n')
     .filter((line) => line !== 0)
@@ -76,17 +76,17 @@ function addTransfers(transfers, transfersData, web3Wrapper) {
       from: from,
       to: to,
       value: amount,
-      valueExactBase36: web3Wrapper.parseHexToNumber(amount).toString(36)
+      valueExactBase36: BigInt(amount).toString(36)
     });
   });
 }
 
-exports.addCustomTokenDistribution = function (transfers, fromBlock, toBlock, contract, web3Wrapper) {
+exports.addCustomTokenDistribution = function (transfers, fromBlock, toBlock, contract) {
   customTransfersData.forEach((transfersData) => {
     if (transfersData.blockNumber >= fromBlock
       && transfersData.blockNumber <= toBlock
-      && (!contract || transfersData.contract === contract)) {
-      addTransfers(transfers, transfersData, web3Wrapper);
+      && transfersData.contract === contract) {
+      addTransfers(transfers, transfersData);
     }
   });
 };

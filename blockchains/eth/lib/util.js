@@ -18,17 +18,8 @@ function stableSort(array, sortFunc) {
   array.forEach(x => delete x._position);
 }
 
-function computeGasExpense (web3Wrapper, gasPrice, gasUsed) {
-  return web3Wrapper.parseValueToBN(gasPrice) * web3Wrapper.parseValueToBN(gasUsed);
-}
-
-function computeGasExpenseBase36 (web3Wrapper, gasPrice, gasUsed) {
-  return web3Wrapper.parseValueToBN(gasPrice).mul(web3Wrapper.parseValueToBN(gasUsed)).toString(36);
-}
 
 module.exports = {
   transactionOrder,
-  stableSort,
-  computeGasExpense,
-  computeGasExpenseBase36
+  stableSort
 };

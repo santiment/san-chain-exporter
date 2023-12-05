@@ -1,6 +1,7 @@
 const { Web3 } = require('web3');
 const assert = require('assert');
 const eth_worker = require('../../blockchains/eth/eth_worker');
+const constants = require('../../blockchains/eth/lib/constants');
 const {
   injectDAOHackTransfers,
   DAO_HACK_ADDRESSES,
@@ -122,7 +123,7 @@ describe('fetch past events', function () {
     'type': 'call'
   };
 
-  const worker = new eth_worker.worker();
+  const worker = new eth_worker.worker(constants);
   let feeResult = null;
   let callResult = null;
 
@@ -130,7 +131,7 @@ describe('fetch past events', function () {
     feeResult = {
       from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
       to: '0x829bd824b016326a401d083b33d092293333a830',
-      value: 14086000000000000,
+      value: 14086000000000000n,
       valueExactBase36: '3up2j2e99ts',
       blockNumber: 5711193,
       timestamp: 1527814787,
@@ -141,7 +142,7 @@ describe('fetch past events', function () {
     callResult = {
       from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
       to: '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
-      value: 320086793278069500,
+      value: 320086793278069536n,
       valueExactBase36: '2fjpaqu9o0tc',
       blockNumber: 5711193,
       timestamp: 1527814787,
@@ -156,14 +157,14 @@ describe('fetch past events', function () {
     const result = await worker.getPastTransactionEvents(blocks.values(), receipts);
     const expectedResult = [feeResult];
 
-    assert.deepStrictEqual(expectedResult, result);
+    assert.deepStrictEqual(result, expectedResult);
   });
 
   it('parse transfer events', async function () {
     const result = await worker.getPastTransferEvents([trace], blocks);
     const expectedResult = [callResult];
 
-    assert.deepStrictEqual(expectedResult, result);
+    assert.deepStrictEqual(result, expectedResult);
   });
 
   it('add genesis events', async function () {

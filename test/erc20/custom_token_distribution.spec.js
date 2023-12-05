@@ -8144,23 +8144,17 @@ const sanPresaleTransfers = [
     }
 ];
 
-describe('addCustomTokenDistribution', function() {
-  it('adds SAN presale transfers', async function() {
-    let result = [];
-    addCustomTokenDistribution(result, 4011221, 4011221);
+describe('addCustomTokenDistribution', function () {
+    it('adds SAN presale transfers', async function () {
+        let result = [];
+        addCustomTokenDistribution(result, 4011221, 4011221, '0x7c5a0ce9267ed19b22f8cae653f198e3e8daf098');
 
-var fs = require('fs');
-fs.appendFile('expectedOutput.txt', result.toString(), function (err) {
-  if (err) {
-    console.error(err);
-  } else {
-    console.log('done write');
-  }
-});
-
-assert.deepEqual(
-      result,
-      sanPresaleTransfers
-    );
-  });
+        assert(result.length === sanPresaleTransfers.length);
+        for (let i = 0; i < result.length; ++i) {
+            assert.deepEqual(
+                result[i],
+                sanPresaleTransfers[i]
+            );
+        }
+    });
 });

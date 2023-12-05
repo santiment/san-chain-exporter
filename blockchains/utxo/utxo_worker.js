@@ -3,37 +3,36 @@ const jayson = require('jayson/promise');
 const { parseURL } = require('whatwg-url');
 const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
-const {
-  NODE_URL,
-  MAX_RETRIES,
-  RPC_PASSWORD,
-  RPC_USERNAME,
-  CONFIRMATIONS,
-  DEFAULT_TIMEOUT,
-  MAX_CONCURRENT_REQUESTS,
-  LOOP_INTERVAL_CURRENT_MODE_SEC
-} = require('./lib/constants');
 
-const URL = parseURL(NODE_URL);
 
 class UtxoWorker extends BaseWorker {
-  constructor() {
+  constructor(constants) {
     super();
 
-    logger.info(`Connecting to the node ${NODE_URL}`);
+    this.NODE_URL = constants.NODE_URL;
+    this.URL = parseURL(this.NODE_URL);
+    this.MAX_RETRIES = constants.MAX_RETRIES,
+      this.RPC_PASSWORD = constants.RPC_PASSWORD;
+    this.RPC_USERNAME = constants.RPC_USERNAME;
+    this.CONFIRMATIONS = constants.CONFIRMATIONS;
+    this.DEFAULT_TIMEOUT = constants.DEFAULT_TIMEOUT;
+    this.MAX_CONCURRENT_REQUESTS = constants.MAX_CONCURRENT_REQUESTS;
+    this.LOOP_INTERVAL_CURRENT_MODE_SEC = constants.LOOP_INTERVAL_CURRENT_MODE_SEC;
+
+    logger.info(`Connecting to the node ${this.NODE_URL}`);
     this.client = jayson.Client.https({
       host: URL.host,
       port: URL.port,
       method: 'POST',
-      auth: RPC_USERNAME + ':' + RPC_PASSWORD,
-      timeout: DEFAULT_TIMEOUT,
+      auth: this.RPC_USERNAME + ':' + this.RPC_PASSWORD,
+      timeout: this.DEFAULT_TIMEOUT,
       version: 1
     });
   }
 
   async init() {
     const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
-    this.lastConfirmedBlock = blockchainInfo.blocks - CONFIRMATIONS;
+    this.lastConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
   }
 
   async sendRequest(method, params) {
@@ -49,7 +48,7 @@ class UtxoWorker extends BaseWorker {
   async sendRequestWithRetry(method, params) {
     let retries = 0;
     let retryIntervalMs = 0;
-    while (retries < MAX_RETRIES) {
+    while (retries < this.MAX_RETRIES) {
       try {
         const response = await this.sendRequest(method, params).catch(err => Promise.reject(err));
         if (response.error || response.result === null) {
@@ -60,16 +59,16 @@ class UtxoWorker extends BaseWorker {
           continue;
         }
         return response;
-      } catch(err) {
+      } catch (err) {
         retries++;
         retryIntervalMs += (2000 * retries);
         logger.error(
           `Try block in sendRequest for ${method} failed. Reason: ${err.toString()}. Waiting ${retryIntervalMs} and retrying for ${retries} time`
-          );
+        );
         await new Promise((resolve) => setTimeout(resolve, retryIntervalMs));
       }
     }
-    return Promise.reject(`sendRequest for ${method} failed after ${MAX_RETRIES} retries`);
+    return Promise.reject(`sendRequest for ${method} failed after ${this.MAX_RETRIES} retries`);
   }
 
   async decodeTransaction(transaction_bytecode) {
@@ -94,10 +93,10 @@ class UtxoWorker extends BaseWorker {
 
   async work() {
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      this.sleepTimeMsec = LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+      this.sleepTimeMsec = this.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
       const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
-      const newConfirmedBlock = blockchainInfo.blocks - CONFIRMATIONS;
+      const newConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
       if (newConfirmedBlock === this.lastConfirmedBlock) {
         return [];
       }
@@ -107,7 +106,7 @@ class UtxoWorker extends BaseWorker {
       this.sleepTimeMsec = 0;
     }
 
-    const numConcurrentRequests = Math.min(MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock - this.lastExportedBlock);
+    const numConcurrentRequests = Math.min(this.MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock - this.lastExportedBlock);
     const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + 1 + i));
     const blocks = await Promise.all(requests);
     this.lastExportedBlock += blocks.length;

@@ -12,7 +12,7 @@ exports.getGenesisTransfers = function (web3Wrapper) {
   const result = [];
   GENESIS_TRANSFERS.forEach((transfer) => {
     const [id, from, to, amount] = transfer;
-    const wei = web3Wrapper.etherToWei(amount);
+    const wei = web3Wrapper.etherToWei(parseFloat(amount));
 
     result.push({
       from: 'GENESIS',

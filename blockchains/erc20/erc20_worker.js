@@ -1,6 +1,5 @@
 'use strict';
 const { Web3 } = require('web3');
-const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
 const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
@@ -31,9 +30,9 @@ function simpleHash(input) {
 }
 
 class ERC20Worker extends BaseWorker {
-  constructor() {
+  constructor(constants) {
     super();
-
+    this.constants = constants;
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(constants)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
@@ -43,14 +42,14 @@ class ERC20Worker extends BaseWorker {
   }
 
   async init(exporter) {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
 
-    if (constants.EXPORT_BLOCKS_LIST) {
+    if (this.constants.EXPORT_BLOCKS_LIST) {
       this.blocksList = await initBlocksList();
     }
 
-    if (constants.CONTRACT_MODE !== 'vanilla') {
-      const parsedContracts = await readJsonFile(constants.CONTRACT_MAPPING_FILE_PATH);
+    if (this.constants.CONTRACT_MODE !== 'vanilla') {
+      const parsedContracts = await readJsonFile(this.constants.CONTRACT_MAPPING_FILE_PATH);
 
       if (parsedContracts.modified_contracts) {
         this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract) => new ContractOverwrite(contract));
@@ -60,13 +59,13 @@ class ERC20Worker extends BaseWorker {
         this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
       }
 
-      logger.info(`Running in '${constants.CONTRACT_MODE}' contracts mode', ` +
+      logger.info(`Running in '${this.constants.CONTRACT_MODE}' contracts mode', ` +
         `${this.contractsOverwriteArray.length + this.contractsUnmodified.length} contracts will be monitored.`);
       logger.info(`Overwritten contracts are: ${JSON.stringify(this.contractsOverwriteArray)}`);
       logger.info(`Extracted unmodified contracts are: ${JSON.stringify(this.contractsUnmodified)}`);
     }
 
-    const hashFunction = constants.EVENTS_IN_SAME_PARTITION ? (event) => simpleHash(event.contract) : null;
+    const hashFunction = this.constants.EVENTS_IN_SAME_PARTITION ? (event) => simpleHash(event.contract) : null;
     await exporter.initPartitioner(hashFunction);
   }
 
@@ -92,7 +91,7 @@ class ERC20Worker extends BaseWorker {
   }
 
   async work() {
-    const result = constants.EXPORT_BLOCKS_LIST ?
+    const result = this.constants.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
       await nextIntervalCalculator(this);
 
@@ -105,7 +104,7 @@ class ERC20Worker extends BaseWorker {
     let events = [];
     let overwritten_events = [];
     const timestampsCache = new TimestampsCache();
-    if ('extract_exact_overwrite' === constants.CONTRACT_MODE) {
+    if ('extract_exact_overwrite' === this.constants.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
         events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, this.allOldContracts, timestampsCache);
         changeContractAddresses(events, this.contractsOverwriteArray);
@@ -122,7 +121,7 @@ class ERC20Worker extends BaseWorker {
     }
     else {
       events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, null, timestampsCache);
-      if ('extract_all_append' === constants.CONTRACT_MODE) {
+      if ('extract_all_append' === this.constants.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
     }

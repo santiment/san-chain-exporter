@@ -6,7 +6,6 @@ const fetch_transactions = require('./lib/fetch_transactions');
 const { BNBTransactionsFetcher } = require('./lib/bnb_transactions_fetcher');
 const { getTransactionsWithKeys } = require('./lib/edit_transactions');
 const BaseWorker = require('../../lib/worker_base');
-const constants = require('./lib/constants');
 
 
 // This dynamic import is a workaround for p-queue being 'pure ESM' package.
@@ -36,11 +35,12 @@ class MetricsStore {
 
 
 class BNBWorker extends BaseWorker {
-  constructor() {
+  constructor(constants) {
     super();
 
     this.newRequestsCount = 0;
     this.bnbTransactionsFetcher = null;
+    this.constants = constants;
 
     if (constants.BNB_MODE !== 'trades' && constants.BNB_MODE !== 'transactions') {
       throw new Error(`BNB mode needs to be either 'transactions' or 'trades' provided is '${constants.BNB_MODE}'`);
@@ -55,9 +55,9 @@ class BNBWorker extends BaseWorker {
    */
   async init() {
     this.queue = new PQueue({
-      concurrency: constants.MAX_CONNECTION_CONCURRENCY,
-      interval: constants.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
-      intervalCap: constants.MAX_CONNECTION_CONCURRENCY
+      concurrency: this.constants.MAX_CONNECTION_CONCURRENCY,
+      interval: this.constants.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
+      intervalCap: this.constants.MAX_CONNECTION_CONCURRENCY
     });
   }
 
@@ -96,7 +96,7 @@ class BNBWorker extends BaseWorker {
     // If we have catched up with the chain do an extra sleep to reduce the load on the API further.
     // Also if the result is empty, this must be an error on the previous fetch
     if (this.bnbTransactionsFetcher.isUpToDateWithBlockchain || resultTransactions.length === 0) {
-      this.sleepTimeMsec = 1000 * constants.LOOP_INTERVAL_CURRENT_MODE_SEC;
+      this.sleepTimeMsec = 1000 * this.constants.LOOP_INTERVAL_CURRENT_MODE_SEC;
     }
     else {
       this.sleepTimeMsec = 0;
@@ -131,18 +131,18 @@ class BNBWorker extends BaseWorker {
    * @override
    */
   initPosition(lastProcessedPosition) {
-    let fetchRangeMsec = constants.FETCH_INTERVAL_CURRENT_MODE_MSEC;
+    let fetchRangeMsec = this.constants.FETCH_INTERVAL_CURRENT_MODE_MSEC;
     if (lastProcessedPosition) {
       logger.info(`Resuming export from position ${JSON.stringify(lastProcessedPosition)}`);
       // If the last range used is bigger than 'current' mode - use it
-      if (lastProcessedPosition.fetchRangeMsec > constants.FETCH_INTERVAL_CURRENT_MODE_MSEC) {
+      if (lastProcessedPosition.fetchRangeMsec > this.constants.FETCH_INTERVAL_CURRENT_MODE_MSEC) {
         fetchRangeMsec = lastProcessedPosition.fetchRangeMsec;
       }
     } else {
       // This is a new deploy, we would try the big historic fetch interval
-      fetchRangeMsec = constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC;
+      fetchRangeMsec = this.constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC;
       lastProcessedPosition = {
-        timestampReached: constants.BNB_CHAIN_START_MSEC,
+        timestampReached: this.constants.BNB_CHAIN_START_MSEC,
         blockNumber: 0
       };
       logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`);

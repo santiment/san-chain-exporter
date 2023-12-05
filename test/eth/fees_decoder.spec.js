@@ -209,15 +209,8 @@ function turnReceiptsToMap(receipts) {
 }
 
 describe('Fees decoder test', function () {
-  let feesDecoder = null;
-  let web3 = null;
-  let web3Wrapper = null;
-
-  beforeEach(function () {
-    web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
-    web3Wrapper = new Web3Wrapper(web3);
-    feesDecoder = new FeesDecoder(web3, web3Wrapper);
-  });
+  const web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
+  const feesDecoder = new FeesDecoder(web3Wrapper);
 
   it('test fees post London zero priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,

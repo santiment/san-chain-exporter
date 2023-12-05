@@ -1,4 +1,3 @@
-const { computeGasExpense, computeGasExpenseBase36 } = require('./util');
 const constants = require('./constants');
 
 class FeesDecoder {
@@ -7,11 +6,12 @@ class FeesDecoder {
   }
 
   getPreLondonForkFees(transaction, block, receipts) {
+    const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     return [{
       from: transaction.from,
       to: block.miner,
-      value: computeGasExpense(this.web3Wrapper, transaction.gasPrice, receipts[transaction.hash].gasUsed),
-      valueExactBase36: computeGasExpenseBase36(this.web3Wrapper, transaction.gasPrice, receipts[transaction.hash].gasUsed),
+      value: gasExpense,
+      valueExactBase36: gasExpense.toString(36),
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
       transactionHash: transaction.hash,
@@ -20,12 +20,12 @@ class FeesDecoder {
   }
 
   pushBurntFee(transaction, block, receipts, result) {
+    const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     result.push({
       from: transaction.from,
       to: constants.BURN_ADDRESS,
-      value: computeGasExpense(this.web3Wrapper, block.baseFeePerGas, receipts[transaction.hash].gasUsed),
-      valueExactBase36: computeGasExpenseBase36(this.web3Wrapper, block.baseFeePerGas,
-        receipts[transaction.hash].gasUsed),
+      value: gasExpense,
+      valueExactBase36: gasExpense.toString(36),
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
       transactionHash: transaction.hash,
@@ -44,14 +44,14 @@ class FeesDecoder {
    * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
    **/
   pushMinerFee(transaction, block, receipts, result) {
-    const tipMinerPerGas = transaction.gasPrice - block.baseFeePerGas;
+    const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
+    const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     if (tipMinerPerGas > 0) {
       result.push({
         from: transaction.from,
         to: block.miner,
-        value: computeGasExpense(this.web3Wrapper, tipMinerPerGas, receipts[transaction.hash].gasUsed),
-        valueExactBase36: computeGasExpenseBase36(this.web3Wrapper, tipMinerPerGas,
-          receipts[transaction.hash].gasUsed),
+        value: gasExpense,
+        valueExactBase36: gasExpense.toString(36),
         blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
         timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
         transactionHash: transaction.hash,
@@ -68,10 +68,9 @@ class FeesDecoder {
     return result;
   }
 
-  getFeesFromTransactionsInBlock(block, receipts) {
+  getFeesFromTransactionsInBlock(block, blockNumber, receipts) {
     const result = [];
     block.transactions.forEach((transaction) => {
-      const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       const feeTransfers =
         constants.IS_ETH && blockNumber >= constants.LONDON_FORK_BLOCK ?
           this.getPostLondonForkFees(transaction, block, receipts) :

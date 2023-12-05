@@ -1,11 +1,17 @@
-const { types } = require('web3');
-
-const NUMBER_DATA_FORMAT = { bytes: types.FMT_BYTES.HEX, number: types.FMT_NUMBER.NUMBER };
-
 class Web3Wrapper {
     constructor(web3) {
         this.web3 = web3;
+    }
 
+    castBigIntToNumber(bigIntValue) {
+        const minSafe = BigInt(Number.MIN_SAFE_INTEGER);
+        const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
+        if (bigIntValue >= minSafe && bigIntValue <= maxSafe) {
+            return Number(bigIntValue);
+        }
+        else {
+            throw new Error(`BigInt value ${bigIntValue} can not be safely cast to Number`);
+        }
     }
 
     parseHexToNumberString(field) {
@@ -13,8 +19,7 @@ class Web3Wrapper {
     }
 
     parseHexToNumber(field) {
-        const result = this.web3.utils.hexToNumber(field);
-        return result;
+        return this.web3.utils.hexToNumber(field);
     }
 
     parseNumberToHex(field) {
@@ -26,20 +31,19 @@ class Web3Wrapper {
     }
 
     async getBlockNumber() {
-        return await this.web3.eth.getBlockNumber(NUMBER_DATA_FORMAT);
+        return this.castBigIntToNumber(await this.web3.eth.getBlockNumber());
     }
 
     async getPastLogs(queryObject) {
-        return await this.web3.eth.getPastLogs(queryObject, NUMBER_DATA_FORMAT);
+        return await this.web3.eth.getPastLogs(queryObject);
     }
 
     async getBlock(blockNumber) {
-        return await this.web3.eth.getBlock(blockNumber, false,
-            NUMBER_DATA_FORMAT);
+        return await this.web3.eth.getBlock(blockNumber, false);
     }
 
     etherToWei(amount) {
-        return this.web3.toWei(amount, 'ether');
+        return this.web3.utils.toWei(amount, 'ether');
     }
 }
 

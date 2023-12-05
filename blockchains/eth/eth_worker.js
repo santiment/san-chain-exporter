@@ -1,7 +1,6 @@
 const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
 const { filterErrors } = require('./lib/filter_errors');
-const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
 const { getGenesisTransfers } = require('./lib/genesis_transfers');
@@ -14,10 +13,12 @@ const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 
 class ETHWorker extends BaseWorker {
-  constructor() {
+  constructor(constants) {
     super();
 
+    this.constants = constants;
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
+    logger.info(`Applying the following settings: ${JSON.stringify(constants)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
     if (constants.NODE_URL.substring(0, 5) === 'https') {
       this.ethClient = jayson.client.https(constants.NODE_URL);
@@ -69,7 +70,7 @@ class ETHWorker extends BaseWorker {
     const responses = [];
 
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
+      const req = this.ethClient.request(this.constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
       responses.push(this.ethClient.request([req]));
     }
 
@@ -127,7 +128,7 @@ class ETHWorker extends BaseWorker {
     const result = [];
 
     for (let i = 0; i < traces.length; i++) {
-      const block_timestamp = this.web3Wrapper.parseHexToNumber(blocksMap.get(traces[i]['blockNumber']));
+      const block_timestamp = this.web3Wrapper.parseHexToNumber(blocksMap.get(traces[i]['blockNumber']).timestamp);
       result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));
     }
 
@@ -138,9 +139,9 @@ class ETHWorker extends BaseWorker {
     const result = [];
 
     for (const block of blocks) {
-      const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, receipts);
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
-      if (constants.IS_ETH && blockNumber >= constants.SHANGHAI_FORK_BLOCK) {
+      const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
+      if (this.constants.IS_ETH && blockNumber >= this.constants.SHANGHAI_FORK_BLOCK) {
         decoded_transactions.push(... await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
       }
       result.push(...decoded_transactions);
@@ -174,7 +175,7 @@ class ETHWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
   }
 }
 

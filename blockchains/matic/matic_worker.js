@@ -1,6 +1,5 @@
 const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
-const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
@@ -10,9 +9,10 @@ const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator'
 
 
 class MaticWorker extends BaseWorker {
-  constructor() {
+  constructor(constants) {
     super();
 
+    this.constants = constants;
     logger.info(`Connecting to Polygon node ${constants.NODE_URL}`);
     this.web3Wrapper = new Web3Wrapper(new Web3.providers.HttpProvider(constants.NODE_URL));
     if (constants.NODE_URL.substring(0, 5) === 'https') {
@@ -44,7 +44,7 @@ class MaticWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
   }
 }
 
