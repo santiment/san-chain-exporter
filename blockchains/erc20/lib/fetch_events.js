@@ -18,10 +18,10 @@ async function decodeEventBasicInfo(web3Wrapper, event, timestampsCache) {
 
   return {
     contract: event['address'].toLowerCase(),
-    blockNumber: web3Wrapper.castBigIntToNumber(event['blockNumber']),
+    blockNumber: Number(event['blockNumber']),
     timestamp: timestamp,
     transactionHash: event['transactionHash'],
-    logIndex: event['logIndex']
+    logIndex: Number(event['logIndex'])
   };
 }
 

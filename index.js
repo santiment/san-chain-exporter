@@ -9,6 +9,7 @@ const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name;
 const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
+const constantsBase = require('./lib/constants');
 
 var SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
@@ -40,8 +41,8 @@ class Main {
 
   async initWorker() {
     this.#isWorkerSet();
-
-    this.worker = new worker.worker(constants);
+    const mergedConstants = { ...constantsBase, ...constants };
+    this.worker = new worker.worker(mergedConstants);
     await this.worker.init(this.exporter, metrics);
     await this.handleInitPosition();
   }

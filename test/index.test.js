@@ -10,7 +10,10 @@ const { worker } = require('../blockchains/eth/eth_worker');
 const zkClientAsync = require('../lib/zookeeper_client_async');
 
 describe('Main', () => {
-  const constants = {};
+  const constants = {
+    START_BLOCK: -1,
+    START_PRIMARY_KEY: -1
+  };
 
   afterEach(() => {
     sinon.restore();

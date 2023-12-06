@@ -20,7 +20,8 @@ class TimestampsCache {
 
   async getTimestampFromNode(web3Wrapper, blockNumber) {
     const block = await web3Wrapper.getBlock(blockNumber);
-    return block['timestamp'];
+    // Cast the timestamp to Number as that is how we expect it for historic reasons
+    return Number(block['timestamp']);
   }
 
 

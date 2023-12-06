@@ -3,17 +3,6 @@ class Web3Wrapper {
         this.web3 = web3;
     }
 
-    castBigIntToNumber(bigIntValue) {
-        const minSafe = BigInt(Number.MIN_SAFE_INTEGER);
-        const maxSafe = BigInt(Number.MAX_SAFE_INTEGER);
-        if (bigIntValue >= minSafe && bigIntValue <= maxSafe) {
-            return Number(bigIntValue);
-        }
-        else {
-            throw new Error(`BigInt value ${bigIntValue} can not be safely cast to Number`);
-        }
-    }
-
     parseHexToNumberString(field) {
         return this.web3.utils.hexToNumberString(field);
     }
@@ -31,7 +20,8 @@ class Web3Wrapper {
     }
 
     async getBlockNumber() {
-        return this.castBigIntToNumber(await this.web3.eth.getBlockNumber());
+        // We are casting to Number here due to how this field is expected in our pipeline
+        return Number((await this.web3.eth.getBlockNumber()));
     }
 
     async getPastLogs(queryObject) {
