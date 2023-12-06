@@ -6,7 +6,7 @@ const {
   DAO_HACK_FORK_BLOCK
 } = require('../../blockchains/eth/lib/dao_hack');
 
-describe('fetch past events', function() {
+describe('transform events', function() {
   const transaction = {
     blockHash: '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
     blockNumber: '0x572559',
@@ -58,7 +58,7 @@ describe('fetch past events', function() {
       transactionsRoot: '0xa7df4bb8858bfc779dae9b59201561394b686cdc942a7b0728aa396f7e35f40f',
       uncles: []
     });
-    
+
     const receipts = {
       '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d' :
       {
@@ -118,12 +118,12 @@ describe('fetch past events', function() {
       'transactionPosition': 0,
       'type': 'call'
     };
-    
+
     const worker = new eth_worker.worker();
     let feeResult = null;
     let callResult = null;
-    
-    beforeEach(async function() {
+
+    beforeEach(function() {
       feeResult = {
         from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
         to: '0x829bd824b016326a401d083b33d092293333a830',
@@ -134,7 +134,7 @@ describe('fetch past events', function() {
         transactionHash: '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
         type: 'fee'
       };
-      
+
       callResult = {
         from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
         to: '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
@@ -147,25 +147,25 @@ describe('fetch past events', function() {
         type: 'call'
       };
     });
-    
-    
-    it('parse transaction events', async function () {
-      const result = await worker.getPastTransactionEvents(blocks.values(), receipts);
+
+
+    it('parse transaction events', function () {
+      const result = worker.transformTransactionEvents(blocks.values(), receipts);
       const expectedResult = [feeResult];
-      
+
       assert.deepStrictEqual(expectedResult, result);
     });
-    
-    it('parse transfer events', async function () {
-      const result = await worker.getPastTransferEvents([trace], blocks);
+
+    it('parse transfer events', function () {
+      const result = worker.transformTransferEvents([trace], blocks);
       const expectedResult = [callResult];
-      
+
       assert.deepStrictEqual(expectedResult, result);
     });
-    
-    it('add genesis events', async function () {
-      const result = await worker.getPastEvents(0, 1, [trace], blocks, receipts);
-      
+
+    it('add genesis events', function () {
+      const result = worker.transformEvents(0, 1, [trace], blocks, receipts);
+
       const firstGenesisEvent = {
         from: 'GENESIS',
         to: '0x000d836201318ec6899a67540690382780743280',
@@ -176,35 +176,35 @@ describe('fetch past events', function() {
         transactionHash: 'GENESIS_000d836201318ec6899a67540690382780743280',
         type: 'genesis'
       };
-      
-      
+
+
       assert.deepStrictEqual(firstGenesisEvent, result[0]);
     });
-    
-    it('genesis events ordering', async function () {
-      const result = await worker.getPastEvents(0, 1, [trace], blocks, receipts);
-      
+
+    it('genesis events ordering', function () {
+      const result = worker.transformEvents(0, 1, [trace], blocks, receipts);
+
       const genesisEventsInserted = 8894;
       assert.strictEqual(result.length, genesisEventsInserted + 2);
       assert.deepStrictEqual(callResult, result[genesisEventsInserted]);
       assert.deepStrictEqual(feeResult, result[genesisEventsInserted + 1]);
     });
-    
-    it('DAO hack events', async function () {
-      const result = await worker.getPastEvents(DAO_HACK_FORK_BLOCK - 1, DAO_HACK_FORK_BLOCK + 1, [trace], blocks, receipts);
+
+    it('DAO hack events', function () {
+      const result = worker.transformEvents(DAO_HACK_FORK_BLOCK - 1, DAO_HACK_FORK_BLOCK + 1, [trace], blocks, receipts);
       const expectedEvents = DAO_HACK_ADDRESSES.length + 2;
-      
+
       assert.deepStrictEqual(expectedEvents, result.length);
     });
-    
-    it('DAO hack events ordering', async function () {
+
+    it('DAO hack events ordering', function () {
       // Test that DAO hack events are inserted in between the others
       feeResult.blockNumber = DAO_HACK_FORK_BLOCK - 1;
       callResult.blockNumber = DAO_HACK_FORK_BLOCK - 1;
-      
+
       const eventsResult = [feeResult, callResult];
       injectDAOHackTransfers(eventsResult);
-      
+
       assert.deepStrictEqual(feeResult, eventsResult[0]);
       assert.deepStrictEqual(callResult, eventsResult[1]);
     });

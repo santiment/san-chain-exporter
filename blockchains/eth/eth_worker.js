@@ -1,17 +1,17 @@
 const Web3 = require('web3');
 const jayson = require('jayson/promise');
-const { filterErrors } = require('./lib/filter_errors');
 const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
-const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-const { getGenesisTransfers } = require('./lib/genesis_transfers');
-const { transactionOrder, stableSort } = require('./lib/util');
-const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
-const { decodeTransferTrace } = require('./lib/decode_transfers');
+const BaseWorker = require('../../lib/worker_base');
 const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
+const { filterErrors } = require('./lib/filter_errors');
+const { decodeTransferTrace } = require('./lib/decode_transfers');
+const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
+const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
+const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
+
 
 class ETHWorker extends BaseWorker {
   constructor() {
@@ -27,6 +27,7 @@ class ETHWorker extends BaseWorker {
     }
     this.feesDecoder = new FeesDecoder(this.web3, this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3, this.web3Wrapper);
+    this.buffer = [];
   }
 
   parseEthInternalTrx(result) {
@@ -41,6 +42,7 @@ class ETHWorker extends BaseWorker {
   }
 
   fetchEthInternalTrx(fromBlock, toBlock) {
+    logger.info(`Fetching traces info ${fromBlock}:${toBlock}`);
     return this.ethClient.request('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
@@ -67,55 +69,59 @@ class ETHWorker extends BaseWorker {
   }
 
   async fetchReceipts(blockNumbers) {
-    const responses = [];
-
+    const batch = [];
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
-      responses.push(this.ethClient.request([req]));
+      batch.push(
+        this.ethClient.request(
+          constants.RECEIPTS_API_METHOD,
+          [this.web3Wrapper.parseNumberToHex(blockNumber)],
+          undefined,
+          false
+        )
+      );
     }
-
-    const finishedRequests = await Promise.all(responses);
+    const finishedRequests = await this.ethClient.request(batch);
     const result = {};
 
-    finishedRequests.forEach((blockResponses) => {
-      if (!blockResponses) return;
-
-      blockResponses.forEach((blockResponse) => {
-        if (blockResponse.result) {
-          blockResponse.result.forEach((receipt) => {
-            result[receipt.transactionHash] = receipt;
-          });
-        }
-        else {
-          throw new Error(JSON.stringify(blockResponse));
-        }
-      });
+    finishedRequests.forEach((response) => {
+      if (response.result) {
+        response.result.forEach((receipt) => {
+          result[receipt.transactionHash] = receipt;
+        });
+      }
+      else {
+        throw new Error(JSON.stringify(response));
+      }
     });
 
     return result;
   }
 
-  async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
-    logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`);
-    const [traces, blocks] = await Promise.all([
-      this.fetchEthInternalTrx(fromBlock, toBlock),
-      this.fetchBlocks(fromBlock, toBlock)
-    ]);
+  async fetchBlocksAndReceipts(fromBlock, toBlock) {
+    logger.info(`Fetching blocks info ${fromBlock}:${toBlock}`);
+    const blocks = await this.fetchBlocks(fromBlock, toBlock);
     logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`);
     const receipts = await this.fetchReceipts(blocks.keys());
 
-    return [traces, blocks, receipts];
+    return [blocks, receipts];
   }
 
-  async getPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
+  async fetchData(fromBlock, toBlock) {
+    return await Promise.all([
+      this.fetchEthInternalTrx(fromBlock, toBlock),
+      this.fetchBlocksAndReceipts(fromBlock, toBlock)]);
+  }
+
+  transformEvents(fromBlock, toBlock, data) {
+    const [traces, [blocks, receipts]] = data;
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
       events.push(...getGenesisTransfers(this.web3));
     }
 
-    events.push(... await this.getPastTransferEvents(traces, blocks));
-    events.push(... await this.getPastTransactionEvents(blocks.values(), receipts));
+    events.push(...this.transformTransferEvents(traces, blocks));
+    events.push(...this.transformTransactionEvents(blocks.values(), receipts));
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info('Adding the DAO hack transfers');
       events = injectDAOHackTransfers(events);
@@ -124,54 +130,44 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-  async getPastTransferEvents(traces, blocksMap) {
+  transformTransferEvents(traces, blocksMap) {
     const result = [];
-
     for (let i = 0; i < traces.length; i++) {
       const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocksMap.get(traces[i]['blockNumber']));
-      result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));
+      result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));//TODO: Maybe push {blocknumbers: data}
     }
 
     return result;
   }
 
-  async getPastTransactionEvents(blocks, receipts) {
+  transformTransactionEvents(blocks, receipts) {
     const result = [];
-
     for (const block of blocks) {
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, receipts);
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       if (constants.IS_ETH && blockNumber >= constants.SHANGHAI_FORK_BLOCK) {
-        decoded_transactions.push(... await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
+        decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
       }
       result.push(...decoded_transactions);
+      //TODO: Maybe push {blocknumbers: data}
     }
 
     return result;
   }
+//TODO:s - If you have a [{#:data}] then you can check whether the # just doesnt have data or it's missing
+  async makeQueueTask(interval) {
+    const data = await this.fetchData(interval.fromBlock, interval.toBlock);
+    const transformedData = this.transformEvents(interval.fromBlock, interval.toBlock, data);
+    transformedData.forEach((data) => this.buffer.push(data));
+  }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
-    if (!result.success) {
-      return [];
-    }
+    const intervals = await nextIntervalCalculator(this);
+    if (intervals.length === 0) return [];
 
-    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(result.fromBlock, result.toBlock);
-    const events = await this.getPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
+    for (const interval of intervals) this.queue.add(() => this.makeQueueTask(interval));
 
-    if (events.length > 0) {
-      stableSort(events, transactionOrder);
-      for (let i = 0; i < events.length; i++) {
-        events[i].primaryKey = this.lastPrimaryKey + i + 1;
-      }
-
-      this.lastPrimaryKey += events.length;
-    }
-
-    this.lastExportedBlock = result.toBlock;
-
-    return events;
+    this.lastExportedBlock = Math.max(intervals[intervals.length - 1].toBlock, this.lastExportTime);
   }
 
   async init() {

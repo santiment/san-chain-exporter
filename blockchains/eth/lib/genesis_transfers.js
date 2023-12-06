@@ -8,7 +8,7 @@ const GENESIS_TRANSFERS = fs.readFileSync(path.resolve(__dirname) + '/ethereum_g
 
 const GENESIS_TIMESTAMP = 1438269973;
 
-exports.getGenesisTransfers = function(web3) {
+exports.getGenesisTransfers = function (web3) {
   const result = [];
   GENESIS_TRANSFERS.forEach((transfer) => {
     const [id, from, to, amount] = transfer;

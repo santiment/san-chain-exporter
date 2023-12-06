@@ -6,10 +6,13 @@ const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
 const { Exporter } = require('./lib/kafka_storage');
 const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name;
-const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
+const { stableSort, transactionOrder } = require('./blockchains/eth/lib/util');
+const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS, MAX_CONCURRENT_REQUESTS, PQUEUE_MAX_SIZE } = require('./lib/constants');
+
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 
 var SegfaultHandler = require('segfault-handler');
+const { BLOCK_INTERVAL } = require('./blockchains/eth/lib/constants');
 SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
 
 class Main {
@@ -30,6 +33,10 @@ class Main {
   async handleInitPosition() {
     const lastRecoveredPosition = await this.exporter.getLastPosition();
     this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
+    this.currentInterval = {
+      fromBlock: this.lastProcessedPosition.blockNumber + 1,
+      toBlock: this.lastProcessedPosition.blockNumber + BLOCK_INTERVAL
+    };
     await this.exporter.savePosition(this.lastProcessedPosition);
   }
 
@@ -43,6 +50,10 @@ class Main {
     this.worker = new worker.worker();
     await this.worker.init(this.exporter, metrics);
     await this.handleInitPosition();
+    if (BLOCKCHAIN === 'eth') {
+      const PQueue = (await import('p-queue')).default;
+      this.worker.queue = new PQueue({ concurrency: MAX_CONCURRENT_REQUESTS });
+    }
   }
 
   async init() {
@@ -71,22 +82,49 @@ class Main {
     metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
   }
 
+  #inCurrentInterval(blockNumber) {
+    return blockNumber >= this.currentInterval.fromBlock && blockNumber <= this.currentInterval.toBlock;
+  }
+
+  #inNextInterval(blockNumber) {
+    return (
+      blockNumber >= this.currentInterval.fromBlock + BLOCK_INTERVAL &&
+      blockNumber <= this.currentInterval.toBlock + BLOCK_INTERVAL);
+  }
+
+  generateKafkaArray(events) {
+    stableSort(events, transactionOrder);
+    const kafkaArray = [];
+    while (events.length > 0) {
+      if (this.#inCurrentInterval(events[0].blockNumber)) {
+        events[0].primaryKey = this.lastPrimaryKey + kafkaArray.length + 1;
+        kafkaArray.push(events.shift());
+      } else if (this.#inNextInterval(events[0].blockNumber)) {
+        events[0].primaryKey = this.lastPrimaryKey + kafkaArray.length + 1;
+        kafkaArray.push(events.shift());
+        this.currentInterval.fromBlock += BLOCK_INTERVAL;
+        this.currentInterval.toBlock += BLOCK_INTERVAL;
+      } else {
+        break;
+      }
+    }
+    this.lastPrimaryKey += kafkaArray.length;
+    return kafkaArray;
+  }
+
   async workLoop() {
     while (this.shouldWork) {
-      this.worker.lastRequestStartTime = new Date();
-      const events = await this.worker.work();
-
-      this.worker.lastExportTime = Date.now();
-
-      this.updateMetrics();
-      this.lastProcessedPosition = this.worker.getLastProcessedPosition();
-
-      if (events && events.length > 0) {
-        await this.exporter.storeEvents(events);
+      if (this.worker.queue.size < PQUEUE_MAX_SIZE) await this.worker.work();
+      const kafkaArray = this.generateKafkaArray(this.worker.buffer, this.worker.lastBufferedBlock);
+      if (kafkaArray.length > 0) {
+        this.lastProcessedPosition = { 
+          primaryKey: kafkaArray[kafkaArray.length - 1].primaryKey,
+          blockNumber: kafkaArray[kafkaArray.length - 1].blockNumber
+        };
+        await this.exporter.storeEvents(kafkaArray);
+        await this.exporter.savePosition(this.lastProcessedPosition);
+        logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
       }
-      await this.exporter.savePosition(this.lastProcessedPosition);
-      logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
-
       if (this.shouldWork) {
         await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));
       }
