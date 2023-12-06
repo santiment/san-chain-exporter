@@ -14,7 +14,7 @@ const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 
 class ETHWorker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
 
     this.constants = constants;
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);

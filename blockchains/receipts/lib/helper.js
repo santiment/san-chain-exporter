@@ -22,7 +22,11 @@ const decodeLog = (log, web3Wrapper) => {
     key => object.unset(log, key));
 
   collection.forEach(['logIndex', 'transactionLogIndex'],
-    key => log[key] = web3Wrapper.parseHexToNumber(log[key])
+    key => {
+      if (Object.prototype.hasOwnProperty.call(log, key) && log[key] !== undefined) {
+        log[key] = web3Wrapper.parseHexToNumber(log[key]);
+      }
+    }
   );
 
   return log;
@@ -40,10 +44,14 @@ const columnizeLogs = (logs, web3Wrapper) => {
 };
 
 const decodeReceipt = (receipt, web3Wrapper) => {
-  const clonedReceipt = lang.clone(receipt);
+  const clonedReceipt = lang.cloneDeep(receipt);
 
   collection.forEach(['blockNumber', 'status', 'transactionIndex'],
-    key => clonedReceipt[key] = web3Wrapper.parseHexToNumber(clonedReceipt[key])
+    key => {
+      if (Object.prototype.hasOwnProperty.call(clonedReceipt, key) && clonedReceipt[key] !== undefined) {
+        clonedReceipt[key] = web3Wrapper.parseHexToNumber(clonedReceipt[key]);
+      }
+    }
   );
 
   collection.forEach(['cumulativeGasUsed', 'gasUsed'],

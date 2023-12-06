@@ -10,12 +10,12 @@ const Web3Wrapper = require('../eth/lib/web3_wrapper');
 
 class ReceiptsWorker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
 
     this.constants = constants;
     logger.info(`Connecting to node ${constants.NODE_URL}`);
     this.client = jayson.client.https(constants.NODE_URL);
-    this.web3Wrapper = new Web3Wrapper(new Web3.providers.HttpProvider(constants.NODE_URL);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
   }
 
   async init() {
@@ -27,7 +27,7 @@ class ReceiptsWorker extends BaseWorker {
     for (let i = fromBlock; i < toBlock + 1; i++) {
       batch.push(
         this.client.request(
-          constants.GET_BLOCK_ENDPOINT,
+          this.constants.GET_BLOCK_ENDPOINT,
           [this.web3Wrapper.parseNumberToHex(i),
             true],
           undefined,
@@ -82,7 +82,7 @@ class ReceiptsWorker extends BaseWorker {
     for (let i = fromBlock; i <= toBlock; i++) {
       batch.push(
         this.client.request(
-          constants.GET_RECEIPTS_ENDPOINT,
+          this.constants.GET_RECEIPTS_ENDPOINT,
           [this.web3Wrapper.parseNumberToHex(i)],
           undefined,
           false

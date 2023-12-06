@@ -31,7 +31,7 @@ function simpleHash(input) {
 
 class ERC20Worker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
     this.constants = constants;
     logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(constants)}`);

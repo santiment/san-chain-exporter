@@ -1,9 +1,8 @@
-const rewire = require('rewire');
 const { expect } = require('chai');
-const helper = rewire('../../blockchains/receipts/lib/helper');
+const helper = require('../../blockchains/receipts/lib/helper');
 
 const { Web3 } = require('web3');
-const Web3Wrapper = require('./lib/web3_wrapper');
+const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
 
 const web3Wrapper = new Web3Wrapper(new Web3());
 
@@ -125,7 +124,7 @@ context('receipt with logs', () => {
     timestamp: '2020-10-02T08:51:25.779Z',
     level: 'info',
     blockHash: '0xa6e57d9dc2447ba63bef1dfd03b7885cf71753a93260f66016463b2e3b32d82e',
-    blockNumber: 1004250,
+    blockNumber: '0xF52DA',
     contractAddress: null,
     cumulativeGasUsed: '0x242F8',
     from: '0xae04420f8e66003b201ac5ec59cc529c2ec5b12f',
@@ -149,7 +148,7 @@ context('receipt with logs', () => {
     root: '0x2b29b7a06c5bdd1d0287e0327bf2eb94a10bdd4ab9a11fce81787d6956d75f3b',
     to: '0x6e3ded77aa29924ba55a87c23ee7d985b07212c6',
     transactionHash: '0xad637af875b539171853d144933b84680a93ccbefa22a68f127dc099fc26a43d',
-    transactionIndex: 4
+    transactionIndex: '0x4'
   };
 
   describe('receipt decoding', () => {

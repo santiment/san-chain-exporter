@@ -10,7 +10,7 @@ const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator'
 
 class MaticWorker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
 
     this.constants = constants;
     logger.info(`Connecting to Polygon node ${constants.NODE_URL}`);

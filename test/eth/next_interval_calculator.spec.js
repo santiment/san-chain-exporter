@@ -22,11 +22,14 @@ class MockIsCalledWeb3Wrapper {
     }
 }
 
+constants.CONFIRMATIONS = 3;
+constants.BLOCK_INTERVAL = 100;
+
 describe('Check interval not going backwards', function () {
 
     it('Fetched interval should not go backwards even if Node reports old block numbers', async function () {
         const worker = new eth_worker.worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper(100)
+        worker.web3Wrapper = new MockWeb3Wrapper(100);
         const result = await nextIntervalCalculator(worker);
 
         assert.deepStrictEqual(result.success, true);

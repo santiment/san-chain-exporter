@@ -7,7 +7,7 @@ const BaseWorker = require('../../lib/worker_base');
 
 class UtxoWorker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
 
     this.NODE_URL = constants.NODE_URL;
     this.URL = parseURL(this.NODE_URL);

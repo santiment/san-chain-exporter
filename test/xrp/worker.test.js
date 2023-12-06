@@ -2,6 +2,7 @@
 const assert = require('assert');
 
 const xrp_worker = require('../../blockchains/xrp/xrp_worker');
+const constants = require('../../blockchains/xrp/lib/constants');
 
 /** A stripped down XRP block */
 const xrpBlock = {
@@ -39,7 +40,7 @@ const mockFetchLedgerTransactions = (connection, ledger_index) => {
 
 describe('workLoopSimpleTest', function () {
   it('Checking that position is being updated', async function () {
-    const worker = new xrp_worker.worker();
+    const worker = new xrp_worker.worker(constants);
     worker.fetchLedgerTransactions = mockFetchLedgerTransactions;
 
     // Set a huge last confirmed Node block, so that we do not ask the node and mock more easily.
@@ -60,7 +61,7 @@ describe('workLoopSimpleTest', function () {
   });
 
   it('Checking that expected result is returned', async function () {
-    const worker = new xrp_worker.worker();
+    const worker = new xrp_worker.worker(constants);
     worker.fetchLedgerTransactions = mockFetchLedgerTransactions;
 
     // Set a huge last confirmed Node block, so that we do not ask the node and mock more easily.
@@ -80,7 +81,7 @@ describe('workLoopSimpleTest', function () {
   });
 
   it('should loop several times due to lack of transactions', async () => {
-    const worker = new xrp_worker.worker();
+    const worker = new xrp_worker.worker(constants);
     // The invalid block would have no transactions but a non 0 transaction_hash
     const invalidBlock = {
       result: {

@@ -36,7 +36,7 @@ class MetricsStore {
 
 class BNBWorker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
 
     this.newRequestsCount = 0;
     this.bnbTransactionsFetcher = null;

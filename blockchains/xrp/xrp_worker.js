@@ -6,7 +6,7 @@ const BaseWorker = require('../../lib/worker_base');
 
 class XRPWorker extends BaseWorker {
   constructor(constants) {
-    super();
+    super(constants);
 
     this.constants = constants;
     this.nodeURLs = constants.XRP_NODE_URLS.split(',');
