@@ -157,7 +157,7 @@ describe('workLoopTest', function () {
   let genesisTransactions = null;
 
   beforeEach(async function () {
-    cardanoWorker = new cardano_worker.worker();
+    cardanoWorker = new cardano_worker.worker(constants);
     transactions = getTransactions();
     cardanoWorker.getTransactions = async function () {
       // Return a deep copy of the transactions so not to pollute the original object

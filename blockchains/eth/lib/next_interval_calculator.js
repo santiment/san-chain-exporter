@@ -1,6 +1,3 @@
-const constants = require('./constants');
-
-
 function isNewBlockAvailable(worker) {
   return worker.lastExportedBlock < worker.lastConfirmedBlock;
 }
@@ -23,7 +20,7 @@ async function nextIntervalCalculator(worker) {
   if (!firstNewBlockCheck) {
     // On the previous cycle we closed the gap to the head of the blockchain.
     // Check if there are new blocks now.
-    const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - constants.CONFIRMATIONS;
+    const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - worker.constants.CONFIRMATIONS;
     if (newConfirmedBlock > worker.lastConfirmedBlock) {
       // The Node has progressed
       worker.lastConfirmedBlock = newConfirmedBlock;
@@ -37,18 +34,18 @@ async function nextIntervalCalculator(worker) {
     }
     else {
       // If data became available only after asking the Node, we are close to the Head, come back later
-      worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+      worker.sleepTimeMsec = worker.constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
     }
 
     return {
       success: true,
       fromBlock: worker.lastExportedBlock + 1,
-      toBlock: Math.min(worker.lastExportedBlock + constants.BLOCK_INTERVAL, worker.lastConfirmedBlock)
+      toBlock: Math.min(worker.lastExportedBlock + worker.constants.BLOCK_INTERVAL, worker.lastConfirmedBlock)
     };
   }
   else {
     // The Node has not progressed
-    worker.sleepTimeMsec = constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+    worker.sleepTimeMsec = worker.constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
     return { success: false };
   }
 }
