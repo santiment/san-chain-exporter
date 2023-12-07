@@ -30,7 +30,7 @@ describe('genesis transfers', function () {
     const result_expected = {
       'from': '0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb',
       'to': '0x245133ea0fb1b77fab5886d7ffb8046dfeff3858',
-      'value': 160000000000000000n,
+      'value': 160000000000000000,
       'valueExactBase36': '17rf9la2f4sg',
       'blockNumber': 711983,
       'timestamp': 1000000,
@@ -108,7 +108,7 @@ describe('genesis transfers', function () {
     const result_expected = {
       'from': 'mining_block',
       'to': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-      'value': 5000000000000000000n,
+      'value': 5000000000000000000,
       'valueExactBase36': '11zk02pzlmwow',
       'blockNumber': 710093,
       'timestamp': 1450433505,
@@ -146,7 +146,7 @@ describe('genesis transfers', function () {
     const result_expected = {
       'from': '0x245133ea0fb1b77fab5886d7ffb8046dfeff3858',
       'to': '0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb',
-      'value': 1500000000000000000n,
+      'value': 1500000000000000000,
       'valueExactBase36': 'be9lmezvoveo',
       'blockNumber': 710221,
       'timestamp': 1450435908,

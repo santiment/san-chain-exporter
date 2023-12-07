@@ -220,7 +220,7 @@ describe('Fees decoder test', function () {
     const expected = [{
       from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
       to: constants.BURN_ADDRESS,
-      value: 1049725694283000n,
+      value: 1049725694283000,
       valueExactBase36: 'ac3hbr9fco',
       blockNumber: 13447057,
       timestamp: 1634631172,
@@ -244,13 +244,13 @@ describe('Fees decoder test', function () {
       to: 'burn',
       transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
       type: 'fee_burnt',
-      value: 3653345337731778n,
+      value: 3653345337731778,
       valueExactBase36: 'zz03ofi5du'
     },
     {
       from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
       to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-      value: 73086000000000n,
+      value: 73086000000000,
       valueExactBase36: 'pwn8tdiio',
       blockNumber: 13447057,
       timestamp: 1634631172,
@@ -274,13 +274,13 @@ describe('Fees decoder test', function () {
       to: 'burn',
       transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
       type: 'fee_burnt',
-      value: 1391883443307000n,
+      value: 1391883443307000,
       valueExactBase36: 'dpdqfcs260'
     },
     {
       from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
       to: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-      value: 42000000000000n,
+      value: 42000000000000,
       valueExactBase36: 'evyj7lbeo',
       blockNumber: 13318440,
       timestamp: 1632888074,
@@ -300,7 +300,7 @@ describe('Fees decoder test', function () {
     const expected = [{
       from: '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',
       to: '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-      value: 2354887722000000n,
+      value: 2354887722000000,
       valueExactBase36: 'n6qkhga2dc',
       blockNumber: 1000000,
       timestamp: 1455404053,

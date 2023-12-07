@@ -131,7 +131,7 @@ describe('fetch past events', function () {
     feeResult = {
       from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
       to: '0x829bd824b016326a401d083b33d092293333a830',
-      value: 14086000000000000n,
+      value: 14086000000000000,
       valueExactBase36: '3up2j2e99ts',
       blockNumber: 5711193,
       timestamp: 1527814787,
@@ -142,7 +142,7 @@ describe('fetch past events', function () {
     callResult = {
       from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
       to: '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
-      value: 320086793278069536n,
+      value: 320086793278069500,
       valueExactBase36: '2fjpaqu9o0tc',
       blockNumber: 5711193,
       timestamp: 1527814787,
