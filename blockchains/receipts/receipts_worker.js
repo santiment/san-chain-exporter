@@ -70,7 +70,7 @@ class ReceiptsWorker extends BaseWorker {
     else {
       receipts = await this.fetchReceiptsFromTransaction(blocks);
     }
-    const decodedReceipts = receipts.map(block => helper.decodeReceipt(block, this.web3Wrapper));
+    const decodedReceipts = receipts.map(receipt => helper.decodeReceipt(receipt, this.web3Wrapper));
     const decodedBlocks = blocks.map(block => helper.decodeBlock(block, this.web3Wrapper));
     const timestamps = helper.prepareBlockTimestampsObject(decodedBlocks);
 
