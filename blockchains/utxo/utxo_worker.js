@@ -10,7 +10,6 @@ class UtxoWorker extends BaseWorker {
     super(constants);
 
     this.NODE_URL = constants.NODE_URL;
-    this.URL = parseURL(this.NODE_URL);
     this.MAX_RETRIES = constants.MAX_RETRIES,
       this.RPC_PASSWORD = constants.RPC_PASSWORD;
     this.RPC_USERNAME = constants.RPC_USERNAME;
@@ -19,10 +18,12 @@ class UtxoWorker extends BaseWorker {
     this.MAX_CONCURRENT_REQUESTS = constants.MAX_CONCURRENT_REQUESTS;
     this.LOOP_INTERVAL_CURRENT_MODE_SEC = constants.LOOP_INTERVAL_CURRENT_MODE_SEC;
 
+    const url = parseURL(this.NODE_URL);
+
     logger.info(`Connecting to the node ${this.NODE_URL}`);
     this.client = jayson.Client.https({
-      host: URL.host,
-      port: URL.port,
+      host: url.host,
+      port: url.port,
       method: 'POST',
       auth: this.RPC_USERNAME + ':' + this.RPC_PASSWORD,
       timeout: this.DEFAULT_TIMEOUT,

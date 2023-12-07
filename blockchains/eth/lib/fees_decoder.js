@@ -10,7 +10,7 @@ class FeesDecoder {
     return [{
       from: transaction.from,
       to: block.miner,
-      value: gasExpense,
+      value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
@@ -24,7 +24,7 @@ class FeesDecoder {
     result.push({
       from: transaction.from,
       to: constants.BURN_ADDRESS,
-      value: gasExpense,
+      value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
@@ -50,7 +50,7 @@ class FeesDecoder {
       result.push({
         from: transaction.from,
         to: block.miner,
-        value: gasExpense,
+        value: Number(gasExpense),
         valueExactBase36: gasExpense.toString(36),
         blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
         timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),

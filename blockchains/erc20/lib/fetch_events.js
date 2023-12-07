@@ -13,16 +13,21 @@ const QNT_contract = '0x4a220e6096b25eadb88358cb44068a3248254675';
 const WETH_contract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
 
-async function decodeEventBasicInfo(web3Wrapper, event, timestampsCache) {
+async function decodeEventBasicInfo(web3Wrapper, event, timestampsCache, addContract = true) {
   const timestamp = await timestampsCache.getBlockTimestamp(web3Wrapper, event['blockNumber']);
 
-  return {
-    contract: event['address'].toLowerCase(),
+  const decodedEvent = {
     blockNumber: Number(event['blockNumber']),
     timestamp: timestamp,
     transactionHash: event['transactionHash'],
     logIndex: Number(event['logIndex'])
   };
+
+  if (addContract) {
+    decodedEvent.contract = event['address'].toLowerCase();
+  }
+
+  return decodedEvent;
 }
 
 /**Transfer(address,address,uint256)
@@ -44,7 +49,7 @@ async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
   }
 
   result.from = decodeAddress(event['topics'][1]);
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;
@@ -62,7 +67,7 @@ async function decodeBurnEvent(web3Wrapper, event, timestampsCache) {
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;
@@ -80,7 +85,7 @@ async function decodeMintEvent(web3Wrapper, event, timestampsCache) {
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;
@@ -99,7 +104,7 @@ async function decodeBNBFreezeEvent(web3Wrapper, event, timestampsCache) {
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = FREEZE_ADDRESS;
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;
@@ -118,7 +123,7 @@ async function decodeBNBUnfreezeEvent(web3Wrapper, event, timestampsCache) {
 
   result.from = FREEZE_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;
@@ -137,7 +142,7 @@ async function decodeWETHDepositEvent(web3Wrapper, event, timestampsCache) {
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;
@@ -156,7 +161,7 @@ async function decodeWETHWithdrawalEvent(web3Wrapper, event, timestampsCache) {
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
-  result.value = parseFloat(web3Wrapper.parseHexToNumberString(event['data']));
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
   result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
 
   return result;

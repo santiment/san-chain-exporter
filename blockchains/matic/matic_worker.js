@@ -14,7 +14,7 @@ class MaticWorker extends BaseWorker {
 
     this.constants = constants;
     logger.info(`Connecting to Polygon node ${constants.NODE_URL}`);
-    this.web3Wrapper = new Web3Wrapper(new Web3.providers.HttpProvider(constants.NODE_URL));
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
     if (constants.NODE_URL.substring(0, 5) === 'https') {
       this.ethClient = jayson.client.https(constants.NODE_URL);
     } else {

@@ -7,6 +7,9 @@ class Web3Wrapper {
         return this.web3.utils.hexToNumberString(field);
     }
 
+    /**
+     * Converts value to it's number representation. Returns bigint or number depending on value.
+     */
     parseHexToNumber(field) {
         return this.web3.utils.hexToNumber(field);
     }
@@ -21,7 +24,7 @@ class Web3Wrapper {
 
     async getBlockNumber() {
         // We are casting to Number here due to how this field is expected in our pipeline
-        return Number((await this.web3.eth.getBlockNumber()));
+        return Number(await this.web3.eth.getBlockNumber());
     }
 
     async getPastLogs(queryObject) {

@@ -6,7 +6,7 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
     return {
       from: `mining_${trace['action']['rewardType']}`,
       to: trace['action']['author'],
-      value: web3Wrapper.parseHexToNumber(trace['action']['value']),
+      value: Number(web3Wrapper.parseHexToNumber(trace['action']['value'])),
       valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
@@ -19,7 +19,7 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
     return {
       from: trace['action']['from'],
       to: trace['result']['address'],
-      value: web3Wrapper.parseHexToNumber(trace['action']['value']),
+      value: Number(web3Wrapper.parseHexToNumber(trace['action']['value'])),
       valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
@@ -33,7 +33,7 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
     return {
       from: trace['action']['address'],
       to: trace['action']['refundAddress'],
-      value: web3Wrapper.parseHexToNumber(trace['action']['balance']),
+      value: Number(web3Wrapper.parseHexToNumber(trace['action']['balance'])),
       valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['balance']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
@@ -50,7 +50,7 @@ function decodeTransferTrace(trace, timestamp, web3Wrapper) {
   return {
     from: trace['action']['from'],
     to: trace['action']['to'],
-    value: web3Wrapper.parseHexToNumber(trace['action']['value']),
+    value: Number(web3Wrapper.parseHexToNumber(trace['action']['value'])),
     valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
     blockNumber: trace['blockNumber'],
     timestamp: timestamp,
