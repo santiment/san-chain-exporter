@@ -141,7 +141,8 @@ class ETHWorker extends BaseWorker {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
       if (this.settings.IS_ETH && blockNumber >= this.settings.SHANGHAI_FORK_BLOCK) {
-        decoded_transactions.push(... await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
+        const blockTimestamp = this.web3Wrapper.parseHexToNumber(block.timestamp);
+        decoded_transactions.push(... this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
       }
       result.push(...decoded_transactions);
     }
