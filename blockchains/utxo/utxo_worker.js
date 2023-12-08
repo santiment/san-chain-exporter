@@ -6,17 +6,17 @@ const BaseWorker = require('../../lib/worker_base');
 
 
 class UtxoWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
+  constructor(settings) {
+    super(settings);
 
-    this.NODE_URL = constants.NODE_URL;
-    this.MAX_RETRIES = constants.MAX_RETRIES,
-      this.RPC_PASSWORD = constants.RPC_PASSWORD;
-    this.RPC_USERNAME = constants.RPC_USERNAME;
-    this.CONFIRMATIONS = constants.CONFIRMATIONS;
-    this.DEFAULT_TIMEOUT = constants.DEFAULT_TIMEOUT;
-    this.MAX_CONCURRENT_REQUESTS = constants.MAX_CONCURRENT_REQUESTS;
-    this.LOOP_INTERVAL_CURRENT_MODE_SEC = constants.LOOP_INTERVAL_CURRENT_MODE_SEC;
+    this.NODE_URL = settings.NODE_URL;
+    this.MAX_RETRIES = settings.MAX_RETRIES,
+      this.RPC_PASSWORD = settings.RPC_PASSWORD;
+    this.RPC_USERNAME = settings.RPC_USERNAME;
+    this.CONFIRMATIONS = settings.CONFIRMATIONS;
+    this.DEFAULT_TIMEOUT = settings.DEFAULT_TIMEOUT;
+    this.MAX_CONCURRENT_REQUESTS = settings.MAX_CONCURRENT_REQUESTS;
+    this.LOOP_INTERVAL_CURRENT_MODE_SEC = settings.LOOP_INTERVAL_CURRENT_MODE_SEC;
 
     const url = parseURL(this.NODE_URL);
 

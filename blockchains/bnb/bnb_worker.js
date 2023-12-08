@@ -35,19 +35,18 @@ class MetricsStore {
 
 
 class BNBWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
+  constructor(settings) {
+    super(settings);
 
     this.newRequestsCount = 0;
     this.bnbTransactionsFetcher = null;
-    this.constants = constants;
 
-    if (constants.BNB_MODE !== 'trades' && constants.BNB_MODE !== 'transactions') {
-      throw new Error(`BNB mode needs to be either 'transactions' or 'trades' provided is '${constants.BNB_MODE}'`);
+    if (settings.BNB_MODE !== 'trades' && settings.BNB_MODE !== 'transactions') {
+      throw new Error(`BNB mode needs to be either 'transactions' or 'trades' provided is '${settings.BNB_MODE}'`);
     }
-    this.bnbTradesMode = constants.BNB_MODE === 'trades';
+    this.bnbTradesMode = settings.BNB_MODE === 'trades';
 
-    logger.info(`BNBWorker running in '${constants.BNB_MODE}' mode. Node URL is: '${constants.SERVER_URL}'`);
+    logger.info(`BNBWorker running in '${settings.BNB_MODE}' mode. Node URL is: '${settings.SERVER_URL}'`);
   }
 
   /**
@@ -55,9 +54,9 @@ class BNBWorker extends BaseWorker {
    */
   async init() {
     this.queue = new PQueue({
-      concurrency: this.constants.MAX_CONNECTION_CONCURRENCY,
-      interval: this.constants.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
-      intervalCap: this.constants.MAX_CONNECTION_CONCURRENCY
+      concurrency: this.settings.MAX_CONNECTION_CONCURRENCY,
+      interval: this.settings.TIMEOUT_BETWEEN_REQUESTS_BURST_MSEC,
+      intervalCap: this.settings.MAX_CONNECTION_CONCURRENCY
     });
   }
 
@@ -96,7 +95,7 @@ class BNBWorker extends BaseWorker {
     // If we have catched up with the chain do an extra sleep to reduce the load on the API further.
     // Also if the result is empty, this must be an error on the previous fetch
     if (this.bnbTransactionsFetcher.isUpToDateWithBlockchain || resultTransactions.length === 0) {
-      this.sleepTimeMsec = 1000 * this.constants.LOOP_INTERVAL_CURRENT_MODE_SEC;
+      this.sleepTimeMsec = 1000 * this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC;
     }
     else {
       this.sleepTimeMsec = 0;
@@ -131,18 +130,18 @@ class BNBWorker extends BaseWorker {
    * @override
    */
   initPosition(lastProcessedPosition) {
-    let fetchRangeMsec = this.constants.FETCH_INTERVAL_CURRENT_MODE_MSEC;
+    let fetchRangeMsec = this.settings.FETCH_INTERVAL_CURRENT_MODE_MSEC;
     if (lastProcessedPosition) {
       logger.info(`Resuming export from position ${JSON.stringify(lastProcessedPosition)}`);
       // If the last range used is bigger than 'current' mode - use it
-      if (lastProcessedPosition.fetchRangeMsec > this.constants.FETCH_INTERVAL_CURRENT_MODE_MSEC) {
+      if (lastProcessedPosition.fetchRangeMsec > this.settings.FETCH_INTERVAL_CURRENT_MODE_MSEC) {
         fetchRangeMsec = lastProcessedPosition.fetchRangeMsec;
       }
     } else {
       // This is a new deploy, we would try the big historic fetch interval
-      fetchRangeMsec = this.constants.FETCH_INTERVAL_HISTORIC_MODE_MSEC;
+      fetchRangeMsec = this.settings.FETCH_INTERVAL_HISTORIC_MODE_MSEC;
       lastProcessedPosition = {
-        timestampReached: this.constants.BNB_CHAIN_START_MSEC,
+        timestampReached: this.settings.BNB_CHAIN_START_MSEC,
         blockNumber: 0
       };
       logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`);

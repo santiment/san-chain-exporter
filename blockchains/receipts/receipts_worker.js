@@ -9,17 +9,16 @@ const Web3Wrapper = require('../eth/lib/web3_wrapper');
 
 
 class ReceiptsWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
+  constructor(settings) {
+    super(settings);
 
-    this.constants = constants;
-    logger.info(`Connecting to node ${constants.NODE_URL}`);
-    this.client = jayson.client.https(constants.NODE_URL);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
+    logger.info(`Connecting to node ${settings.NODE_URL}`);
+    this.client = jayson.client.https(settings.NODE_URL);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
   }
 
   async fetchBlockTimestamps(fromBlock, toBlock) {
@@ -27,7 +26,7 @@ class ReceiptsWorker extends BaseWorker {
     for (let i = fromBlock; i < toBlock + 1; i++) {
       batch.push(
         this.client.request(
-          this.constants.GET_BLOCK_ENDPOINT,
+          this.settings.GET_BLOCK_ENDPOINT,
           [this.web3Wrapper.parseNumberToHex(i),
             true],
           undefined,
@@ -48,7 +47,7 @@ class ReceiptsWorker extends BaseWorker {
         var transactionHash = transactions[trx]['hash'];
         batch.push(
           this.client.request(
-            this.constants.GET_RECEIPTS_ENDPOINT,
+            this.settings.GET_RECEIPTS_ENDPOINT,
             [transactionHash],
             undefined,
             false
@@ -64,7 +63,7 @@ class ReceiptsWorker extends BaseWorker {
     const blocks = await this.fetchBlockTimestamps(fromBlock, toBlock);
     let receipts;
 
-    if (!this.constants.TRANSACTION) {
+    if (!this.settings.TRANSACTION) {
       receipts = await this.fetchReceipts(fromBlock, toBlock);
     }
     else {
@@ -82,7 +81,7 @@ class ReceiptsWorker extends BaseWorker {
     for (let i = fromBlock; i <= toBlock; i++) {
       batch.push(
         this.client.request(
-          this.constants.GET_RECEIPTS_ENDPOINT,
+          this.settings.GET_RECEIPTS_ENDPOINT,
           [this.web3Wrapper.parseNumberToHex(i)],
           undefined,
           false
@@ -94,9 +93,9 @@ class ReceiptsWorker extends BaseWorker {
 
   async work() {
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      this.sleepTimeMsec = this.constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+      this.sleepTimeMsec = this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
-      const newConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
+      const newConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
       if (newConfirmedBlock === this.lastConfirmedBlock) {
         return [];
       }
@@ -105,7 +104,7 @@ class ReceiptsWorker extends BaseWorker {
       this.sleepTimeMsec = 0;
     }
 
-    const toBlock = Math.min(this.lastExportedBlock + this.constants.BLOCK_INTERVAL, this.lastConfirmedBlock);
+    const toBlock = Math.min(this.lastExportedBlock + this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
     const fromBlock = this.lastExportedBlock + 1;
 
     logger.info(`Fetching receipts for interval ${fromBlock}:${toBlock}`);

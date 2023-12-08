@@ -13,17 +13,16 @@ const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 
 class ETHWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
+  constructor(settings) {
+    super(settings);
 
-    this.constants = constants;
-    logger.info(`Connecting to Ethereum node ${constants.NODE_URL}`);
-    logger.info(`Applying the following settings: ${JSON.stringify(constants)}`);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
-    if (constants.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(constants.NODE_URL);
+    logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
+    logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    if (settings.NODE_URL.substring(0, 5) === 'https') {
+      this.ethClient = jayson.client.https(settings.NODE_URL);
     } else {
-      this.ethClient = jayson.client.http(constants.NODE_URL);
+      this.ethClient = jayson.client.http(settings.NODE_URL);
     }
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
@@ -70,7 +69,7 @@ class ETHWorker extends BaseWorker {
     const responses = [];
 
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(this.constants.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
+      const req = this.ethClient.request(this.settings.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
       responses.push(this.ethClient.request([req]));
     }
 
@@ -141,7 +140,7 @@ class ETHWorker extends BaseWorker {
     for (const block of blocks) {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
-      if (this.constants.IS_ETH && blockNumber >= this.constants.SHANGHAI_FORK_BLOCK) {
+      if (this.settings.IS_ETH && blockNumber >= this.settings.SHANGHAI_FORK_BLOCK) {
         decoded_transactions.push(... await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
       }
       result.push(...decoded_transactions);
@@ -175,7 +174,7 @@ class ETHWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
   }
 }
 

@@ -5,11 +5,10 @@ const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
 
 class XRPWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
+  constructor(settings) {
+    super(settings);
 
-    this.constants = constants;
-    this.nodeURLs = constants.XRP_NODE_URLS.split(',');
+    this.nodeURLs = settings.XRP_NODE_URLS.split(',');
     this.connections = [];
     this.retryIntervalMs = 1000;
   }
@@ -20,8 +19,8 @@ class XRPWorker extends BaseWorker {
       throw 'Error: All API URLs returned error.';
     }
 
-    for (let i = 0; i < this.constants.CONNECTIONS_COUNT; i++) {
-      const clientOptions = { timeout: this.constants.DEFAULT_WS_TIMEOUT };
+    for (let i = 0; i < this.settings.CONNECTIONS_COUNT; i++) {
+      const clientOptions = { timeout: this.settings.DEFAULT_WS_TIMEOUT };
       const nodeURL = this.nodeURLs[i % this.nodeURLs.length];
       logger.info(`Using ${nodeURL} as XRPL API endpoint.`);
       const api = new xrpl.Client(nodeURL, clientOptions);
@@ -34,7 +33,7 @@ class XRPWorker extends BaseWorker {
 
       this.connections.push({
         connection: api,
-        queue: new PQueue({ concurrency: this.constants.MAX_CONNECTION_CONCURRENCY }),
+        queue: new PQueue({ concurrency: this.settings.MAX_CONNECTION_CONCURRENCY }),
         index: i
       });
     }
@@ -55,7 +54,7 @@ class XRPWorker extends BaseWorker {
       expand: false
     });
     const lastValidatedLedgerData = lastValidatedLedger.result;
-    this.lastConfirmedBlock = parseInt(lastValidatedLedgerData.ledger.ledger_index) - this.constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = parseInt(lastValidatedLedgerData.ledger.ledger_index) - this.settings.CONFIRMATIONS;
   }
 
   isEmptyTransactionHash(transaction_hash) {
@@ -68,7 +67,7 @@ class XRPWorker extends BaseWorker {
   }
 
   async fetchLedger(connection, ledger_index, should_expand) {
-    for (let i = 0; i < this.constants.XRP_ENDPOINT_RETRIES; i++) {
+    for (let i = 0; i < this.settings.XRP_ENDPOINT_RETRIES; i++) {
       const result = await this.connectionSend(connection, {
         command: 'ledger',
         ledger_index: parseInt(ledger_index),
@@ -151,14 +150,14 @@ class XRPWorker extends BaseWorker {
 
   async work() {
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      this.sleepTimeMsec = this.constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+      this.sleepTimeMsec = this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
       const lastValidatedLedger = await this.connectionSend(this.connections[0], {
         command: 'ledger',
         ledger_index: 'validated',
         transactions: true,
         expand: false
       });
-      const newConfirmedBlock = parseInt(lastValidatedLedger.result.ledger.ledger_index) - this.constants.CONFIRMATIONS;
+      const newConfirmedBlock = parseInt(lastValidatedLedger.result.ledger.ledger_index) - this.settings.CONFIRMATIONS;
       if (newConfirmedBlock === this.lastConfirmedBlock) {
         return [];
       }
@@ -166,7 +165,7 @@ class XRPWorker extends BaseWorker {
     } else {
       this.sleepTimeMsec = 0;
     }
-    const toBlock = Math.min(this.lastExportedBlock + this.constants.SEND_BATCH_SIZE, this.lastConfirmedBlock);
+    const toBlock = Math.min(this.lastExportedBlock + this.settings.SEND_BATCH_SIZE, this.lastConfirmedBlock);
     let fromBlock = this.lastExportedBlock + 1;
 
     const requests = [];

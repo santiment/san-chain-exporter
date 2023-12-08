@@ -10,9 +10,8 @@ const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || 'http://localhost
 const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
 
 class CardanoWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
-    this.constants = constants;
+  constructor(settings) {
+    super(settings);
   }
 
   async sendRequest(query) {
@@ -154,7 +153,7 @@ class CardanoWorker extends BaseWorker {
   }
 
   async setLastConfirmedBlock() {
-    this.lastConfirmedBlock = await this.getCurrentBlock() - this.constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.getCurrentBlock() - this.settings.CONFIRMATIONS;
   }
 
   async init() {
@@ -166,7 +165,7 @@ class CardanoWorker extends BaseWorker {
     if (fromBlock >= this.lastConfirmedBlock - 2) {
       // We are up to date with the blockchain (aka 'current mode'). Sleep longer after finishing this loop.
       // The last confirmed block may be partial and would not be exported. Allow for one block gap.
-      this.sleepTimeMsec = this.constants.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+      this.sleepTimeMsec = this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
       // On the previous cycle we closed the gap to the head of the blockchain.
       // Check if there are new blocks now. We want an interval of at least 2 blocks. For some reason the Cardano Node

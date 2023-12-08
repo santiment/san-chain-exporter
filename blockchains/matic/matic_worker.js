@@ -9,16 +9,15 @@ const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator'
 
 
 class MaticWorker extends BaseWorker {
-  constructor(constants) {
-    super(constants);
+  constructor(settings) {
+    super(settings);
 
-    this.constants = constants;
-    logger.info(`Connecting to Polygon node ${constants.NODE_URL}`);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
-    if (constants.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(constants.NODE_URL);
+    logger.info(`Connecting to Polygon node ${settings.NODE_URL}`);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    if (settings.NODE_URL.substring(0, 5) === 'https') {
+      this.ethClient = jayson.client.https(settings.NODE_URL);
     } else {
-      this.ethClient = jayson.client.http(constants.NODE_URL);
+      this.ethClient = jayson.client.http(settings.NODE_URL);
     }
   }
 
@@ -44,7 +43,7 @@ class MaticWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
   }
 }
 
