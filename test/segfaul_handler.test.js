@@ -1,2 +1,8 @@
 var SegfaultHandler = require('segfault-handler');
-SegfaultHandler.registerHandler('crash.log');
+
+
+describe('segfault handler', () => {
+  it('register handler succeeds', () => {
+    SegfaultHandler.registerHandler('crash.log');
+  });
+});

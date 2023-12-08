@@ -1,9 +1,11 @@
 const assert = require('assert');
 const rewire = require('rewire');
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
-const web3 = new Web3();
+const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
+
+const web3Wrapper = new Web3Wrapper(new Web3());
 
 const rawEvents = [
   // bat mint
@@ -362,7 +364,7 @@ class TimestampsCacheMock {
 describe('decodeEvents', function () {
   it('decodes the events fetched from the ethereum node', async function () {
     const decodeEvents = fetch_events.__get__('decodeEvents');
-    const result = await decodeEvents(web3, rawEvents, new TimestampsCacheMock());
+    const result = await decodeEvents(web3Wrapper, rawEvents, new TimestampsCacheMock());
     assert.deepEqual(
       result,
       decodedEvents
@@ -384,7 +386,7 @@ describe('filterEvents', function () {
 describe('getPastEvents', function () {
   it('fetches and parses events from the ethereum node', async function () {
     const getPastEvents = fetch_events.__get__('getPastEvents');
-    const result = await getPastEvents(web3, 0, 0, null, new TimestampsCacheMock());
+    const result = await getPastEvents(web3Wrapper, 0, 0, null, new TimestampsCacheMock());
     assert.deepEqual(
       result,
       filteredEvents

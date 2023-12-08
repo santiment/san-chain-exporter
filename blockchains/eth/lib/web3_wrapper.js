@@ -1,18 +1,15 @@
-
 class Web3Wrapper {
-
     constructor(web3) {
         this.web3 = web3;
-    }
-
-    parseValueToBN(field) {
-        return this.web3.utils.toBN(field);
     }
 
     parseHexToNumberString(field) {
         return this.web3.utils.hexToNumberString(field);
     }
 
+    /**
+     * Converts value to it's number representation. Returns bigint or number depending on value.
+     */
     parseHexToNumber(field) {
         return this.web3.utils.hexToNumber(field);
     }
@@ -21,28 +18,25 @@ class Web3Wrapper {
         return this.web3.utils.numberToHex(field);
     }
 
-    parseValue(field) {
-        return parseFloat(this.parseHexToNumberString(field));
+    parseHexToBase36String(field) {
+        return BigInt(this.web3.utils.hexToNumberString(field)).toString(36);
     }
 
-    parseValueBase36(field) {
-        return this.parseValueToBN(field).toString(36);
+    async getBlockNumber() {
+        // We are casting to Number here due to how this field is expected in our pipeline
+        return Number(await this.web3.eth.getBlockNumber());
     }
 
-    parseTransactionPosition(field) {
-        return this.parseHexToNumber(field);
+    async getPastLogs(queryObject) {
+        return await this.web3.eth.getPastLogs(queryObject);
     }
 
-    parseBalance(field) {
-        return parseFloat(this.parseHexToNumberString(field));
+    async getBlock(blockNumber) {
+        return await this.web3.eth.getBlock(blockNumber, false);
     }
 
-    parseBalanceBase36(field) {
-        return this.parseValueBase36(field);
-    }
-
-    decodeTimestampFromBlock(block) {
-        return this.parseHexToNumber(block.timestamp);
+    etherToWei(amount) {
+        return this.web3.utils.toWei(amount, 'ether');
     }
 }
 

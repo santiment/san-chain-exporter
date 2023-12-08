@@ -1,21 +1,23 @@
 /*jshint esversion: 6 */
 const assert = require('assert');
 const rewire = require('rewire');
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
 const { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount } = require('../../blockchains/erc20/lib/contract_overwrite');
-const web3 = new Web3();
 const { readJsonFile } = require('../../blockchains/erc20/lib/util');
+const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f';
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f';
 const SNXContractReplacer = 'snx_contract';
 
+const web3Wrapper = new Web3Wrapper(new Web3());
+
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
   blockHash: '0x5df3aa774b85a9513d261cc5bd778725e3e0d0944da747dc2f245fecf1e58b63',
-  blockNumber: 10449812,
+  blockNumber: 10449812n,
   data: '0x000000000000000000000000000000000000000000000000000000000623a7c0',
   logIndex: 122,
   removed: false,
@@ -34,7 +36,7 @@ const rawEventNotSNX = {
 const rawEventSNXLegacy = {
   address: SNXContractLegacy,
   blockHash: '0x81c2b371f402764a916d34f8f6ef8c9d60123b1b3e67d2ceabfa45fdc55c45cb',
-  blockNumber: 9785855,
+  blockNumber: 9785855n,
   data: '0x0000000000000000000000000000000000000000000000059dcdf2014551b400',
   logIndex: 70,
   removed: false,
@@ -53,7 +55,7 @@ const rawEventSNXLegacy = {
 const rawEventSNXNew = {
   address: SNXContractNew,
   blockHash: '0x22f94f61168af2e451d9e6e55dda66eb2546c117becaf717a6564278cc0532aa',
-  blockNumber: 10449853,
+  blockNumber: 10449853n,
   data: '0x0000000000000000000000000000000000000000000000621ecbc23581080000',
   logIndex: 158,
   removed: false,
@@ -131,7 +133,7 @@ async function singletonContractsOverwrite() {
 describe('contract manipulations', function () {
   it('decode contract addresses', async function () {
     const decodeEvents = fetch_events.__get__('decodeEvents');
-    const decodedEvents = await decodeEvents(web3,
+    const decodedEvents = await decodeEvents(web3Wrapper,
       [rawEventNotSNX,
         rawEventSNXLegacy,
         rawEventSNXNew

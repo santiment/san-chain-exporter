@@ -1,6 +1,5 @@
-const Web3 = require('web3');
+const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
-const constants = require('./lib/constants');
 const { logger } = require('../../lib/logger');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
@@ -10,16 +9,15 @@ const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator'
 
 
 class MaticWorker extends BaseWorker {
-  constructor() {
-    super();
+  constructor(settings) {
+    super(settings);
 
-    logger.info(`Connecting to Polygon node ${constants.NODE_URL}`);
-    this.web3 = new Web3(new Web3.providers.HttpProvider(constants.NODE_URL));
-    this.web3Wrapper = new Web3Wrapper(this.web3);
-    if (constants.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(constants.NODE_URL);
+    logger.info(`Connecting to Polygon node ${settings.NODE_URL}`);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    if (settings.NODE_URL.substring(0, 5) === 'https') {
+      this.ethClient = jayson.client.https(settings.NODE_URL);
     } else {
-      this.ethClient = jayson.client.http(constants.NODE_URL);
+      this.ethClient = jayson.client.http(settings.NODE_URL);
     }
   }
 
@@ -31,7 +29,7 @@ class MaticWorker extends BaseWorker {
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    const events = await getPastEvents(this.web3, result.fromBlock, result.toBlock);
+    const events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events);
@@ -45,7 +43,7 @@ class MaticWorker extends BaseWorker {
   }
 
   async init() {
-    this.lastConfirmedBlock = await this.web3.eth.getBlockNumber() - constants.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
   }
 }
 

@@ -2,35 +2,25 @@
 const { decodeEvents } = require('../../erc20/lib/fetch_events');
 const { TimestampsCache } = require('../../erc20/lib/timestamps_cache');
 const { decodeAddress } = require('../../erc20/lib/util');
+const { decodeEventBasicInfo } = require('../../erc20/lib/fetch_events');
 
 const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 
 
-async function decodeEventBasicInfo(web3, event, timestampsCache) {
-  const timestamp = await timestampsCache.getBlockTimestamp(web3, event['blockNumber']);
-
-  return {
-    blockNumber: parseInt(web3.utils.hexToNumberString(event['blockNumber'])),
-    timestamp: timestamp,
-    transactionHash: event['transactionHash'],
-    logIndex: parseInt(web3.utils.hexToNumberString(event['logIndex']))
-  };
-}
-
 /**Transfer(address,address,uint256)
  * Used by all Polygon ERC20 tokens
  **/
-async function decodeTransferEvent(web3, event, timestampsCache) {
+async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
   if (event['topics'].length !== 4) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3, event, timestampsCache);
+  const result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache, false);
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
-  result.value = parseFloat(web3.utils.hexToNumberString(event['data'].substring(0, 66)));
-  result.valueExactBase36 = web3.utils.toBN(event['data'].substring(0, 66)).toString(36);
+  result.value = Number(web3Wrapper.parseHexToNumber(event['data'].substring(0, 66)));
+  result.valueExactBase36 = web3Wrapper.parseHexToBase36String(event['data'].substring(0, 66));
 
   return result;
 }
@@ -42,23 +32,23 @@ const decodeFunctions = {
 
 };
 
-async function getPastEvents(web3, fromBlock, toBlock) {
-  const events = await getRawEvents(web3, fromBlock, toBlock);
+async function getPastEvents(web3Wrapper, fromBlock, toBlock) {
+  const events = await getRawEvents(web3Wrapper, fromBlock, toBlock);
 
-  const decodedEvents = await decodeEvents(web3, events, new TimestampsCache(), decodeFunctions);
+  const decodedEvents = await decodeEvents(web3Wrapper, events, new TimestampsCache(), decodeFunctions);
 
   return decodedEvents;
 }
 
 
-async function getRawEvents(web3, fromBlock, toBlock) {
+async function getRawEvents(web3Wrapper, fromBlock, toBlock) {
   let queryObject = {
-    fromBlock: web3.utils.numberToHex(fromBlock),
-    toBlock: web3.utils.numberToHex(toBlock),
+    fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
+    toBlock: web3Wrapper.parseNumberToHex(toBlock),
     address: MATIC_ADDRESS
   };
 
-  return await web3.eth.getPastLogs(queryObject);
+  return await web3Wrapper.getPastLogs(queryObject);
 }
 
 

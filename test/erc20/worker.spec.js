@@ -1,12 +1,18 @@
 const rewire = require('rewire');
 const assert = require('assert');
-const sinon = require('sinon');
 const erc20_worker = rewire('../../blockchains/erc20/erc20_worker');
+const constants = require('../../blockchains/erc20/lib/constants');
 const { ContractOverwrite } = require('../../blockchains/erc20/lib/contract_overwrite');
 const extend_events = require('./extend_events.spec');
 
 class MockExporter {
     initPartitioner() {
+    }
+}
+
+class MockWeb3Wrapper {
+    async getBlockNumber() {
+        return 1;
     }
 }
 
@@ -58,12 +64,12 @@ describe('Test ERC20 worker', function () {
 
     it('test the events returned when in \'vanilla\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        erc20_worker.__set__('constants', { CONTRACT_MODE: 'vanilla' });
+        constants.CONTRACT_MODE = 'vanilla';
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
         });
-        const worker = new erc20_worker.worker();
-        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        const worker = new erc20_worker.worker(constants);
+        worker.web3Wrapper = new MockWeb3Wrapper();
         await worker.init(mockExporter);
 
         worker.lastConfirmedBlock = 1;
@@ -76,16 +82,14 @@ describe('Test ERC20 worker', function () {
 
     it('test the events returned when in \'extract_exact_overwrite\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        erc20_worker.__set__('constants', {
-            CONTRACT_MODE: 'extract_exact_overwrite',
-            CONTRACT_MAPPING_FILE_PATH: './test/erc20/contract_mapping/contract_mapping.json'
-        });
+        constants.CONTRACT_MODE = 'extract_exact_overwrite';
+        constants.CONTRACT_MAPPING_FILE_PATH = './test/erc20/contract_mapping/contract_mapping.json';
 
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
         });
-        const worker = new erc20_worker.worker();
-        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        const worker = new erc20_worker.worker(constants);
+        worker.web3Wrapper = new MockWeb3Wrapper();
         await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
@@ -115,16 +119,15 @@ describe('Test ERC20 worker', function () {
 
     it('test the events returned when in \'extract_all_append\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
-        erc20_worker.__set__('constants', {
-            CONTRACT_MODE: 'extract_all_append',
-            CONTRACT_MAPPING_FILE_PATH: './test/erc20/contract_mapping/contract_mapping.json'
-        });
+        constants.CONTRACT_MODE = 'extract_all_append';
+        constants.CONTRACT_MAPPING_FILE_PATH = './test/erc20/contract_mapping/contract_mapping.json';
+
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
         });
 
-        const worker = new erc20_worker.worker();
-        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        const worker = new erc20_worker.worker(constants);
+        worker.web3Wrapper = new MockWeb3Wrapper();
         await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
@@ -155,16 +158,15 @@ describe('Test ERC20 worker', function () {
 
     it('test multiple events returned when in \'extract_all_append\' mode', async function () {
         // Test that the overwritten event would be correctly ordered in between two original events
-        erc20_worker.__set__('constants', {
-            CONTRACT_MODE: 'extract_all_append',
-            CONTRACT_MAPPING_FILE_PATH: './test/erc20/contract_mapping/contract_mapping.json'
-        });
+        constants.CONTRACT_MODE = 'extract_all_append';
+        constants.CONTRACT_MAPPING_FILE_PATH = './test/erc20/contract_mapping/contract_mapping.json';
+
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent, originalEvent2];
         });
 
-        const worker = new erc20_worker.worker();
-        sinon.stub(worker.web3.eth, 'getBlockNumber').resolves(1);
+        const worker = new erc20_worker.worker(constants);
+        worker.web3Wrapper = new MockWeb3Wrapper();
         await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
@@ -194,8 +196,8 @@ describe('Test ERC20 worker', function () {
     });
 
     it('test getBlocksListInterval when ZK position not defined', async function () {
-        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
-        const worker = new erc20_worker.worker();
+        constants.EXPORT_BLOCKS_LIST = true;
+        const worker = new erc20_worker.worker(constants);
         worker.blocksList = [[1, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = -1;
 
@@ -206,8 +208,8 @@ describe('Test ERC20 worker', function () {
     });
 
     it('test getBlocksListInterval when ZK position is defined', async function () {
-        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
-        const worker = new erc20_worker.worker();
+        constants.EXPORT_BLOCKS_LIST = true;
+        const worker = new erc20_worker.worker(constants);
         worker.blocksList = [[1, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = 20;
 
@@ -218,8 +220,8 @@ describe('Test ERC20 worker', function () {
     });
 
     it('test getBlocksListInterval new iteration', async function () {
-        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
-        const worker = new erc20_worker.worker();
+        constants.EXPORT_BLOCKS_LIST = true;
+        const worker = new erc20_worker.worker(constants);
         worker.blocksList = [[5, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = 10;
 
@@ -230,8 +232,8 @@ describe('Test ERC20 worker', function () {
     });
 
     it('test getBlocksListInterval ZK defined, no more blocks', async function () {
-        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
-        const worker = new erc20_worker.worker();
+        constants.EXPORT_BLOCKS_LIST = true;
+        const worker = new erc20_worker.worker(constants);
         worker.blocksList = [[5, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = 30;
 
@@ -242,8 +244,8 @@ describe('Test ERC20 worker', function () {
     });
 
     it('test getBlocksListInterval new iteration, no more blocks', async function () {
-        erc20_worker.__set__('constants', { EXPORT_BLOCKS_LIST: true });
-        const worker = new erc20_worker.worker();
+        constants.EXPORT_BLOCKS_LIST = true;
+        const worker = new erc20_worker.worker(constants);
         worker.blocksList = [[21, 30]];
         worker.lastExportedBlock = 30;
 

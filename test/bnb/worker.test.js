@@ -66,7 +66,7 @@ class MockTransactionsFetcher1 {
 
 describe('workLoopSimpleTest', function () {
   it('Checking that position is being updated', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     worker.init();
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher1();
 
@@ -85,7 +85,7 @@ describe('workLoopSimpleTest', function () {
   });
 
   it('Checking that two transactions without children are passing through the work loop without modifications', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     worker.init();
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher1();
 
@@ -104,7 +104,7 @@ class MockTransactionsFetcher2 {
 }
 describe('workLoopRepeatedTest', function () {
   it('Checking that a repeated transaction would be removed', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     worker.init();
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher2();
 
@@ -129,7 +129,7 @@ class MockTransactionsFetcher3 {
 
 describe('workLoopRepeatedTest', function () {
   it('Checking that correct sleep timeout is set', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     worker.init();
     worker.bnbTransactionsFetcher = new MockTransactionsFetcher3();
 
@@ -143,7 +143,7 @@ describe('workLoopRepeatedTest', function () {
 
 describe('checkBNBWorkersSetsInitRange', function () {
   it('Checking no previous data would set historic', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     const lastPosition = worker.initPosition();
 
     assert.strictEqual(
@@ -157,7 +157,7 @@ describe('checkBNBWorkersSetsInitRange', function () {
   });
 
   it('Checking small range would be extended to \'current\'', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     const lastPosition = worker.initPosition({ fetchRangeMsec: 1 });
 
     assert.strictEqual(
@@ -172,7 +172,7 @@ describe('checkBNBWorkersSetsInitRange', function () {
   });
 
   it('Checking value bigger than \'current\' would be preserved', async function () {
-    const worker = new bnb_worker.worker();
+    const worker = new bnb_worker.worker(constants);
     const lastPosition = worker.initPosition({ fetchRangeMsec: constants.FETCH_INTERVAL_CURRENT_MODE_MSEC + 1 });
 
     assert.strictEqual(

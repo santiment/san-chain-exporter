@@ -10,6 +10,11 @@ const { worker } = require('../blockchains/eth/eth_worker');
 const zkClientAsync = require('../lib/zookeeper_client_async');
 
 describe('Main', () => {
+  const constants = {
+    START_BLOCK: -1,
+    START_PRIMARY_KEY: -1
+  };
+
   afterEach(() => {
     sinon.restore();
   });
@@ -50,7 +55,7 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.exporter = exporterStub;
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
 
     sinon.spy(mainInstance, 'handleInitPosition');
     await mainInstance.handleInitPosition();
@@ -66,7 +71,7 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.exporter = exporterStub;
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
 
     sinon.spy(mainInstance, 'handleInitPosition');
     await mainInstance.handleInitPosition();
@@ -82,7 +87,7 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.exporter = exporterStub;
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
 
     try {
       await mainInstance.handleInitPosition();
@@ -99,7 +104,7 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.exporter = exporterStub;
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
 
     try {
       await mainInstance.handleInitPosition();
@@ -111,7 +116,7 @@ describe('Main', () => {
 
   it('initWorker throws error when worker is already present', async () => {
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
     try {
       await mainInstance.initWorker();
       expect.fail('initWorker should have thrown an error');
@@ -162,7 +167,7 @@ describe('Main', () => {
   it('workLoop throws error when worker can\'t be initialised', async () => {
     sinon.stub(BaseWorker.prototype, 'work').rejects(new Error('Error in worker "work" method'));
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
     try {
       await mainInstance.workLoop();
       expect.fail('workLoop should have thrown an error');
@@ -177,7 +182,7 @@ describe('Main', () => {
     sinon.stub(Exporter.prototype, 'storeEvents').rejects(new Error('storeEvents failed'));
 
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
     mainInstance.exporter = new Exporter('test-exporter');
     try {
       await mainInstance.workLoop();
@@ -194,7 +199,7 @@ describe('Main', () => {
     sinon.stub(Exporter.prototype, 'savePosition').rejects(new Error('savePosition failed'));
 
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker();
+    mainInstance.worker = new BaseWorker(constants);
     mainInstance.exporter = new Exporter('test-exporter');
     try {
       await mainInstance.workLoop();
