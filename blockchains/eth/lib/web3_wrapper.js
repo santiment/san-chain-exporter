@@ -38,6 +38,10 @@ class Web3Wrapper {
     etherToWei(amount) {
         return this.web3.utils.toWei(amount, 'ether');
     }
+
+    gweiToWei(amount) {
+        return this.web3.utils.toWei(amount, 'gwei');
+    }
 }
 
 
