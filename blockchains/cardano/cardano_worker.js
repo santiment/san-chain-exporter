@@ -1,7 +1,7 @@
 /* jslint es6 */
 'use strict';
 const got = require('got');
-const uuidv1 = require('uuid/v1');
+const { v1: uuidv1 } = require('uuid');
 const BaseWorker = require('../../lib/worker_base');
 const util = require('./lib/util');
 const { logger } = require('../../lib/logger');
