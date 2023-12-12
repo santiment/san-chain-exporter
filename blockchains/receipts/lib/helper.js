@@ -26,6 +26,9 @@ const decodeLog = (log, web3Wrapper) => {
       if (Object.prototype.hasOwnProperty.call(log, key) && log[key] !== undefined) {
         log[key] = web3Wrapper.parseHexToNumber(log[key]);
       }
+      else {
+        log[key] = null;
+      }
     }
   );
 
@@ -50,6 +53,9 @@ const decodeReceipt = (receipt, web3Wrapper) => {
     key => {
       if (Object.prototype.hasOwnProperty.call(clonedReceipt, key) && clonedReceipt[key] !== undefined) {
         clonedReceipt[key] = web3Wrapper.parseHexToNumber(clonedReceipt[key]);
+      }
+      else {
+        clonedReceipt[key] = null;
       }
     }
   );
