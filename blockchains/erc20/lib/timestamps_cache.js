@@ -1,9 +1,12 @@
 'use strict';
+const { logger } = require('../../../lib/logger');
+
 const DATA_MISSING = -1;
 
 class TimestampsCache {
   constructor() {
     this.timestampStore = {};
+    this.highestNodeFetchedBlock = 0;
   }
 
   saveTimestampInStore(blockNumber, timestamp) {
@@ -20,8 +23,12 @@ class TimestampsCache {
 
   async getTimestampFromNode(web3Wrapper, blockNumber) {
     const block = await web3Wrapper.getBlock(blockNumber);
-    // Cast the timestamp to Number as that is how we expect it for historic reasons
-    return Number(block['timestamp']);
+    const timestamp = Number(block['timestamp']);
+    this.saveTimestampInStore(blockNumber, timestamp);
+    if (this.highestNodeFetchedBlock < blockNumber) {
+      this.highestNodeFetchedBlock = blockNumber;
+    }
+    return timestamp;
   }
 
 
@@ -32,14 +39,62 @@ class TimestampsCache {
     }
 
     const timestamp = await this.getTimestampFromNode(web3Wrapper, blockNumber);
-    this.saveTimestampInStore(blockNumber, timestamp);
+
 
     return timestamp;
   }
 }
 
 
+class WarmupTimestampsCache extends TimestampsCache {
+  constructor(cacheForwardWarmup, cacheBackwardSize) {
+    super();
+    this.highestUserRequestedBlock = 0;
+    this.cacheForwardWarmup = cacheForwardWarmup;
+    this.cacheBackwardSize = cacheBackwardSize;
+    this.cacheWarmupInProgress = false;
+  }
+
+  async getBlockTimestamp(web3Wrapper, blockNumber) {
+    const blockNumberCast = Number(blockNumber);
+    if (blockNumberCast > this.highestUserRequestedBlock) {
+      this.highestUserRequestedBlock = blockNumberCast;
+
+      if (!this.cacheWarmupInProgress) {
+        // Do not await on the cache warm up. This should happen in the background.
+        this.tryWarmCache(web3Wrapper);
+      }
+
+      this.tryCleanCache();
+    }
+
+    const result = await super.getBlockTimestamp(web3Wrapper, blockNumberCast);
+    return result;
+  }
+
+  async tryWarmCache(web3Wrapper) {
+    this.cacheWarmupInProgress = true;
+    while (this.highestUserRequestedBlock + this.cacheForwardWarmup > this.highestNodeFetchedBlock &&
+      this.highestNodeFetchedBlock < web3Wrapper.lastBlockNumber) {
+      //logger.info(`Warming cache for block: ${this.highestNodeFetchedBlock + 1}`)
+      await this.getTimestampFromNode(web3Wrapper, this.highestNodeFetchedBlock + 1);
+    }
+    this.cacheWarmupInProgress = false;
+  }
+
+  tryCleanCache() {
+    logger.info(`Cache size is ${Object.keys(this.timestampStore).length}`);
+    Object.keys(this.timestampStore).forEach((key) => {
+      if (Number(key) < this.highestUserRequestedBlock - this.cacheBackwardSize) {
+        //console.log(`Deleting key ${key}`);
+        delete this.timestampStore[key];
+      }
+    });
+  }
+}
+
 
 module.exports = {
-  TimestampsCache
+  TimestampsCache,
+  WarmupTimestampsCache
 };

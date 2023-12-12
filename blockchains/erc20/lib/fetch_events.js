@@ -188,6 +188,7 @@ async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, t
   const endTime = new Date();
   logger.info(`We got ${events.length} raw events from node for ${endTime - startTime} ms`);
   const decodedEvents = await decodeEvents(web3Wrapper, events, timestampsCache);
+  logger.info('Events decoded');
   const result = filterEvents(decodedEvents);
 
   addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress, web3Wrapper);

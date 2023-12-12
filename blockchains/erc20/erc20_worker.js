@@ -7,7 +7,7 @@ const { stableSort, readJsonFile } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
-const { TimestampsCache } = require('./lib/timestamps_cache');
+const { WarmupTimestampsCache } = require('./lib/timestamps_cache');
 const { getPastEvents } = require('./lib/fetch_events');
 const { initBlocksList } = require('../../lib/fetch_blocks_list');
 
@@ -39,6 +39,11 @@ class ERC20Worker extends BaseWorker {
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
     this.allOldContracts = [];
+
+    this.forwardWarmUpIntervalBlocks = 100;
+    this.backwardCacheSizeBlocks = 10;
+
+    this.timestampsCache = new WarmupTimestampsCache(this.forwardWarmUpIntervalBlocks, this.backwardCacheSizeBlocks);
   }
 
   async init(exporter) {
@@ -103,16 +108,16 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     let overwritten_events = [];
-    const timestampsCache = new TimestampsCache();
+
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
-        events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, this.allOldContracts, timestampsCache);
+        events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, this.allOldContracts, this.timestampsCache);
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
 
       if (this.contractsUnmodified.length > 0) {
         const rawEvents = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, this.contractsUnmodified,
-          timestampsCache);
+          this.timestampsCache);
 
         for (const event of rawEvents) {
           events.push(event);
@@ -120,7 +125,7 @@ class ERC20Worker extends BaseWorker {
       }
     }
     else {
-      events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, null, timestampsCache);
+      events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, null, this.timestampsCache);
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
