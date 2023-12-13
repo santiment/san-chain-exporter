@@ -12,6 +12,7 @@ const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
 class CardanoWorker extends BaseWorker {
   constructor(settings) {
     super(settings);
+    this.pRetry = null;
   }
 
   async sendRequest(query) {
@@ -111,7 +112,7 @@ class CardanoWorker extends BaseWorker {
 
   async getTransactions(blockNumber, lastConfirmedBlock) {
     logger.info(`Getting transactions for interval ${blockNumber} - ${lastConfirmedBlock}`);
-    const response = await this.sendRequest(`
+    const query = `
     {
       transactions(
         where: {
@@ -143,7 +144,15 @@ class CardanoWorker extends BaseWorker {
         }
 
       }
-    }`);
+    }`;
+
+    const response = await this.pRetry(() => this.sendRequest(query),
+      {
+        onFailedAttempt: error => {
+          logger.warn(`Request ${blockNumber} - ${lastConfirmedBlock} is retried. There are ${error.retriesLeft} retries left.`);
+        },
+        retries: this.settings.NODE_REQUEST_RETRY
+      });
 
     if (response.data === null) {
       throw new Error(`Error getting transactions for current block number ${blockNumber}`);
@@ -158,6 +167,7 @@ class CardanoWorker extends BaseWorker {
 
   async init() {
     await this.setLastConfirmedBlock();
+    this.pRetry = (await import('p-retry')).default;
   }
 
   async work() {
