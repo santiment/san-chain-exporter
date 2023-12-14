@@ -1,6 +1,5 @@
 const { Web3 } = require('web3');
 const jayson = require('jayson/promise');
-const got = require('got');
 const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');

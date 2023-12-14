@@ -356,8 +356,11 @@ class TimestampsCacheMock {
     };
   }
 
-  async getBlockTimestamp(web3, blockNumber) {
+  getBlockTimestamp(blockNumber) {
     return this.blockTimestamps[blockNumber.toString()];
+  }
+
+  async waitResponse() {
   }
 }
 

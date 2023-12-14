@@ -15,7 +15,7 @@ async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
     return null;
   }
 
-  const result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache, false);
+  const result = await decodeEventBasicInfo(event, timestampsCache, false);
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
