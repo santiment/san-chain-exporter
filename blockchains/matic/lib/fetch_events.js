@@ -35,7 +35,7 @@ const decodeFunctions = {
 async function getPastEvents(web3Wrapper, fromBlock, toBlock) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock);
 
-  const decodedEvents = await decodeEvents(web3Wrapper, events, new TimestampsCache(), decodeFunctions);
+  const decodedEvents = decodeEvents(web3Wrapper, events, new TimestampsCache(), decodeFunctions);
 
   return decodedEvents;
 }

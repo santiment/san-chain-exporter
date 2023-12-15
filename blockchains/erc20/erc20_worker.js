@@ -126,7 +126,7 @@ class ERC20Worker extends BaseWorker {
       }
     }
     else {
-      events = await getPastEvents(this.web3Wrapper, this.ethClient, interval.fromBlock, interval.toBlock, null, timestampsCache);
+      events = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
