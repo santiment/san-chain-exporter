@@ -3,13 +3,12 @@
 class TimestampsCache {
   constructor(ethClient, fromBlock, toBlock) {
     this.timestampStore = {};
-    this.ethClient = ethClient;
     this.rangeSize = toBlock - fromBlock + 1;
 
     const blockRequests = [];
     for (let i = fromBlock; i <= toBlock; i++) {
       blockRequests.push(
-        this.ethClient.request(
+        ethClient.request(
           'eth_getBlockByNumber',
           [i, false],
           undefined,
@@ -18,7 +17,7 @@ class TimestampsCache {
       );
     }
 
-    this.responsePromise = this.ethClient.request(blockRequests);
+    this.responsePromise = ethClient.request(blockRequests);
   }
 
   async waitResponse(web3Wrapper) {

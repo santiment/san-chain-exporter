@@ -8,9 +8,9 @@ const { stableSort, readJsonFile } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
 const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
+const { TimestampsCache } = require('./lib/timestamps_cache');
 const { getPastEvents } = require('./lib/fetch_events');
 const { initBlocksList } = require('../../lib/fetch_blocks_list');
-const { TimestampsCache } = require('./lib/timestamps_cache');
 
 /**
  * A simple non cryptographic hash function similar to Java's 'hashCode'
