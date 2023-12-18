@@ -27,7 +27,7 @@ You can control the log level during development with the following environment 
 * `RDKAFKA_DEBUG`. This determines which rdkafka debug contexts will be enabled. The value corresponds to the `debug` configuration value of rdkafka. See https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md for possible values. By default no contexts are enabled.
 
 
-## Tests
+## Unit Tests
 
 You can run the unit tests in one of the following ways:
 
@@ -43,9 +43,31 @@ $ npm test
 $ ./bin/test.sh
 ```
 
-You can run the integration tests with:
-```bash
-$ ./e2e/test.sh
+## Integration tests
+
+
+1. Run the needed infrastructure
+
+In one console execute the command:
+
+```
+docker compose -f ./e2e/docker-compose.yml up --build
+```
+
+2. Run the test itself
+
+In another console execute the test:
+
+```
+./e2e/test.sh
+```
+
+3. Stop the infrastructure
+
+Stop the infrastructure (Ctrl+C) in the first console and delete leftover containers:
+
+```
+docker compose -f ./e2e/docker-compose.yml rm -f
 ```
 
 ## Writing exporters
