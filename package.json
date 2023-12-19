@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "TEST_ENV=1 BLOCKCHAIN=eth CONTRACT_MAPPING_FILE_PATH=test/erc20/contract_mapping/contract_mapping.json LOG_LEVEL=error CONTRACT_MODE=extract_exact_overwrite mocha --recursive --reporter spec",
-    "integration_test": "TEST_ENV=1 mocha --recursive --reporter spec",
+    "integration_test": "mocha --recursive --reporter spec integration_test",
     "lint": "eslint '**/*.js'",
     "start": "node index.js"
   },

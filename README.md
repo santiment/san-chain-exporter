@@ -69,6 +69,14 @@ Stop the infrastructure (Ctrl+C) in the first console and delete leftover contai
 ./e2e/stop-environment.sh
 ```
 
+## Integration tests
+
+Those are tests which would run the exporter against a running Node and compare the output to expected values.
+
+```
+npm run integration_test
+```
+
 ## Writing exporters
 
 When writing data exporter you need to make sure the following things:
