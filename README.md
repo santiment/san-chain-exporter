@@ -42,8 +42,7 @@ $ npm test
 ```bash
 $ ./bin/test.sh
 ```
-
-## Integration tests
+## Kafka transaction tests
 
 
 1. Run the needed infrastructure
@@ -51,7 +50,7 @@ $ ./bin/test.sh
 In one console execute the command:
 
 ```
-docker compose -f ./e2e/docker-compose.yml up --build
+./e2e/start-environment.sh
 ```
 
 2. Run the test itself
@@ -67,7 +66,7 @@ In another console execute the test:
 Stop the infrastructure (Ctrl+C) in the first console and delete leftover containers:
 
 ```
-docker compose -f ./e2e/docker-compose.yml rm -f
+./e2e/stop-environment.sh
 ```
 
 ## Writing exporters
