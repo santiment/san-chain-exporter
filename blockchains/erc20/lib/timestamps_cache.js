@@ -5,17 +5,15 @@ class TimestampsCache {
     this.timestampStore = {};
     this.rangeSize = toBlock - fromBlock + 1;
 
-    const blockRequests = [];
-    for (let i = fromBlock; i <= toBlock; i++) {
-      blockRequests.push(
-        ethClient.request(
-          'eth_getBlockByNumber',
-          [i, false],
-          undefined,
-          false
-        )
-      );
-    }
+    const blockRequests = Array.from(
+      { length: toBlock - fromBlock + 1 },
+      (_, index) => ethClient.request(
+        'eth_getBlockByNumber',
+        [fromBlock + index, false],
+        undefined,
+        false
+      )
+    );
 
     this.responsePromise = ethClient.request(blockRequests);
   }
