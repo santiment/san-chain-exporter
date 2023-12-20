@@ -31,20 +31,25 @@ function simpleHash(input) {
 }
 
 class ERC20Worker extends BaseWorker {
-  constructor(settings) {
+  constructor(settings, web3Wrapper, ethClient) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
-    if (settings.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(settings.NODE_URL);
-    } else {
-      this.ethClient = jayson.client.http(settings.NODE_URL);
+    this.web3Wrapper = web3Wrapper || new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    if (!ethClient) {
+      if (settings.NODE_URL.substring(0, 5) === 'https') {
+        this.ethClient = jayson.client.https(settings.NODE_URL);
+      } else {
+        this.ethClient = jayson.client.http(settings.NODE_URL);
+      }
+      this.contractsOverwriteArray = [];
+      this.contractsUnmodified = [];
+      this.allOldContracts = [];
     }
-    this.contractsOverwriteArray = [];
-    this.contractsUnmodified = [];
-    this.allOldContracts = [];
+    else {
+      this.ethClient = ethClient;
+    }
   }
 
   async init(exporter) {

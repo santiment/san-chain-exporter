@@ -3,7 +3,7 @@ const assert = require('assert');
 const erc20_worker = rewire('../../blockchains/erc20/erc20_worker');
 const constants = require('../../blockchains/erc20/lib/constants');
 const { ContractOverwrite } = require('../../blockchains/erc20/lib/contract_overwrite');
-const extend_events = require('./extend_events.spec');
+const helpers = require('./helpers');
 
 class MockExporter {
     initPartitioner() {
@@ -13,6 +13,11 @@ class MockExporter {
 class MockWeb3Wrapper {
     async getBlockNumber() {
         return 1;
+    }
+}
+
+class MockEthClient {
+    request() {
     }
 }
 
@@ -56,10 +61,10 @@ describe('Test ERC20 worker', function () {
         correctedEvent.contract = CONTRACT_REPLACE;
 
         originalEventWithPrimaryKey = JSON.parse(JSON.stringify(originalEvent));
-        extend_events.setExpectedEventPrimaryKey(originalEventWithPrimaryKey);
+        helpers.setExpectedEventPrimaryKey(originalEventWithPrimaryKey);
 
         correctedEventWithPrimaryKey = JSON.parse(JSON.stringify(correctedEvent));
-        extend_events.setExpectedEventPrimaryKey(correctedEventWithPrimaryKey);
+        helpers.setExpectedEventPrimaryKey(correctedEventWithPrimaryKey);
     });
 
     it('test the events returned when in \'vanilla\' mode', async function () {
@@ -68,8 +73,7 @@ describe('Test ERC20 worker', function () {
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
         });
-        const worker = new erc20_worker.worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         await worker.init(mockExporter);
 
         worker.lastConfirmedBlock = 1;
@@ -88,8 +92,7 @@ describe('Test ERC20 worker', function () {
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
         });
-        const worker = new erc20_worker.worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
@@ -126,8 +129,7 @@ describe('Test ERC20 worker', function () {
             return [originalEvent];
         });
 
-        const worker = new erc20_worker.worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
@@ -165,8 +167,7 @@ describe('Test ERC20 worker', function () {
             return [originalEvent, originalEvent2];
         });
 
-        const worker = new erc20_worker.worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         await worker.init(mockExporter);
 
         worker.contractsOverwriteArray = [];
@@ -197,7 +198,7 @@ describe('Test ERC20 worker', function () {
 
     it('test getBlocksListInterval when ZK position not defined', async function () {
         constants.EXPORT_BLOCKS_LIST = true;
-        const worker = new erc20_worker.worker(constants);
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         worker.blocksList = [[1, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = -1;
 
@@ -209,7 +210,7 @@ describe('Test ERC20 worker', function () {
 
     it('test getBlocksListInterval when ZK position is defined', async function () {
         constants.EXPORT_BLOCKS_LIST = true;
-        const worker = new erc20_worker.worker(constants);
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         worker.blocksList = [[1, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = 20;
 
@@ -221,7 +222,7 @@ describe('Test ERC20 worker', function () {
 
     it('test getBlocksListInterval new iteration', async function () {
         constants.EXPORT_BLOCKS_LIST = true;
-        const worker = new erc20_worker.worker(constants);
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         worker.blocksList = [[5, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = 10;
 
@@ -233,7 +234,7 @@ describe('Test ERC20 worker', function () {
 
     it('test getBlocksListInterval ZK defined, no more blocks', async function () {
         constants.EXPORT_BLOCKS_LIST = true;
-        const worker = new erc20_worker.worker(constants);
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         worker.blocksList = [[5, 10], [11, 20], [21, 30]];
         worker.lastExportedBlock = 30;
 
@@ -245,7 +246,7 @@ describe('Test ERC20 worker', function () {
 
     it('test getBlocksListInterval new iteration, no more blocks', async function () {
         constants.EXPORT_BLOCKS_LIST = true;
-        const worker = new erc20_worker.worker(constants);
+        const worker = new erc20_worker.worker(constants, new MockWeb3Wrapper(), new MockEthClient());
         worker.blocksList = [[21, 30]];
         worker.lastExportedBlock = 30;
 
