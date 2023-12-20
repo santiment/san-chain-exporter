@@ -1,3 +1,3 @@
- #! /bin/sh
+#! /bin/sh
 
-docker-compose -f ./e2e/docker-compose.yml up --build && docker-compose -f ./e2e/docker-compose.yml rm -f
+KAFKA_URL=localhost:9092 ZOOKEEPER_URL=localhost:2181 KAFKA_TOPIC=erc20_exporter_test ./node_modules/.bin/mocha e2e/producer-transaction.spec.js

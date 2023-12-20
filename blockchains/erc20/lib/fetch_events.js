@@ -13,8 +13,8 @@ const QNT_contract = '0x4a220e6096b25eadb88358cb44068a3248254675';
 const WETH_contract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
 
-async function decodeEventBasicInfo(web3Wrapper, event, timestampsCache, addContract = true) {
-  const timestamp = await timestampsCache.getBlockTimestamp(web3Wrapper, event['blockNumber']);
+function decodeEventBasicInfo(event, timestampsCache, addContract = true) {
+  const timestamp = timestampsCache.getBlockTimestamp(event['blockNumber']);
 
   const decodedEvent = {
     blockNumber: Number(event['blockNumber']),
@@ -33,15 +33,15 @@ async function decodeEventBasicInfo(web3Wrapper, event, timestampsCache, addCont
 /**Transfer(address,address,uint256)
  * Used by all ERC20 tokens
  **/
-async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
+function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
   if (event['topics'].length !== 3) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   // Custom burn event for QNT token
-  let to = decodeAddress(event['topics'][2]);
+  const to = decodeAddress(event['topics'][2]);
   if (to.toLowerCase() === QNT_contract && event['address'].toLowerCase() === QNT_contract) {
     result.to = BURN_ADDRESS;
   } else {
@@ -58,12 +58,12 @@ async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
 /**Burn(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-async function decodeBurnEvent(web3Wrapper, event, timestampsCache) {
+function decodeBurnEvent(web3Wrapper, event, timestampsCache) {
   if (event['topics'].length !== 2) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
@@ -76,12 +76,12 @@ async function decodeBurnEvent(web3Wrapper, event, timestampsCache) {
 /**Mint(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-async function decodeMintEvent(web3Wrapper, event, timestampsCache) {
+function decodeMintEvent(web3Wrapper, event, timestampsCache) {
   if (event['topics'].length !== 2) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
@@ -94,13 +94,13 @@ async function decodeMintEvent(web3Wrapper, event, timestampsCache) {
 /**Freeze(address indexed,uint256)
  * Only for BNB
  **/
-async function decodeBNBFreezeEvent(web3Wrapper, event, timestampsCache) {
+function decodeBNBFreezeEvent(web3Wrapper, event, timestampsCache) {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = FREEZE_ADDRESS;
@@ -113,13 +113,13 @@ async function decodeBNBFreezeEvent(web3Wrapper, event, timestampsCache) {
 /**Unfreeze(address indexed,uint256)
  * Only for BNB
  **/
-async function decodeBNBUnfreezeEvent(web3Wrapper, event, timestampsCache) {
+function decodeBNBUnfreezeEvent(web3Wrapper, event, timestampsCache) {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = FREEZE_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
@@ -132,13 +132,13 @@ async function decodeBNBUnfreezeEvent(web3Wrapper, event, timestampsCache) {
 /**Deposit(address indexed dst, uint wad)
  * Only for WETH
  **/
-async function decodeWETHDepositEvent(web3Wrapper, event, timestampsCache) {
+function decodeWETHDepositEvent(web3Wrapper, event, timestampsCache) {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
@@ -151,13 +151,13 @@ async function decodeWETHDepositEvent(web3Wrapper, event, timestampsCache) {
 /**Withdrawal(address,uint256)
  * Only for WETH
  **/
-async function decodeWETHWithdrawalEvent(web3Wrapper, event, timestampsCache) {
+function decodeWETHWithdrawalEvent(web3Wrapper, event, timestampsCache) {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
   }
 
-  let result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache);
+  const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
@@ -182,7 +182,8 @@ const decodeFunctionsMap = {
 
 async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, timestampsCache) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
-  const decodedEvents = await decodeEvents(web3Wrapper, events, timestampsCache);
+  await timestampsCache.waitResponse(web3Wrapper);
+  const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
   const result = filterEvents(decodedEvents);
 
   addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress, web3Wrapper);
@@ -207,13 +208,13 @@ async function getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress) {
   return await web3Wrapper.getPastLogs(queryObject);
 }
 
-async function decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions = decodeFunctionsMap) {
+function decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions = decodeFunctionsMap) {
   const result = [];
   for (const event of events) {
     if (event.topics && event.topics[0]) {
       const decodeFunction = decodeFunctions[event.topics[0]];
       if (decodeFunction) {
-        const decodedEvent = await decodeFunction(web3Wrapper, event, timestampsCache);
+        const decodedEvent = decodeFunction(web3Wrapper, event, timestampsCache);
         if (decodedEvent) result.push(decodedEvent);
       }
     }

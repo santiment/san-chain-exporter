@@ -1,15 +1,5 @@
-/*
- * node-rdkafka - Node.js wrapper for RdKafka C/C++ library
- *
- * Copyright (c) 2016 Blizzard Entertainment
- *
- * This software may be modified and distributed under the terms
- * of the MIT license.  See the LICENSE.txt file for details.
- */
-
 const { Exporter } = require('../lib/kafka_storage');
 const Kafka = require('node-rdkafka');
-const {storeEvents} = require('../lib/store_events');
 const KAFKA_URL = process.env.KAFKA_URL || 'localhost:9092';
 
 class TestConsumer {
@@ -34,7 +24,7 @@ class TestConsumer {
     this.consumer.setDefaultConsumeTimeout(1000);
 
     this.dataReadPromise = new Promise((resolve) => {
-      consumer.on('data', function(m) {
+      consumer.on('data', function (m) {
         num_received++;
         result.push(m);
         if (num_received === num_expected) {
@@ -44,7 +34,7 @@ class TestConsumer {
     });
 
     this.subscribedPromise = new Promise((resolve, reject) => {
-      consumer.on('event.error', function(err) {
+      consumer.on('event.error', function (err) {
         console.error('Error from consumer');
         console.error(err);
         reject(err);
@@ -52,7 +42,7 @@ class TestConsumer {
       consumer.on('ready', function () {
         consumer.subscribe([topic]);
       }, 2000);
-      consumer.on('subscribed', function() {
+      consumer.on('subscribed', function () {
         consumer.consume();
         resolve();
       });
@@ -77,45 +67,13 @@ class TestConsumer {
   }
 }
 
-async function sendMessagesInTransaction(exporter) {
-  await exporter.initTransactions();
-  await exporter.beginTransaction();
 
-  // At this point the exporter is connected.
-  // We send one message just to create the topic.
-  await exporter.sendDataWithKey({
-    timestamp: 10000000,
-    iso_date: new Date().toISOString(),
-    key: 1
-  }, 'key');
-
-  await exporter.commitTransaction();
-}
-
-describe('Producer transactions', function() {
+describe('Producer transactions', function () {
   let exporter;
   let testConsumer;
   let num_messages_test = 3;
 
-  // This is done only to create the test topic.
-  before( function(done) {
-    this.timeout(5000);
-    exporter = new Exporter('erc20-producer-transactions-test', true);
-    exporter.connect().then(function () {
-      exporter.subscribeDeliveryReports(function (err) {
-        if(err) {
-          throw err;
-        }
-        exporter.disconnect(function () {
-          done();
-        });
-      });
-
-      sendMessagesInTransaction(exporter);
-    });
-  });
-
-  beforeEach(function(done) {
+  beforeEach(function (done) {
     this.timeout(20000);
 
     exporter = new Exporter('erc20-producer-transactions-test', true);
@@ -125,16 +83,16 @@ describe('Producer transactions', function() {
     });
   });
 
-  afterEach(function(done) {
+  afterEach(function (done) {
     this.timeout(10000);
     exporter.disconnect(() => {
-      testConsumer.disconnect(function() {
+      testConsumer.disconnect(function () {
         done();
       });
     });
   });
 
-  it('should get 100% deliverability if transaction is commited', async function() {
+  it('should get 100% deliverability if transaction is commited', async function () {
     this.timeout(20000);
 
     await testConsumer.waitSubscribed();
@@ -145,7 +103,7 @@ describe('Producer transactions', function() {
     // Do a small delay before starting writing messages, otherwise the consumer is missing them.
     // This should not really be needed, because we have received the 'subscribed' event in the
     // consumer but there is something I am missing.
-    setTimeout( async function () {
+    setTimeout(async function () {
       for (let i = 0; i < num_messages_test; i++) {
         exporter.sendDataWithKey({
           timestamp: 10000000,
@@ -159,7 +117,7 @@ describe('Producer transactions', function() {
     await testConsumer.waitData();
   });
 
-  it('using the \'storeEvents\' function should begin and commit a transaction', async function() {
+  it('using the \'storeEvents\' function should begin and commit a transaction', async function () {
     // We need the huge timeout because starting and closing a transaction takes around 1 sec
     this.timeout(10000);
     await exporter.initTransactions();
@@ -181,7 +139,7 @@ describe('Producer transactions', function() {
 
     setTimeout(async function () {
       for (let i = 0; i < num_messages_test; i++) {
-        await storeEvents(exporter, [testEvent]);
+        await exporter.storeEvents([testEvent]);
       }
     }, 1000);
 

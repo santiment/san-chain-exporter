@@ -15,7 +15,7 @@ async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
     return null;
   }
 
-  const result = await decodeEventBasicInfo(web3Wrapper, event, timestampsCache, false);
+  const result = await decodeEventBasicInfo(event, timestampsCache, false);
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
@@ -35,7 +35,7 @@ const decodeFunctions = {
 async function getPastEvents(web3Wrapper, fromBlock, toBlock) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock);
 
-  const decodedEvents = await decodeEvents(web3Wrapper, events, new TimestampsCache(), decodeFunctions);
+  const decodedEvents = decodeEvents(web3Wrapper, events, new TimestampsCache(), decodeFunctions);
 
   return decodedEvents;
 }

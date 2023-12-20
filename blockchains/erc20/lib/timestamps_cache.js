@@ -1,43 +1,50 @@
 'use strict';
-const DATA_MISSING = -1;
 
 class TimestampsCache {
-  constructor() {
+  constructor(ethClient, fromBlock, toBlock) {
     this.timestampStore = {};
+    this.rangeSize = toBlock - fromBlock + 1;
+
+    const blockRequests = Array.from(
+      { length: toBlock - fromBlock + 1 },
+      (_, index) => ethClient.request(
+        'eth_getBlockByNumber',
+        [fromBlock + index, false],
+        undefined,
+        false
+      )
+    );
+
+    this.responsePromise = ethClient.request(blockRequests);
   }
 
-  saveTimestampInStore(blockNumber, timestamp) {
-    this.timestampStore[blockNumber] = timestamp;
+  async waitResponse(web3Wrapper) {
+    const resultsArray = await this.responsePromise;
+    if (!Array.isArray(resultsArray)) {
+      throw new Error('Blocks response is not an array');
+    }
+    if (resultsArray.length !== this.rangeSize) {
+      throw new Error(`Expected ${this.rangeSize} but got ${resultsArray.length} blocks response`);
+    }
+
+    for (const result of resultsArray) {
+      const blockNumber = web3Wrapper.parseHexToNumber(result.result.number);
+      const blockTimestamp = web3Wrapper.parseHexToNumber(result.result.timestamp);
+      this.timestampStore[blockNumber] = blockTimestamp;
+    }
+
+
   }
 
-  getTimestampFromStore(blockNumber) {
+  getBlockTimestamp(blockNumber) {
     if (Object.prototype.hasOwnProperty.call(this.timestampStore, blockNumber)) {
       return this.timestampStore[blockNumber];
     }
-
-    return DATA_MISSING;
-  }
-
-  async getTimestampFromNode(web3Wrapper, blockNumber) {
-    const block = await web3Wrapper.getBlock(blockNumber);
-    // Cast the timestamp to Number as that is how we expect it for historic reasons
-    return Number(block['timestamp']);
-  }
-
-
-  async getBlockTimestamp(web3Wrapper, blockNumber) {
-    const timestampStore = this.getTimestampFromStore(blockNumber);
-    if (timestampStore !== DATA_MISSING) {
-      return timestampStore;
+    else {
+      throw new Error(`Missing timestamp for block number ${blockNumber}`);
     }
-
-    const timestamp = await this.getTimestampFromNode(web3Wrapper, blockNumber);
-    this.saveTimestampInStore(blockNumber, timestamp);
-
-    return timestamp;
   }
 }
-
 
 
 module.exports = {

@@ -1,5 +1,6 @@
 'use strict';
 const { Web3 } = require('web3');
+const jayson = require('jayson/promise');
 const { logger } = require('../../lib/logger');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
 const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
@@ -30,15 +31,25 @@ function simpleHash(input) {
 }
 
 class ERC20Worker extends BaseWorker {
-  constructor(settings) {
+  constructor(settings, web3Wrapper, ethClient) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
-    this.contractsOverwriteArray = [];
-    this.contractsUnmodified = [];
-    this.allOldContracts = [];
+    this.web3Wrapper = web3Wrapper || new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    if (!ethClient) {
+      if (settings.NODE_URL.substring(0, 5) === 'https') {
+        this.ethClient = jayson.client.https(settings.NODE_URL);
+      } else {
+        this.ethClient = jayson.client.http(settings.NODE_URL);
+      }
+      this.contractsOverwriteArray = [];
+      this.contractsUnmodified = [];
+      this.allOldContracts = [];
+    }
+    else {
+      this.ethClient = ethClient;
+    }
   }
 
   async init(exporter) {
@@ -91,27 +102,27 @@ class ERC20Worker extends BaseWorker {
   }
 
   async work() {
-    const result = this.settings.EXPORT_BLOCKS_LIST ?
+    const interval = this.settings.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
       await nextIntervalCalculator(this);
 
-    if (!result.success) {
+    if (!interval.success) {
       return [];
     }
 
-    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
+    logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 
     let events = [];
     let overwritten_events = [];
-    const timestampsCache = new TimestampsCache();
+    const timestampsCache = new TimestampsCache(this.ethClient, interval.fromBlock, interval.toBlock);
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
-        events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, this.allOldContracts, timestampsCache);
+        events = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
 
       if (this.contractsUnmodified.length > 0) {
-        const rawEvents = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, this.contractsUnmodified,
+        const rawEvents = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.contractsUnmodified,
           timestampsCache);
 
         for (const event of rawEvents) {
@@ -120,7 +131,7 @@ class ERC20Worker extends BaseWorker {
       }
     }
     else {
-      events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock, null, timestampsCache);
+      events = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
@@ -128,11 +139,11 @@ class ERC20Worker extends BaseWorker {
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events, overwritten_events);
-      logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
+      logger.info(`Setting primary keys ${events.length} messages for blocks ${interval.fromBlock}:${interval.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
 
-    this.lastExportedBlock = result.toBlock;
+    this.lastExportedBlock = interval.toBlock;
     const resultEvents = events.concat(overwritten_events);
 
     // If overwritten events have been generated, they need to be merged into the original events

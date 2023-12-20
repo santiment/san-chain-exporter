@@ -114,7 +114,7 @@ const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew));
 correctedEventSNXNew.contract = SNXContractReplacer;
 
 class TimestampsCacheMock {
-  async getBlockTimestamp() {
+  getBlockTimestamp() {
     return 0;
   }
 }

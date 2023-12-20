@@ -1,6 +1,7 @@
 class Web3Wrapper {
     constructor(web3) {
         this.web3 = web3;
+        this.lastBlockNumber = 0;
     }
 
     parseHexToNumberString(field) {
@@ -24,7 +25,8 @@ class Web3Wrapper {
 
     async getBlockNumber() {
         // We are casting to Number here due to how this field is expected in our pipeline
-        return Number(await this.web3.eth.getBlockNumber());
+        this.lastBlockNumber = Number(await this.web3.eth.getBlockNumber());
+        return this.lastBlockNumber;
     }
 
     async getPastLogs(queryObject) {
