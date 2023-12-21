@@ -37,17 +37,15 @@ class EthClientMock {
 
 class TimestampsCacheMock extends TimestampsCache {
   constructor() {
-    super(new EthClientMock(), 10000, 10001);
+    super(new EthClientMock(), new Web3Wrapper(new Web3()), 10000, 10001);
   }
 }
 
 
 describe('Test Timestamps cache', function () {
-  const web3Wrapper = new Web3Wrapper(new Web3());
-
   it('test block response fills cache', async function () {
     const timestampsCache = new TimestampsCacheMock(blockResponses);
-    await timestampsCache.waitResponse(web3Wrapper);
+    await timestampsCache.waitResponse();
 
     assert.equal(timestampsCache.getBlockTimestamp(10000), 1438334627);
     assert.equal(timestampsCache.getBlockTimestamp(10001), 1438334639);
@@ -55,7 +53,7 @@ describe('Test Timestamps cache', function () {
 
   it('test incorrectly filled cache would throw', async function () {
     const timestampsCache = new TimestampsCacheMock(blockResponses);
-    timestampsCache.waitResponse(web3Wrapper);
+    timestampsCache.waitResponse();
 
     assert.throws(function () { timestampsCache.getBlockTimestamp(10002); }, Error);
   });

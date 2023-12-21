@@ -29,7 +29,7 @@ class MaticWorker extends BaseWorker {
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    const events = await getPastEvents(this.web3Wrapper, result.fromBlock, result.toBlock);
+    const events = await getPastEvents(this.ethClient, this.web3Wrapper, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events);

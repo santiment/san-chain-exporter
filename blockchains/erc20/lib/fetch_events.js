@@ -182,7 +182,7 @@ const decodeFunctionsMap = {
 
 async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, timestampsCache) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
-  await timestampsCache.waitResponse(web3Wrapper);
+  await timestampsCache.waitResponse();
   const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
   const result = filterEvents(decodedEvents);
 

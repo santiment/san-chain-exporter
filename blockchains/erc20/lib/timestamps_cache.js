@@ -1,15 +1,17 @@
 'use strict';
 
 class TimestampsCache {
-  constructor(ethClient, fromBlock, toBlock) {
+  constructor(ethClient, web3Wrapper, fromBlock, toBlock) {
     this.timestampStore = {};
     this.rangeSize = toBlock - fromBlock + 1;
+    this.web3Wrapper = web3Wrapper;
 
     const blockRequests = Array.from(
       { length: toBlock - fromBlock + 1 },
       (_, index) => ethClient.request(
         'eth_getBlockByNumber',
-        [fromBlock + index, false],
+        // Some Nodes would also accept decimal, but we convert to be on the safe side
+        [web3Wrapper.parseNumberToHex(fromBlock + index), false],
         undefined,
         false
       )
@@ -18,7 +20,7 @@ class TimestampsCache {
     this.responsePromise = ethClient.request(blockRequests);
   }
 
-  async waitResponse(web3Wrapper) {
+  async waitResponse() {
     const resultsArray = await this.responsePromise;
     if (!Array.isArray(resultsArray)) {
       throw new Error('Blocks response is not an array');
@@ -28,12 +30,10 @@ class TimestampsCache {
     }
 
     for (const result of resultsArray) {
-      const blockNumber = web3Wrapper.parseHexToNumber(result.result.number);
-      const blockTimestamp = web3Wrapper.parseHexToNumber(result.result.timestamp);
+      const blockNumber = this.web3Wrapper.parseHexToNumber(result.result.number);
+      const blockTimestamp = this.web3Wrapper.parseHexToNumber(result.result.timestamp);
       this.timestampStore[blockNumber] = blockTimestamp;
     }
-
-
   }
 
   getBlockTimestamp(blockNumber) {

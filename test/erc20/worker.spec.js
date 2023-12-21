@@ -11,8 +11,11 @@ class MockExporter {
 }
 
 class MockWeb3Wrapper {
-    async getBlockNumber() {
+    getBlockNumber() {
         return 1;
+    }
+
+    parseNumberToHex() {
     }
 }
 
