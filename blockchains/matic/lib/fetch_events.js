@@ -10,12 +10,12 @@ const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 /**Transfer(address,address,uint256)
  * Used by all Polygon ERC20 tokens
  **/
-async function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
+function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
   if (event['topics'].length !== 4) {
     return null;
   }
 
-  const result = await decodeEventBasicInfo(event, timestampsCache, false);
+  const result = decodeEventBasicInfo(event, timestampsCache, false);
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
@@ -32,11 +32,12 @@ const decodeFunctions = {
 
 };
 
-async function getPastEvents(web3Wrapper, fromBlock, toBlock) {
+async function getPastEvents(ethClient, web3Wrapper, fromBlock, toBlock) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock);
 
-  const decodedEvents = decodeEvents(web3Wrapper, events, new TimestampsCache(), decodeFunctions);
-
+  const timestampsCache = new TimestampsCache(ethClient, web3Wrapper, fromBlock, toBlock);
+  await timestampsCache.waitResponse();
+  const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions);
   return decodedEvents;
 }
 

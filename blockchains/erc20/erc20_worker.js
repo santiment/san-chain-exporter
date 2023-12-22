@@ -114,7 +114,7 @@ class ERC20Worker extends BaseWorker {
 
     let events = [];
     let overwritten_events = [];
-    const timestampsCache = new TimestampsCache(this.ethClient, interval.fromBlock, interval.toBlock);
+    const timestampsCache = new TimestampsCache(this.ethClient, this.web3Wrapper, interval.fromBlock, interval.toBlock);
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
         events = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
