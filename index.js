@@ -34,12 +34,14 @@ class Main {
     const lastRecoveredPosition = await this.exporter.getLastPosition();
     this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
     this.currentInterval = {
-      fromBlock: this.lastProcessedPosition.blockNumber + 1,
-      toBlock: this.lastProcessedPosition.blockNumber + BLOCK_INTERVAL
+      fromBlock: this.lastProcessedPosition.blockNumber - BLOCK_INTERVAL + 1,
+      toBlock: this.lastProcessedPosition.blockNumber
     };
     await this.exporter.savePosition(this.lastProcessedPosition);
   }
-
+// Start from 0 -> currInterval = <-99 0>
+//[ <data 0-100> <data 100-200> <data 200-300> <data 300-400> <data 400-500> <data 500-600> ]
+//[ <data 500-600> <data 100-200> ] -> check should fail
   #isWorkerSet() {
     if (this.worker) throw new Error('Worker is already set');
   }
@@ -95,11 +97,13 @@ class Main {
   generateKafkaArray(events) {
     stableSort(events, transactionOrder);
     const kafkaArray = [];
+    let initInterval = false;
     while (events.length > 0) {
       if (this.#inCurrentInterval(events[0].blockNumber)) {
         events[0].primaryKey = this.lastPrimaryKey + kafkaArray.length + 1;
         kafkaArray.push(events.shift());
-      } else if (this.#inNextInterval(events[0].blockNumber)) {
+        if (!initInterval) initInterval = true;
+      } else if (this.#inNextInterval(events[0].blockNumber) && initInterval) {
         events[0].primaryKey = this.lastPrimaryKey + kafkaArray.length + 1;
         kafkaArray.push(events.shift());
         this.currentInterval.fromBlock += BLOCK_INTERVAL;

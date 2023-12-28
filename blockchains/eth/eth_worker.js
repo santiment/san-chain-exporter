@@ -10,7 +10,7 @@ const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
-const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
+const { DAO_HACK_FORK_BLOCK, mapAddressToTransfer } = require('./lib/dao_hack');
 
 
 class ETHWorker extends BaseWorker {
@@ -112,49 +112,82 @@ class ETHWorker extends BaseWorker {
       this.fetchBlocksAndReceipts(fromBlock, toBlock)]);
   }
 
+  /**
+   * Method for transforming the fetched raw data from the Node.
+   * The reason behind making such an object is that it isn't necessarily known,
+   * whether there's data for the block number or some thing has gone wrong. The object would help
+   * track progress better.
+   * @param {number} fromBlock 
+   * @param {number} toBlock 
+   * @param {Array} data Array of 1. Array of Traces JSON values 2. Array of Blocks Map and Receipts Array of JSON
+   * @returns {object} {[blockNumber]: data} pairs
+   */
   transformEvents(fromBlock, toBlock, data) {
     const [traces, [blocks, receipts]] = data;
-    let events = [];
+    let events = {};
+    for (let i = fromBlock; i <= toBlock; i++) {
+      events[i] = [];
+    }
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
-      events.push(...getGenesisTransfers(this.web3));
+      events[0].push(...getGenesisTransfers(this.web3));
     }
 
-    events.push(...this.transformTransferEvents(traces, blocks));
-    events.push(...this.transformTransactionEvents(blocks.values(), receipts));
+    const transferEvents = this.transformTransferEvents(traces, blocks);
+    const transactionEvents = this.transformTransactionEvents(blocks.values(), receipts);
+    for (let blockNumber in events) {
+      events[blockNumber].push(...transferEvents[blockNumber]);
+      events[blockNumber].push(...transactionEvents[blockNumber]);
+    }
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info('Adding the DAO hack transfers');
-      events = injectDAOHackTransfers(events);
+      events[DAO_HACK_FORK_BLOCK] = mapAddressToTransfer();
     }
 
     return events;
   }
 
+  /**
+   * 
+   * @param {Array} traces Array of JSON values for the traces
+   * @param {Map} blocksMap Map of { [blockNumber]: data } values for blocks info
+   * @returns {object} {[blockNumber]: data} pairs for transfer events' info
+   */
   transformTransferEvents(traces, blocksMap) {
-    const result = [];
+    const result = {};
     for (let i = 0; i < traces.length; i++) {
-      const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocksMap.get(traces[i]['blockNumber']));
-      result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));//TODO: Maybe push {blocknumbers: data}
+      const block_number = this.web3Wrapper.parseHexToNumber(traces[i]['blockNumber']);
+      const block_timestamp = this.web3Wrapper.decodeTimestampFromBlock(blocksMap.get(block_number));
+      if (!(block_number in result)) {
+        result[block_number] = [];
+      }
+      result[block_number].push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));
     }
 
     return result;
   }
 
+  /**
+   * 
+   * @param {Array} blocks Block numbers array
+   * @param {Array} receipts Receipts JSON values array
+   * @returns {object} {[blockNumber]: data} pairs for transactions events' info
+   */
   transformTransactionEvents(blocks, receipts) {
-    const result = [];
+    const result = {};
     for (const block of blocks) {
+      result[block] = [];
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, receipts);
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       if (constants.IS_ETH && blockNumber >= constants.SHANGHAI_FORK_BLOCK) {
         decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
       }
-      result.push(...decoded_transactions);
-      //TODO: Maybe push {blocknumbers: data}
+      result[blockNumber].push(...decoded_transactions);
     }
 
     return result;
   }
-//TODO:s - If you have a [{#:data}] then you can check whether the # just doesnt have data or it's missing
+
   async makeQueueTask(interval) {
     const data = await this.fetchData(interval.fromBlock, interval.toBlock);
     const transformedData = this.transformEvents(interval.fromBlock, interval.toBlock, data);

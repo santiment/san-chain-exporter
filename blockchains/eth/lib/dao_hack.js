@@ -291,6 +291,10 @@ function daoAddressToTransfer(daoHackAddress) {
   };
 }
 
+function mapAddressToTransfer() {
+   return DAO_HACK_ADDRESSES.map(daoAddressToTransfer);
+}
+
 function injectDAOHackTransfers(transfers) {
    const insertIndex = transfers.findIndex((transfer) => transfer.blockNumber === DAO_HACK_FORK_BLOCK);
    const transfersToInsert = DAO_HACK_ADDRESSES.map(daoAddressToTransfer);
@@ -304,5 +308,6 @@ function injectDAOHackTransfers(transfers) {
 module.exports = {
    DAO_HACK_FORK_BLOCK,
    DAO_HACK_ADDRESSES,
+   mapAddressToTransfer,
    injectDAOHackTransfers
 };
