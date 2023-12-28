@@ -143,8 +143,12 @@ class ETHWorker extends BaseWorker {
       events.push(...getGenesisTransfers(this.web3));
     }
 
-    events.push(... await this.getPastTransferEvents(traces, blocks));
-    events.push(... await this.getPastTransactionEvents(blocks.values(), receipts));
+    const transferEvents = await this.getPastTransferEvents(traces, blocks);
+    for (const transfer of transferEvents) events.push(transfer);
+
+    const transactionEvents = await this.getPastTransactionEvents(blocks.values(), receipts);
+    for (const trx of transactionEvents) events.push(trx);
+
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info('Adding the DAO hack transfers');
       events = injectDAOHackTransfers(events);
@@ -171,9 +175,14 @@ class ETHWorker extends BaseWorker {
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, receipts);
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
       if (constants.IS_ETH && blockNumber >= constants.SHANGHAI_FORK_BLOCK) {
-        decoded_transactions.push(... await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber));
+        const temp_decoded_transactions = await this.withdrawalsDecoder.getBeaconChainWithdrawals(block, blockNumber);
+        for (const trx of temp_decoded_transactions) {
+          decoded_transactions.push(trx);
+        }
       }
-      result.push(...decoded_transactions);
+      for (const trx of decoded_transactions) {
+        result.push(trx);
+      }
     }
 
     return result;
