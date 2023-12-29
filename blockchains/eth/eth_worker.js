@@ -1,4 +1,6 @@
 const { Web3 } = require('web3');
+const http = require('http');
+const https = require('https');
 const jayson = require('jayson/promise');
 const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
@@ -19,10 +21,28 @@ class ETHWorker extends BaseWorker {
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+
+    const nodeUrl = new URL(settings.NODE_URL);
+
+    const jaysonOptions = {
+      hostname: nodeUrl.hostname,
+      port: nodeUrl.port,
+      path: nodeUrl.pathname
+    };
+
+    const agentOptions = {
+      keepAlive: true,       // Enable keep-alive
+      keepAliveMsecs: 30000 // Keep alive for 30 seconds
+    };
+
     if (settings.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(settings.NODE_URL);
+      const agent = new https.Agent(agentOptions);
+      jaysonOptions.agent = agent;
+      this.ethClient = jayson.client.https(jaysonOptions);
     } else {
-      this.ethClient = jayson.client.http(settings.NODE_URL);
+      const agent = new http.Agent(agentOptions);
+      jaysonOptions.agent = agent;
+      this.ethClient = jayson.client.http(jaysonOptions);
     }
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
