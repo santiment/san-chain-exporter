@@ -1,7 +1,6 @@
 'use strict';
-const jayson = require('jayson/promise');
-const { parseURL } = require('whatwg-url');
 const { logger } = require('../../lib/logger');
+const { constructRPCClient } = require('../../lib/http_client');
 const BaseWorker = require('../../lib/worker_base');
 
 
@@ -18,12 +17,8 @@ class UtxoWorker extends BaseWorker {
     this.MAX_CONCURRENT_REQUESTS = settings.MAX_CONCURRENT_REQUESTS;
     this.LOOP_INTERVAL_CURRENT_MODE_SEC = settings.LOOP_INTERVAL_CURRENT_MODE_SEC;
 
-    const url = parseURL(this.NODE_URL);
-
     logger.info(`Connecting to the node ${this.NODE_URL}`);
-    this.client = jayson.Client.https({
-      host: url.host,
-      port: url.port,
+    this.client = constructRPCClient(this.NODE_URL, {
       method: 'POST',
       auth: this.RPC_USERNAME + ':' + this.RPC_PASSWORD,
       timeout: this.DEFAULT_TIMEOUT,
