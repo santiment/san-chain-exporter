@@ -1,9 +1,8 @@
 'use strict';
 const { Web3 } = require('web3');
-const jayson = require('jayson/promise');
-
 const helper = require('./lib/helper');
 const { logger } = require('../../lib/logger');
+const { constructRPCClient } = require('../../lib/http_client');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
 
@@ -13,7 +12,7 @@ class ReceiptsWorker extends BaseWorker {
     super(settings);
 
     logger.info(`Connecting to node ${settings.NODE_URL}`);
-    this.client = jayson.client.https(settings.NODE_URL);
+    this.client = constructRPCClient(settings.NODE_URL);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
   }
 

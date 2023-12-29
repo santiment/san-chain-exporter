@@ -2,6 +2,7 @@
 
 const { decodeAddress } = require('./util');
 const { addCustomTokenDistribution } = require('./custom_token_distribution');
+const { logger } = require('../../../lib/logger');
 
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -182,7 +183,9 @@ const decodeFunctionsMap = {
 
 async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, timestampsCache) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
+  const startTime = Date.now();
   await timestampsCache.waitResponse();
+  logger.debug(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
   const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
   const result = filterEvents(decodedEvents);
 

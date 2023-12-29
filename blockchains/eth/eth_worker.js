@@ -1,7 +1,7 @@
 const { Web3 } = require('web3');
-const jayson = require('jayson/promise');
 const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
+const { constructRPCClient } = require('../../lib/http_client');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
 const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { transactionOrder, stableSort } = require('./lib/util');
@@ -19,11 +19,8 @@ class ETHWorker extends BaseWorker {
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
-    if (settings.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(settings.NODE_URL);
-    } else {
-      this.ethClient = jayson.client.http(settings.NODE_URL);
-    }
+    this.ethClient = constructRPCClient(settings.NODE_URL);
+
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }

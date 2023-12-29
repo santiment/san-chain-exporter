@@ -1,6 +1,6 @@
 const { Web3 } = require('web3');
-const jayson = require('jayson/promise');
 const { logger } = require('../../lib/logger');
+const { constructRPCClient } = require('../../lib/http_client');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
 const { extendEventsWithPrimaryKey } = require('../erc20/lib/extend_events_key');
@@ -14,11 +14,7 @@ class MaticWorker extends BaseWorker {
 
     logger.info(`Connecting to Polygon node ${settings.NODE_URL}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
-    if (settings.NODE_URL.substring(0, 5) === 'https') {
-      this.ethClient = jayson.client.https(settings.NODE_URL);
-    } else {
-      this.ethClient = jayson.client.http(settings.NODE_URL);
-    }
+    this.ethClient = constructRPCClient(settings.NODE_URL);
   }
 
   async work() {

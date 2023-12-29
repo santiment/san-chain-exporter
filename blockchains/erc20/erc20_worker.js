@@ -1,7 +1,7 @@
 'use strict';
 const { Web3 } = require('web3');
-const jayson = require('jayson/promise');
 const { logger } = require('../../lib/logger');
+const { constructRPCClient } = require('../../lib/http_client');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
 const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
 const { stableSort, readJsonFile } = require('./lib/util');
@@ -38,11 +38,7 @@ class ERC20Worker extends BaseWorker {
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     this.web3Wrapper = web3Wrapper || new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
     if (!ethClient) {
-      if (settings.NODE_URL.substring(0, 5) === 'https') {
-        this.ethClient = jayson.client.https(settings.NODE_URL);
-      } else {
-        this.ethClient = jayson.client.http(settings.NODE_URL);
-      }
+      this.ethClient = constructRPCClient(settings.NODE_URL);
       this.contractsOverwriteArray = [];
       this.contractsUnmodified = [];
       this.allOldContracts = [];
