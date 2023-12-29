@@ -185,7 +185,7 @@ async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, t
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
   const startTime = Date.now();
   await timestampsCache.waitResponse();
-  logger.info(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
+  logger.debug(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
   const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
   const result = filterEvents(decodedEvents);
 
