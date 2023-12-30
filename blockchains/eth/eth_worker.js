@@ -63,43 +63,51 @@ class ETHWorker extends BaseWorker {
   }
 
   async fetchReceipts(blockNumbers) {
-    const responses = [];
-
+    const batch = [];
     for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(this.settings.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
-      responses.push(this.ethClient.request([req]));
+      batch.push(
+        this.ethClient.request(
+          this.settings.RECEIPTS_API_METHOD,
+          [this.web3Wrapper.parseNumberToHex(blockNumber)],
+          undefined,
+          false
+        )
+      );
     }
-
-    const finishedRequests = await Promise.all(responses);
+    const finishedRequests = await this.ethClient.request(batch);
     const result = {};
 
-    finishedRequests.forEach((blockResponses) => {
-      if (!blockResponses) return;
-
-      blockResponses.forEach((blockResponse) => {
-        if (blockResponse.result) {
-          blockResponse.result.forEach((receipt) => {
-            result[receipt.transactionHash] = receipt;
-          });
-        }
-        else {
-          throw new Error(JSON.stringify(blockResponse));
-        }
-      });
+    finishedRequests.forEach((response) => {
+      if (response.result) {
+        response.result.forEach((receipt) => {
+          result[receipt.transactionHash] = receipt;
+        });
+      }
+      else {
+        throw new Error(JSON.stringify(response));
+      }
     });
 
     return result;
   }
 
-  async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
-    logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`);
-    const [traces, blocks] = await Promise.all([
-      this.fetchEthInternalTrx(fromBlock, toBlock),
-      this.fetchBlocks(fromBlock, toBlock)
-    ]);
+  async fetchBlocksAndReceipts(fromBlock, toBlock) {
+    logger.info(`Fetching blocks info ${fromBlock}:${toBlock}`);
+    const blocks = await this.fetchBlocks(fromBlock, toBlock);
+
     logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`);
     const receipts = await this.fetchReceipts(blocks.keys());
+    return [blocks, receipts];
+  }
 
+  async fetchData(fromBlock, toBlock) {
+    return await Promise.all([
+      this.fetchEthInternalTrx(fromBlock, toBlock),
+      this.fetchBlocksAndReceipts(fromBlock, toBlock)]);
+  }
+
+  async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
+    const [traces, [blocks, receipts]] = await this.fetchData(fromBlock, toBlock);
     return [traces, blocks, receipts];
   }
 
