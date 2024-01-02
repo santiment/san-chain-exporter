@@ -145,6 +145,12 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
+  async generateTask(interval) {
+    const data = await this.fetchData(interval.fromBlock, interval.toBlock);
+    const transformedData = this.transformEvents(interval.fromBlock, interval.toBlock, data);
+    transformedData.forEach((data) => this.buffer.push(data));
+  }
+
   async work() {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
