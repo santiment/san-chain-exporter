@@ -35,6 +35,8 @@ class XRPWorker extends BaseWorker {
       if (this.settings.REQUEST_RATE_INTERVAL_MSEC > 0 && this.settings.REQUEST_RATE_INTERVAL_CAP > 0) {
         pQueueSettings.interval = this.settings.REQUEST_RATE_INTERVAL_MSEC;
         pQueueSettings.intervalCap = this.settings.REQUEST_RATE_INTERVAL_CAP;
+        pQueueSettings.carryoverConcurrencyCount = true;
+        logger.info(`Applying rate limit: ${pQueueSettings.interval} and ${pQueueSettings.intervalCap}`);
       }
 
       this.connections.push({
@@ -133,6 +135,9 @@ class XRPWorker extends BaseWorker {
     else {
     */
     const ledgerWithExpandedTransactions = await this.fetchLedger(connection, ledger_index, true);
+    if (ledgerWithExpandedTransactions.warning) {
+      logger.warn(`Rate limit warning: ${ledgerWithExpandedTransactions.warning}`);
+    }
     //return { ledger: ledger, transactions: ledgerWithExpandedTransactions.transactions };
     return { ledger: ledgerWithExpandedTransactions, transactions: ledgerWithExpandedTransactions.transactions };
   }
