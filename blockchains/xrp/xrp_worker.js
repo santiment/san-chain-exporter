@@ -117,7 +117,7 @@ class XRPWorker extends BaseWorker {
   }
 
   async fetchLedgerTransactions(connection, ledger_index) {
-    const ledger = await this.fetchLedger(connection, ledger_index, false);
+    /*const ledger = await this.fetchLedger(connection, ledger_index, false);
 
     if (ledger.transactions.length > 200) {
       logger.info(`<<< TOO MANY TXS at ledger ${ledger_index}: [[ ${ledger.transactions.length} ]], processing per-tx...`);
@@ -125,15 +125,17 @@ class XRPWorker extends BaseWorker {
       return { ledger: ledger, transactions: transactions };
     }
     else {
-      const ledgerWithExpandedTransactions = await this.fetchLedger(connection, ledger_index, true);
-      return { ledger: ledger, transactions: ledgerWithExpandedTransactions.transactions };
-    }
+    */
+    const ledgerWithExpandedTransactions = await this.fetchLedger(connection, ledger_index, true);
+    //return { ledger: ledger, transactions: ledgerWithExpandedTransactions.transactions };
+    return { ledger: ledgerWithExpandedTransactions, transactions: ledgerWithExpandedTransactions.transactions };
   }
 
   checkAllTransactionsValid(ledgers) {
     for (let indexLedger = 0; indexLedger < ledgers.length; indexLedger++) {
       const transactions = ledgers[indexLedger].transactions;
       const blockNumber = ledgers[indexLedger].ledger.ledger_index;
+      logger.info(`Block number ${blockNumber} has ${transactions.length} transactions`);
       for (let index = 0; index < transactions.length; index++) {
         const transaction = transactions[index];
         if ('validated' in transaction && !transaction.validated) {
