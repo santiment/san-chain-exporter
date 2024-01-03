@@ -31,9 +31,15 @@ class XRPWorker extends BaseWorker {
       });
       await api.connect();
 
+      const pQueueSettings = { concurrency: this.settings.MAX_CONNECTION_CONCURRENCY };
+      if (this.settings.REQUEST_RATE_INTERVAL_MSEC > 0 && this.settings.REQUEST_RATE_INTERVAL_CAP > 0) {
+        pQueueSettings.interval = this.settings.REQUEST_RATE_INTERVAL_MSEC;
+        pQueueSettings.intervalCap = this.settings.REQUEST_RATE_INTERVAL_CAP;
+      }
+
       this.connections.push({
         connection: api,
-        queue: new PQueue({ concurrency: this.settings.MAX_CONNECTION_CONCURRENCY }),
+        queue: new PQueue(pQueueSettings),
         index: i
       });
     }
