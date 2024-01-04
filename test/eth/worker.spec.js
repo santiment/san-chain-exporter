@@ -48,7 +48,7 @@ describe('Test worker', function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
-        worker.fetchTracesBlocksAndReceipts = async function () {
+        worker.fetchData = async function () {
             return [];
         };
         worker.transformPastEvents = function () {

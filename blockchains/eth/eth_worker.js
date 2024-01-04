@@ -62,13 +62,13 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async fetchReceipts(blockNumbers) {
+  async fetchReceipts(fromBlock, toBlock) {
     const batch = [];
-    for (const blockNumber of blockNumbers) {
+    for (let currBlock = fromBlock; currBlock <= toBlock; currBlock++) {
       batch.push(
         this.ethClient.request(
           this.settings.RECEIPTS_API_METHOD,
-          [this.web3Wrapper.parseNumberToHex(blockNumber)],
+          [this.web3Wrapper.parseNumberToHex(currBlock)],
           undefined,
           false
         )
@@ -91,24 +91,12 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async fetchBlocksAndReceipts(fromBlock, toBlock) {
-    logger.info(`Fetching blocks info ${fromBlock}:${toBlock}`);
-    const blocks = await this.fetchBlocks(fromBlock, toBlock);
-
-    logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`);
-    const receipts = await this.fetchReceipts(blocks.keys());
-    return [blocks, receipts];
-  }
-
   async fetchData(fromBlock, toBlock) {
     return await Promise.all([
       this.fetchEthInternalTrx(fromBlock, toBlock),
-      this.fetchBlocksAndReceipts(fromBlock, toBlock)]);
-  }
-
-  async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
-    const [traces, [blocks, receipts]] = await this.fetchData(fromBlock, toBlock);
-    return [traces, blocks, receipts];
+      this.fetchBlocks(fromBlock, toBlock),
+      this.fetchReceipts(fromBlock, toBlock),
+    ]);
   }
 
   transformPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
@@ -164,7 +152,7 @@ class ETHWorker extends BaseWorker {
     }
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(result.fromBlock, result.toBlock);
+    const [traces, blocks, receipts] = await this.fetchData(result.fromBlock, result.toBlock);
     const events = this.transformPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
 
     if (events.length > 0) {
