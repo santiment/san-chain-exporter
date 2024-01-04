@@ -51,7 +51,7 @@ describe('Test worker', function () {
         worker.fetchTracesBlocksAndReceipts = async function () {
             return [];
         };
-        worker.transformPastEvents = async function () {
+        worker.transformPastEvents = function () {
             return [feeResult, callResult];
         };
 

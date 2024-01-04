@@ -165,7 +165,7 @@ class ETHWorker extends BaseWorker {
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
     const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(result.fromBlock, result.toBlock);
-    const events = await this.transformPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
+    const events = this.transformPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
 
     if (events.length > 0) {
       stableSort(events, transactionOrder);
