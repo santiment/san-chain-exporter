@@ -62,56 +62,54 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async fetchReceipts(blockNumbers) {
-    const responses = [];
-
-    for (const blockNumber of blockNumbers) {
-      const req = this.ethClient.request(this.settings.RECEIPTS_API_METHOD, [this.web3Wrapper.parseNumberToHex(blockNumber)], undefined, false);
-      responses.push(this.ethClient.request([req]));
+  async fetchReceipts(fromBlock, toBlock) {
+    const batch = [];
+    for (let currBlock = fromBlock; currBlock <= toBlock; currBlock++) {
+      batch.push(
+        this.ethClient.request(
+          this.settings.RECEIPTS_API_METHOD,
+          [this.web3Wrapper.parseNumberToHex(currBlock)],
+          undefined,
+          false
+        )
+      );
     }
-
-    const finishedRequests = await Promise.all(responses);
+    const finishedRequests = await this.ethClient.request(batch);
     const result = {};
 
-    finishedRequests.forEach((blockResponses) => {
-      if (!blockResponses) return;
-
-      blockResponses.forEach((blockResponse) => {
-        if (blockResponse.result) {
-          blockResponse.result.forEach((receipt) => {
-            result[receipt.transactionHash] = receipt;
-          });
-        }
-        else {
-          throw new Error(JSON.stringify(blockResponse));
-        }
-      });
+    finishedRequests.forEach((response) => {
+      if (response.result) {
+        response.result.forEach((receipt) => {
+          result[receipt.transactionHash] = receipt;
+        });
+      }
+      else {
+        throw new Error(JSON.stringify(response));
+      }
     });
 
     return result;
   }
 
-  async fetchTracesBlocksAndReceipts(fromBlock, toBlock) {
-    logger.info(`Fetching traces for blocks ${fromBlock}:${toBlock}`);
-    const [traces, blocks] = await Promise.all([
+  async fetchData(fromBlock, toBlock) {
+    return await Promise.all([
       this.fetchEthInternalTrx(fromBlock, toBlock),
-      this.fetchBlocks(fromBlock, toBlock)
+      this.fetchBlocks(fromBlock, toBlock),
+      this.fetchReceipts(fromBlock, toBlock),
     ]);
-    logger.info(`Fetching receipts of ${fromBlock}:${toBlock}`);
-    const receipts = await this.fetchReceipts(blocks.keys());
-
-    return [traces, blocks, receipts];
   }
 
-  async getPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
+  transformPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
       events.push(...getGenesisTransfers(this.web3Wrapper));
     }
 
-    events.push(... await this.getPastTransferEvents(traces, blocks));
-    events.push(... await this.getPastTransactionEvents(blocks.values(), receipts));
+    const transformedTransferEvents = this.transformPastTransferEvents(traces, blocks);
+    const transformedTransactionEvents = this.transformPastTransactionEvents(blocks.values(), receipts);
+    for (let event of transformedTransferEvents) events.push(event);
+    for (let event of transformedTransactionEvents) events.push(event);
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info('Adding the DAO hack transfers');
       events = injectDAOHackTransfers(events, this.web3Wrapper);
@@ -120,7 +118,7 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-  async getPastTransferEvents(traces, blocksMap) {
+  transformPastTransferEvents(traces, blocksMap) {
     const result = [];
 
     for (let i = 0; i < traces.length; i++) {
@@ -131,7 +129,7 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async getPastTransactionEvents(blocks, receipts) {
+  transformPastTransactionEvents(blocks, receipts) {
     const result = [];
 
     for (const block of blocks) {
@@ -139,7 +137,7 @@ class ETHWorker extends BaseWorker {
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
       if (this.settings.IS_ETH && blockNumber >= this.settings.SHANGHAI_FORK_BLOCK) {
         const blockTimestamp = this.web3Wrapper.parseHexToNumber(block.timestamp);
-        decoded_transactions.push(... this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
+        decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
       }
       result.push(...decoded_transactions);
     }
@@ -154,8 +152,8 @@ class ETHWorker extends BaseWorker {
     }
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchTracesBlocksAndReceipts(result.fromBlock, result.toBlock);
-    const events = await this.getPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
+    const [traces, blocks, receipts] = await this.fetchData(result.fromBlock, result.toBlock);
+    const events = this.transformPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
 
     if (events.length > 0) {
       stableSort(events, transactionOrder);
