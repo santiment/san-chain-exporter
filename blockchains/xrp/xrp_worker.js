@@ -36,7 +36,7 @@ class XRPWorker extends BaseWorker {
         pQueueSettings.interval = this.settings.REQUEST_RATE_INTERVAL_MSEC;
         pQueueSettings.intervalCap = this.settings.REQUEST_RATE_INTERVAL_CAP;
         pQueueSettings.carryoverConcurrencyCount = true;
-        logger.info(`Applying rate limit: ${pQueueSettings.interval} and ${pQueueSettings.intervalCap}`);
+        logger.info(`Applying rate limit: ${pQueueSettings.intervalCap} requests per ${pQueueSettings.interval} milliseconds`);
       }
 
       this.connections.push({
@@ -102,44 +102,35 @@ class XRPWorker extends BaseWorker {
     throw new Error(`Error: Exhausted retry attempts for block ${ledger_index}.`);
   }
 
-  async fetchTransactions(connection, transactions, ledger_index) {
-    const transactionsPromise = transactions.map(tx =>
-      this.connectionSend(connection, {
-        command: 'tx',
-        transaction: tx,
-        minLedgerVersion: ledger_index,
-        maxLedgerVersion: ledger_index
-      }).catch((error) => {
-        if (error.message === 'txnNotFound') {
-          return Promise.resolve(null);
-        }
-
-        return Promise.reject(error);
-      })
-    );
-
-    const resolvedTransactions = await Promise.all(transactionsPromise);
-
-    // When transactions are fetched one by one, we need to take the 'result' field
-    return resolvedTransactions.map(t => t.result);
-  }
-
   async fetchLedgerTransactions(connection, ledger_index) {
-    /*const ledger = await this.fetchLedger(connection, ledger_index, false);
+    /**
+     * Request the expanded transactions. We have seen cases in the past where the XRPL Node would respond that
+     * the response is too big. In this case in the past we have resolved to fetching per-tx, but this exhausts the
+     * rate limit pretty fast. We need to contemplate different ways how to break the response in this case.
+     * Maybe with some filter like:
+     * https://github.com/XRPLF/xrpl.js/issues/2611#issuecomment-1875579443
+     */
+    const ledger = await this.fetchLedger(connection, ledger_index, true);
+    if (ledger.warning) {
+      logger.warn(`Rate limit warning: ${ledger.warning}`);
+    }
 
-    if (ledger.transactions.length > 200) {
-      logger.info(`<<< TOO MANY TXS at ledger ${ledger_index}: [[ ${ledger.transactions.length} ]], processing per-tx...`);
-      const transactions = await this.fetchTransactions(connection, ledger.transactions, ledger_index);
-      return { ledger: ledger, transactions: transactions };
-    }
-    else {
-    */
-    const ledgerWithExpandedTransactions = await this.fetchLedger(connection, ledger_index, true);
-    if (ledgerWithExpandedTransactions.warning) {
-      logger.warn(`Rate limit warning: ${ledgerWithExpandedTransactions.warning}`);
-    }
-    //return { ledger: ledger, transactions: ledgerWithExpandedTransactions.transactions };
-    return { ledger: ledgerWithExpandedTransactions, transactions: ledgerWithExpandedTransactions.transactions };
+    /* For legacy reasons the response need to contain the compact transaction hashes at the `leger.transactions`
+     * level. The expanded transactions are located at the top level. Example:
+     *
+     *
+     *  {
+     *    "ledger": {
+     *      "transactions": [ Comma separated tx hashes here ]
+     *     },
+     *     "transactions": [ Expanded txs here ]
+     *  }
+     *
+     **/
+    const transactionList = ledger.transactions.map(transaction => transaction.hash);
+    const expandedTransactions = ledger.transactions;
+    ledger.transactions = transactionList;
+    return { ledger: ledger, transactions: expandedTransactions };
   }
 
   checkAllTransactionsValid(ledgers) {
