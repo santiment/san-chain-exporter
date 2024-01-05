@@ -20,7 +20,6 @@ class ETHWorker extends BaseWorker {
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
     this.ethClient = constructRPCClient(settings.NODE_URL);
-
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }
@@ -40,7 +39,8 @@ class ETHWorker extends BaseWorker {
     return this.ethClient.request('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
-    }]).then((data) => this.parseEthInternalTrx(data['result']));
+    }])
+      .then((data) => this.parseEthInternalTrx(data['result']));
   }
 
   async fetchBlocks(fromBlock, toBlock) {
@@ -95,7 +95,7 @@ class ETHWorker extends BaseWorker {
     return await Promise.all([
       this.fetchEthInternalTrx(fromBlock, toBlock),
       this.fetchBlocks(fromBlock, toBlock),
-      this.fetchReceipts(fromBlock, toBlock),
+      // this.fetchReceipts(fromBlock, toBlock),
     ]);
   }
 
@@ -145,18 +145,14 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async generateTask(interval) {
-    const data = await this.fetchData(interval.fromBlock, interval.toBlock);
-    const transformedData = this.transformEvents(interval.fromBlock, interval.toBlock, data);
-    transformedData.forEach((data) => this.buffer.push(data));
-  }
-
   async work() {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
-
+    
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    this.lastQueuedBlock = toBlock;
+
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
     const events = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);

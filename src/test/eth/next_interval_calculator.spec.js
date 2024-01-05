@@ -80,7 +80,7 @@ describe('setWorkerSleepTime', () => {
 describe('nextIntervalCalculator', () => {
   it('would not exceed BLOCK_INTERVAL', () => {
     const worker = new eth_worker.worker(constants);
-    worker.lastExportedBlock = 0;
+    worker.lastQueuedBlock = 0;
     worker.lastConfirmedBlock = 150;
 
     const { fromBlock, toBlock } = nextIntervalCalculator(worker);
@@ -90,7 +90,7 @@ describe('nextIntervalCalculator', () => {
 
   it('would not return full BLOCK_INTERVAL', () => {
     const worker = new eth_worker.worker(constants);
-    worker.lastExportedBlock = 0;
+    worker.lastQueuedBlock = 0;
     worker.lastConfirmedBlock = 37;
 
     const { fromBlock, toBlock } = nextIntervalCalculator(worker);

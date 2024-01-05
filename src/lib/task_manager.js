@@ -1,43 +1,53 @@
-const { BLOCK_INTERVAL } = require('./constants');//TODO: Remove from blockchains constants
+const { cloneDeep } = require('lodash');
+
 
 class TaskManager {
-  constructor(startPosition) {
-    this.map = {};
+  constructor() {
+    this.taskData = {};
     this.queue;
     this.buffer = [];
-    this.currentInterval = {
-      fromBlock: startPosition.fromBlock + BLOCK_INTERVAL,
-      toBlock: startPosition.toBlock + BLOCK_INTERVAL
-    };
+    this.taskIndex = 0;
+    this.lastPushedToBuffer = 0;
   }
 
-  async initPQueue() {
-    this.queue = (await import('p-queue')).default;
-    this.queue.on('complete', (data) => {
-      data.forEach((dataVal) => this.handleNewData(dataVal));
-    });
+  async initQueue(maxConcurrentRequests) {
+    const PQueue = (await import('p-queue')).default;
+    this.queue = new PQueue({ concurrency: maxConcurrentRequests });
+    this.queue.on('completed', (data) => this.handleNewData(data));
   }
 
-  #incrementCurrentInterval() {
-    this.currentInterval.fromBlock += BLOCK_INTERVAL;
-    this.currentInterval.toBlock += BLOCK_INTERVAL;
+  static async create(maxConcurrentRequests) {
+    const tm = new TaskManager();
+    await tm.initQueue(maxConcurrentRequests);
+    return tm;
+  }
+
+  retrieveCompleted() {
+    const bufferCopy = [];
+    while (this.buffer.length > 0) bufferCopy.push(this.buffer.shift());
+    return bufferCopy;
   }
 
   #pushAllEligable() {
-    while (this.map[this.currentInterval]) {
-      this.buffer.push(...this.map[this.currentInterval]);
-      delete this.map[this.currentInterval];
-      this.#incrementCurrentInterval();
+    while (this.taskData[this.lastPushedToBuffer]) {
+      for (const data of this.taskData[this.lastPushedToBuffer]) this.buffer.push(data);
+      delete this.taskData[this.lastPushedToBuffer];
+      this.lastPushedToBuffer++;
     }
   }
 
-  handleNewData(newTransformedData, interval) {
-    this.map[interval] = newTransformedData;
+  handleNewData([key, newTransformedData]) {
+    this.taskData[key] = newTransformedData;
     this.#pushAllEligable();
   }
 
-  pushToQueue(task) {
-    this.queue.add(task());
+  pushToQueue(worker) {
+    this.queue.add(async () => {
+      const result = await worker.work();
+      const currIndex = cloneDeep(this.taskIndex);
+      return [currIndex, result];
+    });
+    this.taskIndex++;
   }
 }
 

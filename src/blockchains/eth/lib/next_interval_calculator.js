@@ -44,8 +44,8 @@ function setWorkerSleepTime(worker, context) {
  */
 function nextIntervalCalculator(worker) {
   return {
-    fromBlock: worker.lastExportedBlock + 1,
-    toBlock: Math.min(worker.lastExportedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
+    fromBlock: worker.lastQueuedBlock + 1,
+    toBlock: Math.min(worker.lastQueuedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
   };
 }
 

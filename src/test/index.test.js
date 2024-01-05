@@ -8,6 +8,7 @@ const BaseWorker = require('../lib/worker_base');
 const { Exporter } = require('../lib/kafka_storage');
 const { worker } = require('../blockchains/eth/eth_worker');
 const zkClientAsync = require('../lib/zookeeper_client_async');
+const TaskManager = require('../lib/task_manager');
 
 describe('Main', () => {
   const constants = {
@@ -159,21 +160,24 @@ describe('Main', () => {
     mainInstance.exporter = new Exporter('test-exporter');
     sinon.stub(worker.prototype, 'init').resolves();
     sinon.stub(mainInstance, 'handleInitPosition').resolves();
+    sinon.stub(TaskManager.prototype, 'initQueue').resolves();
+    mainInstance.lastProcessedPosition = { blockNumber: 10, primaryKey: 1 };
 
     await mainInstance.initWorker();
     assert(mainInstance.handleInitPosition.calledOnce);
+    assert.strictEqual(mainInstance.taskManager.lastPushedToBuffer, 0);
   });
 
   it('workLoop throws error when worker can\'t be initialised', async () => {
     sinon.stub(BaseWorker.prototype, 'work').rejects(new Error('Error in worker "work" method'));
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
-    try {
-      await mainInstance.workLoop();
-      expect.fail('workLoop should have thrown an error');
-    } catch (err) {
-      assert.strictEqual(err.message, 'Error in worker "work" method');
-    }
+    mainInstance.taskManager = new TaskManager(0, 50);
+    await mainInstance.taskManager.initQueue(1);
+    sinon.spy(mainInstance, 'workLoop');
+    await mainInstance.workLoop();
+    assert(mainInstance.workLoop.calledOnce);
+    assert.strictEqual(mainInstance.shouldWork, false);
   });
 
   it('workLoop throws error when storeEvents() fails', async () => {
@@ -184,6 +188,9 @@ describe('Main', () => {
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
     mainInstance.exporter = new Exporter('test-exporter');
+    mainInstance.taskManager = new TaskManager();
+    mainInstance.taskManager.buffer = [ 1 ]; // So that we get to see that storeEvents fails
+    await mainInstance.taskManager.initQueue(1);
     try {
       await mainInstance.workLoop();
       expect.fail('workLoop should have thrown an error');
@@ -201,6 +208,9 @@ describe('Main', () => {
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
     mainInstance.exporter = new Exporter('test-exporter');
+    mainInstance.taskManager = new TaskManager(0, 50);
+    mainInstance.taskManager.buffer = [ 1 ]; // So that we get to see that savePosition fails
+    await mainInstance.taskManager.initQueue(1);
     try {
       await mainInstance.workLoop();
       expect.fail('workLoop should have thrown an error');

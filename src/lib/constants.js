@@ -2,6 +2,8 @@ const BLOCKCHAIN = process.env.BLOCKCHAIN;
 const CONFIG_PATH = process.env.CONFIG_PATH;
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0') - 1;
 const EXPORT_BLOCKS_LIST = process.env.EXPORT_BLOCKS_LIST || false;
+const PQUEUE_MAX_SIZE = parseInt(process.env.PQUEUE_MAX_SIZE || '100');
+const MAX_CONCURRENT_REQUESTS = parseInt(process.env.MAX_CONCURRENT_REQUESTS || '1');
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '50');
 const START_PRIMARY_KEY = parseInt(process.env.START_PRIMARY_KEY || '-1');
 const WRITE_SIGNAL_RECORDS_KAFKA = process.env.WRITE_SIGNAL_RECORDS_KAFKA || false;
@@ -13,9 +15,11 @@ module.exports = {
   CONFIG_PATH,
   START_BLOCK,
   BLOCK_INTERVAL,
+  PQUEUE_MAX_SIZE,
   START_PRIMARY_KEY,
   EXPORT_BLOCKS_LIST,
   EXPORT_TIMEOUT_MLS,
+  MAX_CONCURRENT_REQUESTS,
   WRITE_SIGNAL_RECORDS_KAFKA,
   EXPORT_BLOCKS_LIST_MAX_INTERVAL
 };

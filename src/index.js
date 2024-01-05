@@ -3,9 +3,11 @@ const url = require('url');
 const micro = require('micro');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
+const TaskManager = require('./lib/task_manager');
 const { Exporter } = require('./lib/kafka_storage');
-const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
 const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
+const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
+const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS, MAX_CONCURRENT_REQUESTS } = require('./lib/constants');
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
 const constantsBase = require('./lib/constants');
@@ -34,6 +36,10 @@ class Main {
     await this.exporter.savePosition(this.lastProcessedPosition);
   }
 
+  async #initTaskManager() {
+    this.taskManager = await TaskManager.create(MAX_CONCURRENT_REQUESTS);
+  }
+
   #isWorkerSet() {
     if (this.worker) throw new Error('Worker is already set');
   }
@@ -44,6 +50,7 @@ class Main {
     this.worker = new worker.worker(mergedConstants);
     await this.worker.init(this.exporter, metrics);
     await this.handleInitPosition();
+    await this.#initTaskManager(this.lastProcessedPosition.blockNumber);
   }
 
   async init() {
@@ -72,21 +79,36 @@ class Main {
     metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
   }
 
+  async waitOnStoreEvents() {
+    const bufferCopy = this.taskManager.retrieveCompleted();
+    await this.exporter.storeEvents(bufferCopy);
+    this.lastProcessedPosition = {
+      primaryKey: bufferCopy[bufferCopy.length - 1].primaryKey,
+      blockNumber: bufferCopy[bufferCopy.length - 1].blockNumber
+    };
+    await this.exporter.savePosition(this.lastProcessedPosition);
+    logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
+  }
+
   async workLoop() {
     while (this.shouldWork) {
+      await this.taskManager.queue.onSizeLessThan(constantsBase.PQUEUE_MAX_SIZE);
+      this.taskManager.pushToQueue(this.worker);
       this.worker.lastRequestStartTime = new Date();
-      const events = await this.worker.work();
-
       this.worker.lastExportTime = Date.now();
 
-      this.updateMetrics();
       this.lastProcessedPosition = this.worker.getLastProcessedPosition();
+<<<<<<< HEAD:src/index.js
 
       if (events && events.length > 0) {
         await this.exporter.storeEvents(events, constantsBase.WRITE_SIGNAL_RECORDS_KAFKA);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
+=======
+      if (this.taskManager.buffer.length > 0) this.waitOnStoreEvents();
+      this.updateMetrics();
+>>>>>>> e51968f (Add task manager):index.js
 
       if (this.shouldWork) {
         await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));

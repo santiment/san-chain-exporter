@@ -20,7 +20,7 @@ class WorkerBase {
    * Upon returning from the method call the implementation should have updated all the member variables of the
    * base class.
    */
-  work() {
+  async work() {
     throw new Error('"work" method need to be overriden');
   }
   // To be implemented on inheritance.
@@ -68,6 +68,8 @@ class WorkerBase {
     }
     this.lastExportedBlock = lastProcessedPosition.blockNumber;
     this.lastPrimaryKey = lastProcessedPosition.primaryKey;
+    
+    this.lastQueuedBlock = this.lastExportedBlock;
 
     return lastProcessedPosition;
   }
