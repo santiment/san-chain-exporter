@@ -1,8 +1,12 @@
 const { logger } = require('../../../lib/logger');
+const constants = require('./constants');
 
 function decodeTransferTrace(trace, timestamp, web3Wrapper) {
   // Block & uncle rewards
   if (trace['type'] === 'reward') {
+    if (constants.IS_ETH && parseInt(trace['blockNumber']) >= constants.THE_MERGE)
+      return {};
+
     return {
       from: `mining_${trace['action']['rewardType']}`,
       to: trace['action']['author'],
