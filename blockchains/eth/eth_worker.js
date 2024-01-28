@@ -9,7 +9,7 @@ const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
 const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator } = require('./lib/next_interval_calculator');
+const { nextIntervalCalculator, analyzeWorkerProgress, setWorkerSleepTime } = require('./lib/next_interval_calculator');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 
 class ETHWorker extends BaseWorker {
@@ -146,14 +146,14 @@ class ETHWorker extends BaseWorker {
   }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
-    if (!result.success) {
-      return [];
-    }
+    const workerContext = await analyzeWorkerProgress(this);
+    setWorkerSleepTime(this);
+    if (workerContext === 2) return [];
 
-    logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchData(result.fromBlock, result.toBlock);
-    const events = this.transformPastEvents(result.fromBlock, result.toBlock, traces, blocks, receipts);
+    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
+    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
+    const events = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
 
     if (events.length > 0) {
       stableSort(events, transactionOrder);
@@ -164,7 +164,7 @@ class ETHWorker extends BaseWorker {
       this.lastPrimaryKey += events.length;
     }
 
-    this.lastExportedBlock = result.toBlock;
+    this.lastExportedBlock = toBlock;
 
     return events;
   }
