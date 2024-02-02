@@ -1,36 +1,40 @@
+const WORK_NO_SLEEP = 0;
+const WORK_SLEEP = 1;
+const NO_WORK_SLEEP = 2;
+
 /**
  * Returns the context in which the worker finds itself at a given moment:
- * 
- * 0 : Exporting blocks that are behind the last confirmed block
- * 
- * 1 : We've caught up to the last confirmed block. After a query to the node, we find out that there's a higher goal
- * 
- * 2 : We've caught up to the last confirmed block. After a query to the node, we find out that we've caught up
- * 
+ *
+ * WORK_NO_SLEEP : Exporting blocks that are behind the last confirmed block
+ *
+ * WORK_SLEEP : We've caught up to the last confirmed block. After a query to the node,
+ * we find out that there's a higher goal
+ *
+ * NO_WORK_SLEEP : We've caught up to the last confirmed block. After a query to the node,
+ * we find out that we've caught up
+ *
  * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
  * @returns {number} A number, which points to one of the above-given scenarios
  */
-async function analyzeWorkerProgress(worker) {
-  if (worker.lastExportedBlock < worker.lastConfirmedBlock) return 0;
+async function analyzeWorkerContext(worker) {
+  if (worker.lastExportedBlock < worker.lastConfirmedBlock) return WORK_NO_SLEEP;
 
   const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - worker.settings.CONFIRMATIONS;
   if (newConfirmedBlock > worker.lastConfirmedBlock) {
     worker.lastConfirmedBlock = newConfirmedBlock;
-    return 1;
+    return WORK_SLEEP;
   }
 
-  return 2;
+  return NO_WORK_SLEEP;
 }
 
 /**
  * Function for setting the work loop's sleep time, after the end of the worker's work method.
- * For the above given 0 and 1 scenarios, we'd want no sleep, because we have to work.
- * For 2 we'd want to sleep, because we'd have caught up completely and should back off for some time.
  * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
  * @param {number} context The scenario used for setting the sleep time
  */
 function setWorkerSleepTime(worker, context) {
-  worker.sleepTimeMsec = (context === 2) ? worker.settings.LOOP_INTERVAL_CURRENT_MODE_SEC : 0;
+  worker.sleepTimeMsec = (context !== WORK_NO_SLEEP) ? worker.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000 : 0;
 }
 
 /**
@@ -46,7 +50,10 @@ function nextIntervalCalculator(worker) {
 }
 
 module.exports = {
+  WORK_SLEEP,
+  NO_WORK_SLEEP,
+  WORK_NO_SLEEP,
   setWorkerSleepTime,
-  analyzeWorkerProgress,
+  analyzeWorkerContext,
   nextIntervalCalculator
 };

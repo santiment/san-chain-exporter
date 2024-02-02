@@ -6,7 +6,7 @@ const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
 const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
 const { stableSort, readJsonFile } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
-const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
+const { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } = require('../eth/lib/next_interval_calculator');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
 const { TimestampsCache } = require('./lib/timestamps_cache');
 const { getPastEvents } = require('./lib/fetch_events');
@@ -98,13 +98,13 @@ class ERC20Worker extends BaseWorker {
   }
 
   async work() {
+    const workerContext = await analyzeWorkerContext(this);
+    setWorkerSleepTime(this, workerContext);
+    if (workerContext === NO_WORK_SLEEP) return [];
+
     const interval = this.settings.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
-      await nextIntervalCalculator(this);
-
-    if (!interval.success) {
-      return [];
-    }
+      nextIntervalCalculator(this);
 
     logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 

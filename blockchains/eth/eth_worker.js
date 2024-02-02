@@ -9,7 +9,7 @@ const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
 const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator, analyzeWorkerProgress, setWorkerSleepTime } = require('./lib/next_interval_calculator');
+const { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } = require('./lib/next_interval_calculator');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 
 class ETHWorker extends BaseWorker {
@@ -146,9 +146,9 @@ class ETHWorker extends BaseWorker {
   }
 
   async work() {
-    const workerContext = await analyzeWorkerProgress(this);
-    setWorkerSleepTime(this);
-    if (workerContext === 2) return [];
+    const workerContext = await analyzeWorkerContext(this);
+    setWorkerSleepTime(this, workerContext);
+    if (workerContext === NO_WORK_SLEEP) return [];
 
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
