@@ -1,55 +1,59 @@
-function isNewBlockAvailable(worker) {
-  return worker.lastExportedBlock < worker.lastConfirmedBlock;
-}
+const WORK_NO_SLEEP = 0;
+const WORK_SLEEP = 1;
+const NO_WORK_SLEEP = 2;
+
 /**
- * Return the next interval to be fetched.
- * NOTE: this method modifies the member variables of its argument
+ * Returns the context in which the worker finds itself at a given moment:
  *
- * @param {*} worker A worker object, member variables would be modified
- * @returns An object like so:
- * {
- *  success: Boolean,
- *  fromBlock: Integer,
- *  toBlock: Integer
- * }
+ * WORK_NO_SLEEP : Exporting blocks that are behind the last confirmed block
+ *
+ * WORK_SLEEP : We've caught up to the last confirmed block. After a query to the node,
+ * we find out that there's a higher goal
+ *
+ * NO_WORK_SLEEP : We've caught up to the last confirmed block. After a query to the node,
+ * we find out that we've caught up
+ *
+ * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
+ * @returns {number} A number, which points to one of the above-given scenarios
  */
-async function nextIntervalCalculator(worker) {
-  // Check if we need to ask the Node for new Head block. This is an optimization to skip this call when the exporter
-  // is behind the last seen Head anyways.
-  const firstNewBlockCheck = isNewBlockAvailable(worker);
-  if (!firstNewBlockCheck) {
-    // On the previous cycle we closed the gap to the head of the blockchain.
-    // Check if there are new blocks now.
-    const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - worker.settings.CONFIRMATIONS;
-    if (newConfirmedBlock > worker.lastConfirmedBlock) {
-      // The Node has progressed
-      worker.lastConfirmedBlock = newConfirmedBlock;
-    }
+async function analyzeWorkerContext(worker) {
+  if (worker.lastExportedBlock < worker.lastConfirmedBlock) return WORK_NO_SLEEP;
+
+  const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - worker.settings.CONFIRMATIONS;
+  if (newConfirmedBlock > worker.lastConfirmedBlock) {
+    worker.lastConfirmedBlock = newConfirmedBlock;
+    return WORK_SLEEP;
   }
 
-  if (firstNewBlockCheck || isNewBlockAvailable(worker)) {
-    // If data was available without asking with Node, we are catching up and should come back straight away
-    if (firstNewBlockCheck) {
-      worker.sleepTimeMsec = 0;
-    }
-    else {
-      // If data became available only after asking the Node, we are close to the Head, come back later
-      worker.sleepTimeMsec = worker.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-    }
+  return NO_WORK_SLEEP;
+}
 
-    return {
-      success: true,
-      fromBlock: worker.lastExportedBlock + 1,
-      toBlock: Math.min(worker.lastExportedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
-    };
-  }
-  else {
-    // The Node has not progressed
-    worker.sleepTimeMsec = worker.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
-    return { success: false };
-  }
+/**
+ * Function for setting the work loop's sleep time, after the end of the worker's work method.
+ * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
+ * @param {number} context The scenario used for setting the sleep time
+ */
+function setWorkerSleepTime(worker, context) {
+  worker.sleepTimeMsec = (context !== WORK_NO_SLEEP) ? worker.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000 : 0;
+}
+
+/**
+ * Function for calculating the next interval to be used in the worker's methods for querying the node.
+ * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
+ * @returns {object} The interval, derived from the progress of the worker
+ */
+function nextIntervalCalculator(worker) {
+  return {
+    fromBlock: worker.lastExportedBlock + 1,
+    toBlock: Math.min(worker.lastExportedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
+  };
 }
 
 module.exports = {
+  WORK_SLEEP,
+  NO_WORK_SLEEP,
+  WORK_NO_SLEEP,
+  setWorkerSleepTime,
+  analyzeWorkerContext,
   nextIntervalCalculator
 };
