@@ -5,6 +5,11 @@ const { logger } = require('../../lib/logger');
 const { constructRPCClient } = require('../../lib/http_client');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
+const {
+  nextIntervalCalculator,
+  analyzeWorkerContext,
+  setWorkerSleepTime,
+  NO_WORK_SLEEP } = require('../eth/lib/next_interval_calculator');
 
 
 class ReceiptsWorker extends BaseWorker {
@@ -91,21 +96,11 @@ class ReceiptsWorker extends BaseWorker {
   }
 
   async work() {
-    if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      this.sleepTimeMsec = this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+    const workerContext = await analyzeWorkerContext(this);
+    setWorkerSleepTime(this, workerContext);
+    if (workerContext === NO_WORK_SLEEP) return [];
 
-      const newConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
-      if (newConfirmedBlock === this.lastConfirmedBlock) {
-        return [];
-      }
-      this.lastConfirmedBlock = newConfirmedBlock;
-    } else {
-      this.sleepTimeMsec = 0;
-    }
-
-    const toBlock = Math.min(this.lastExportedBlock + this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
-    const fromBlock = this.lastExportedBlock + 1;
-
+    const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching receipts for interval ${fromBlock}:${toBlock}`);
     const receipts = await this.getReceiptsForBlocks(fromBlock, toBlock);
 
