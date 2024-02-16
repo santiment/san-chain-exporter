@@ -165,7 +165,7 @@ describe('Main', () => {
 
     await mainInstance.initWorker();
     assert(mainInstance.handleInitPosition.calledOnce);
-    assert.strictEqual(mainInstance.taskManager.lastPushedToBuffer, 0);
+    assert.strictEqual(mainInstance.taskManager.currentFromBlock, 11);
   });
 
   it('workLoop throws error when worker can\'t be initialised', async () => {

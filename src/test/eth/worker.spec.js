@@ -46,7 +46,7 @@ describe('Test worker', function () {
   it('test primary key assignment', async function () {
     // Overwrite variables and methods that the 'work' method would use internally.
     worker.lastConfirmedBlock = 1;
-    worker.lastExportedBlock = 0;
+    worker.lastQueuedBlock = 0;
     worker.fetchData = async function () {
       return [];
     };
@@ -56,7 +56,7 @@ describe('Test worker', function () {
 
     const result = await worker.work();
 
-    assert.deepStrictEqual(result, [feeResultWithPrimaryKey, callResultWithPrimaryKey]);
+    assert.deepStrictEqual(result, [{fromBlock: 1, toBlock: 1}, [feeResultWithPrimaryKey, callResultWithPrimaryKey]]);
   });
 });
 

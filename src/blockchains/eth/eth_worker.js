@@ -95,7 +95,7 @@ class ETHWorker extends BaseWorker {
     return await Promise.all([
       this.fetchEthInternalTrx(fromBlock, toBlock),
       this.fetchBlocks(fromBlock, toBlock),
-      // this.fetchReceipts(fromBlock, toBlock),
+      this.fetchReceipts(fromBlock, toBlock),
     ]);
   }
 
@@ -149,7 +149,7 @@ class ETHWorker extends BaseWorker {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
-    
+
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     this.lastQueuedBlock = toBlock;
 
@@ -168,7 +168,7 @@ class ETHWorker extends BaseWorker {
 
     this.lastExportedBlock = toBlock;
 
-    return events;
+    return [{ fromBlock, toBlock }, events];
   }
 
   async init() {

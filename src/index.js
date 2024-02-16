@@ -36,8 +36,9 @@ class Main {
     await this.exporter.savePosition(this.lastProcessedPosition);
   }
 
-  async #initTaskManager() {
+  async #initTaskManager(lastBlock) {
     this.taskManager = await TaskManager.create(MAX_CONCURRENT_REQUESTS);
+    this.taskManager.currentFromBlock = lastBlock + 1;
   }
 
   #isWorkerSet() {
@@ -80,35 +81,44 @@ class Main {
   }
 
   async waitOnStoreEvents() {
-    const bufferCopy = this.taskManager.retrieveCompleted();
-    await this.exporter.storeEvents(bufferCopy);
-    this.lastProcessedPosition = {
-      primaryKey: bufferCopy[bufferCopy.length - 1].primaryKey,
-      blockNumber: bufferCopy[bufferCopy.length - 1].blockNumber
-    };
-    await this.exporter.savePosition(this.lastProcessedPosition);
-    logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
+    if (this.taskManager.buffer.length > 0) {
+      const bufferCopy = this.taskManager.retrieveCompleted();
+      await this.exporter.storeEvents(bufferCopy);
+      this.lastProcessedPosition = {
+        primaryKey: bufferCopy[bufferCopy.length - 1].primaryKey,
+        blockNumber: bufferCopy[bufferCopy.length - 1].blockNumber
+      };
+      await this.exporter.savePosition(this.lastProcessedPosition);
+      logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
+    }
+
+    if (this.taskManager.queue.isPaused) {
+      this.taskManager.queue.start();
+      this.taskManager.consequentTaskIndex = 0;
+      logger.info('Resuming the queue...');
+    }
   }
 
   async workLoop() {
     while (this.shouldWork) {
       await this.taskManager.queue.onSizeLessThan(constantsBase.PQUEUE_MAX_SIZE);
-      this.taskManager.pushToQueue(this.worker);
+      this.taskManager.pushToQueue(() => this.worker.work().catch(err => {
+        logger.error(err.toString());
+        this.shouldWork = false;
+      }));
       this.worker.lastRequestStartTime = new Date();
       this.worker.lastExportTime = Date.now();
 
       this.lastProcessedPosition = this.worker.getLastProcessedPosition();
-<<<<<<< HEAD:src/index.js
 
       if (events && events.length > 0) {
         await this.exporter.storeEvents(events, constantsBase.WRITE_SIGNAL_RECORDS_KAFKA);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
-=======
       if (this.taskManager.buffer.length > 0) this.waitOnStoreEvents();
+      await this.waitOnStoreEvents();
       this.updateMetrics();
->>>>>>> e51968f (Add task manager):index.js
 
       if (this.shouldWork) {
         await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));

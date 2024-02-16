@@ -7,7 +7,7 @@ describe('TaskManager', () => {
 
     assert.deepStrictEqual(taskManager.taskData, {});
     assert.deepStrictEqual(taskManager.buffer, []);
-    assert.strictEqual(taskManager.lastPushedToBuffer, 0);
+    assert.strictEqual(taskManager.lastPushedToBuffer, undefined);
     assert.strictEqual(taskManager.queue, undefined);
   });
 
@@ -28,31 +28,33 @@ describe('TaskManager', () => {
     assert.deepStrictEqual(taskManager.buffer, []);
   });
 
-  it('handleNewData() produces a map key->data pair accordingly', () => {
+  it('handleNewData() fills the taskData object in the correct format', () => {
     const taskManager = new TaskManager();
-    const exampleDataObject = [{ fromBlock: 1, toBlock: 10, data: [1, 2, 3] }];
+    const exampleDataObject = [{ fromBlock: 1, toBlock: 10 }, [1, 2, 3]];
 
-    taskManager.handleNewData([1, exampleDataObject]); // This [key, data] pair comes from the worker's work method
-    assert.deepStrictEqual(taskManager.taskData, {1: exampleDataObject});
+    taskManager.handleNewData(...exampleDataObject); // This [ interval, data ] pair comes from the worker's work method
+    assert.deepStrictEqual(taskManager.taskData, { 1: { toBlock: 10, data: [1, 2, 3] } });
   });
 
-  it('handleNewData() fills the buffer accordingly', () => {
+  it('handleNewData() fills the buffer when sequential intervals present', () => {
     const taskManager = new TaskManager();
-    const exampleDataObject = [{ fromBlock: 1, toBlock: 10, data: [1, 2, 3] }];
-    const exampleDataObject2 = [{ fromBlock: 31, toBlock: 40, data: [4, 5, 6] }];
+    taskManager.currentFromBlock = 1;
+    const exampleDataObject = [{ fromBlock: 1, toBlock: 10 }, [1, 2, 3]];
+    const exampleDataObject2 = [{ fromBlock: 11, toBlock: 30 }, [4, 5, 6]];
 
-    taskManager.handleNewData([0, exampleDataObject]);
-    taskManager.handleNewData([1, exampleDataObject2]);
-    assert.deepStrictEqual(taskManager.buffer, [...exampleDataObject, ...exampleDataObject2]);
+    taskManager.handleNewData(...exampleDataObject);
+    taskManager.handleNewData(...exampleDataObject2);
+    assert.deepStrictEqual(taskManager.buffer, [...exampleDataObject[1], ...exampleDataObject2[1]]);
   });
 
-  it('handleNewData() fills the buffer accordingly 2', () => {
+  it('handleNewData() should not skip interval', () => {
     const taskManager = new TaskManager();
-    const exampleDataObject = [{ fromBlock: 1, toBlock: 10, data: [1, 2, 3] }];
-    const exampleDataObject2 = [{ fromBlock: 31, toBlock: 40, data: [4, 5, 6] }];
+    taskManager.currentFromBlock = 1;
+    const exampleDataObject = [{ fromBlock: 1, toBlock: 10}, [1, 2, 3]];
+    const exampleDataObject2 = [{ fromBlock: 31, toBlock: 40}, [4, 5, 6] ];
 
-    taskManager.handleNewData([0, exampleDataObject]);
-    taskManager.handleNewData([3, exampleDataObject2]);
-    assert.deepStrictEqual(taskManager.buffer, [...exampleDataObject]);
+    taskManager.handleNewData(...exampleDataObject);
+    taskManager.handleNewData(...exampleDataObject2);
+    assert.deepStrictEqual(taskManager.buffer, [...exampleDataObject[1]]);
   });
 });
