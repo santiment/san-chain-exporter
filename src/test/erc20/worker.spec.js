@@ -1,5 +1,6 @@
 const rewire = require('rewire');
 const assert = require('assert');
+const path = require('path');
 const erc20_worker = rewire('../../blockchains/erc20/erc20_worker');
 const constants = require('../../blockchains/erc20/lib/constants');
 const { ContractOverwrite } = require('../../blockchains/erc20/lib/contract_overwrite');
@@ -90,7 +91,7 @@ describe('Test ERC20 worker', function () {
     it('test the events returned when in \'extract_exact_overwrite\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         constants.CONTRACT_MODE = 'extract_exact_overwrite';
-        constants.CONTRACT_MAPPING_FILE_PATH = './test/erc20/contract_mapping/contract_mapping.json';
+        constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
@@ -126,7 +127,7 @@ describe('Test ERC20 worker', function () {
     it('test the events returned when in \'extract_all_append\' mode', async function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         constants.CONTRACT_MODE = 'extract_all_append';
-        constants.CONTRACT_MAPPING_FILE_PATH = './test/erc20/contract_mapping/contract_mapping.json';
+        constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent];
@@ -164,7 +165,7 @@ describe('Test ERC20 worker', function () {
     it('test multiple events returned when in \'extract_all_append\' mode', async function () {
         // Test that the overwritten event would be correctly ordered in between two original events
         constants.CONTRACT_MODE = 'extract_all_append';
-        constants.CONTRACT_MAPPING_FILE_PATH = './test/erc20/contract_mapping/contract_mapping.json';
+        constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         erc20_worker.__set__('getPastEvents', async function () {
             return [originalEvent, originalEvent2];

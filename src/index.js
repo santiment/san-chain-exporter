@@ -1,11 +1,10 @@
 'use strict';
 const url = require('url');
 const micro = require('micro');
-const pkg = require('./package.json');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
 const { Exporter } = require('./lib/kafka_storage');
-const EXPORTER_NAME = process.env.EXPORTER_NAME || pkg.name;
+const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
 const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);

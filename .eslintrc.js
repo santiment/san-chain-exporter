@@ -3,11 +3,16 @@ module.exports = {
         'node': true,
         'commonjs': true,
         'es2021': true,
-	'mocha': true
+        'mocha': true
     },
-    'extends': 'eslint:recommended',
+    'extends': [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended'
+    ],
+    'parser': '@typescript-eslint/parser',
     'parserOptions': {
-        'ecmaVersion': 13
+        'ecmaVersion': 13,
+        'sourceType': 'module',
     },
     'rules': {
         'quotes': ['error', 'single'],
