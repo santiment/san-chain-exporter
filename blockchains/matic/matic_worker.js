@@ -5,7 +5,11 @@ const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
 const { extendEventsWithPrimaryKey } = require('../erc20/lib/extend_events_key');
 const { getPastEvents } = require('./lib/fetch_events');
-const { nextIntervalCalculator } = require('../eth/lib/next_interval_calculator');
+const {
+  nextIntervalCalculator,
+  analyzeWorkerContext,
+  setWorkerSleepTime,
+  NO_WORK_SLEEP } = require('../eth/lib/next_interval_calculator');
 
 
 class MaticWorker extends BaseWorker {
@@ -18,10 +22,11 @@ class MaticWorker extends BaseWorker {
   }
 
   async work() {
-    const result = await nextIntervalCalculator(this);
-    if (!result.success) {
-      return [];
-    }
+    const workerContext = await analyzeWorkerContext(this);
+    setWorkerSleepTime(this, workerContext);
+    if (workerContext === NO_WORK_SLEEP) return [];
+
+    const result = nextIntervalCalculator(this);
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
