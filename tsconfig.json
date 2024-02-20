@@ -6,7 +6,8 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "module": "esnext"
+    "module": "esnext",
+    "noImplicitReturns": true
   },
   "include": ["./src/**/*"]
 }

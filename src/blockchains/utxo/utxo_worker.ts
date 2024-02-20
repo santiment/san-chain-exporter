@@ -1,16 +1,26 @@
 'use strict';
-const { logger } = require('../../lib/logger');
-const { constructRPCClient } = require('../../lib/http_client');
-const BaseWorker = require('../../lib/worker_base');
-
+import {logger} from '../../lib/logger';
+import {constructRPCClient} from '../../lib/http_client';
+import BaseWorker from '../../lib/worker_base';
+import jayson from 'jayson/promise';
 
 class UtxoWorker extends BaseWorker {
+  private readonly NODE_URL: string;
+  private readonly MAX_RETRIES: number;
+  private readonly RPC_USERNAME: string;
+  private readonly RPC_PASSWORD: string;
+  private readonly CONFIRMATIONS: number;
+  private readonly DEFAULT_TIMEOUT: number;
+  private readonly MAX_CONCURRENT_REQUESTS: number;
+  private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
+  private client: jayson.HttpClient | jayson.HttpsClient;
+
   constructor(settings) {
     super(settings);
 
     this.NODE_URL = settings.NODE_URL;
-    this.MAX_RETRIES = settings.MAX_RETRIES,
-      this.RPC_PASSWORD = settings.RPC_PASSWORD;
+    this.MAX_RETRIES = settings.MAX_RETRIES;
+    this.RPC_PASSWORD = settings.RPC_PASSWORD;
     this.RPC_USERNAME = settings.RPC_USERNAME;
     this.CONFIRMATIONS = settings.CONFIRMATIONS;
     this.DEFAULT_TIMEOUT = settings.DEFAULT_TIMEOUT;
@@ -83,7 +93,7 @@ class UtxoWorker extends BaseWorker {
   }
 
   async fetchBlock(block_index) {
-    let blockHash = await this.sendRequestWithRetry('getblockhash', [block_index]);
+    const blockHash = await this.sendRequestWithRetry('getblockhash', [block_index]);
     return await this.sendRequestWithRetry('getblock', [blockHash, 2]);
   }
 

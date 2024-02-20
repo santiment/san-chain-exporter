@@ -1,9 +1,9 @@
-const assert = require('assert');
-const crypto = require('crypto');
-const Kafka = require('node-rdkafka');
-const { BLOCKCHAIN } = require('./constants');
-const ZookeeperClientAsync = require('./zookeeper_client_async');
-const { logger, SYSLOG_LOG_LEVEL, log_according_to_syslog_level } = require('./logger');
+import crypto from 'crypto';
+import Kafka, {LibrdKafkaError, ProducerGlobalConfig} from 'node-rdkafka';
+import {BLOCKCHAIN} from './constants';
+import ZookeeperClientAsync from './zookeeper_client_async';
+import {log_according_to_syslog_level, logger, SYSLOG_LOG_LEVEL} from './logger';
+
 
 const ZOOKEEPER_URL = process.env.ZOOKEEPER_URL || 'localhost:2181';
 const ZOOKEEPER_RETRIES = parseInt(process.env.ZOOKEEPER_RETRIES || '0');
@@ -19,16 +19,14 @@ const BUFFERING_MAX_MESSAGES = parseInt(process.env.BUFFERING_MAX_MESSAGES || '1
 const TRANSACTIONS_TIMEOUT_MS = parseInt(process.env.TRANSACTIONS_TIMEOUT_MS || '60000');
 const KAFKA_MESSAGE_MAX_BYTES = parseInt(process.env.KAFKA_MESSAGE_MAX_BYTES || '10485760');
 
-process.on('unhandledRejection', (reason, p) => {
+process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void => {
   // Otherwise unhandled promises are not possible to trace with the information logged
-  logger.error(
-    'Unhandled Rejection at: ',
-    p,
-    'reason:',
-    reason,
-    'error stack:',
-    reason.stack
-  );
+  if (reason instanceof Error) {
+    logger.error('Unhandled Rejection at: ', p, 'reason:', reason, 'error stack:', (reason as Error).stack);
+  }
+  else {
+    logger.error('Unhandled Rejection at: ', p, 'reason:', reason);
+  }
   process.exit(1);
 });
 
@@ -36,11 +34,14 @@ process.on('unhandledRejection', (reason, p) => {
  * A class to pick partition for an event.
  */
 class Partitioner {
+  private hashFunction: ((key: string) => number) | null;
+  private partitionCount: number = -1;
+
   constructor() {
     this.hashFunction = null;
   }
 
-  async init(hashFunction, topicName, producer) {
+  async init(hashFunction: ((key: string) => number) | null, topicName: string, producer: Kafka.Producer) {
     if (hashFunction) {
       this.hashFunction = hashFunction;
       this.partitionCount = await this.findPartitionCount(topicName, producer);
@@ -50,11 +51,11 @@ class Partitioner {
     }
   }
 
-  async findPartitionCount(topicName, producer) {
+  async findPartitionCount(topicName: string, producer: Kafka.Producer) {
     // We depend on the producer already being connected
     logger.info(`Finding partition count for topic ${topicName}`);
-    const metadata = await new Promise((resolve, reject) => {
-      producer.getMetadata({ topic: topicName, timeout: 10000 }, (err, metadata) => {
+    const metadata: Kafka.Metadata = await new Promise((resolve, reject) => {
+      producer.getMetadata({ topic: topicName, timeout: 10000 }, (err: Kafka.LibrdKafkaError, metadata: Kafka.Metadata) => {
         if (err) {
           reject(err);
         } else {
@@ -92,13 +93,28 @@ class Partitioner {
   }
 }
 
+function castCompression(compression: string): 'none' | 'gzip' | 'snappy' | 'lz4' | 'zstd' {
+  const validCompressions = ['none', 'gzip', 'snappy', 'lz4', 'zstd'];
+  if (validCompressions.includes(compression)) {
+    return compression as 'none' | 'gzip' | 'snappy' | 'lz4' | 'zstd';
+  }
+  throw new Error(`Invalid compression value: ${compression}`);
+}
+
 class Exporter {
+  private readonly exporter_name: string;
+  private readonly producer: Kafka.Producer;
+  private readonly topicName: string;
+  private readonly zookeeperClient: ZookeeperClientAsync;
+  private partitioner: Partitioner;
+
   constructor(exporter_name, transactional = false) {
     this.exporter_name = exporter_name;
-    var producer_settings = {
+
+    const producer_settings: ProducerGlobalConfig = {
       'metadata.broker.list': KAFKA_URL,
       'client.id': this.exporter_name,
-      'compression.codec': KAFKA_COMPRESSION_CODEC,
+      'compression.codec': castCompression(KAFKA_COMPRESSION_CODEC),
       'queue.buffering.max.messages': BUFFERING_MAX_MESSAGES,
       'message.max.bytes': KAFKA_MESSAGE_MAX_BYTES,
       'dr_cb': true,
@@ -158,7 +174,7 @@ class Exporter {
     }
 
     logger.info(`Connecting to kafka host ${KAFKA_URL}`);
-    var promise_result = new Promise((resolve, reject) => {
+    const promise_result = new Promise((resolve, reject) => {
       this.producer.on('ready', resolve);
       this.producer.on('event.error', reject);
       // The user can provide a callback for delivery reports with the
@@ -292,10 +308,10 @@ class Exporter {
       this.producer.produce(this.topicName, null, Buffer.from(event));
     });
 
-    return new Promise((resolve, reject) =>
-      this.producer.flush(KAFKA_FLUSH_TIMEOUT, (err, result) => {
+    return new Promise<void>((resolve, reject) =>
+      this.producer.flush(KAFKA_FLUSH_TIMEOUT, (err: LibrdKafkaError) => {
         if (err) return reject(err);
-        resolve(result);
+        resolve();
       })
     );
   }
@@ -306,7 +322,7 @@ class Exporter {
     }
 
     if (signalRecordData !== null && this.partitioner === null) {
-      throw new Error('Signal record logic needs partitioner')
+      throw new Error('Signal record logic needs partitioner');
     }
 
     events.forEach(event => {
@@ -322,10 +338,10 @@ class Exporter {
       }
     });
 
-    return new Promise((resolve, reject) =>
-      this.producer.flush(KAFKA_FLUSH_TIMEOUT, (err, result) => {
+    return new Promise<void>((resolve, reject) =>
+      this.producer.flush(KAFKA_FLUSH_TIMEOUT, (err) => {
         if (err) return reject(err);
-        resolve(result);
+        resolve();
       })
     );
   }
@@ -350,12 +366,11 @@ class Exporter {
   }
 
   async initTransactions() {
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise<void>((resolve, reject) => {
       this.producer.initTransactions(TRANSACTIONS_TIMEOUT_MS, (err) => {
         if (err) {
           return reject(err);
         }
-
         resolve();
       });
     });
@@ -382,12 +397,11 @@ class Exporter {
   }
 
   async beginTransaction() {
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise<void>((resolve, reject) => {
       this.producer.beginTransaction((err) => {
         if (err) {
           return reject(err);
         }
-
         resolve();
       });
     });
@@ -396,12 +410,11 @@ class Exporter {
   }
 
   async commitTransaction() {
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise<void>((resolve, reject) => {
       this.producer.commitTransaction(TRANSACTIONS_TIMEOUT_MS, (err) => {
         if (err) {
           return reject(err);
         }
-
         resolve();
       });
     });
@@ -410,12 +423,11 @@ class Exporter {
   }
 
   async abortTransaction() {
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise<void>((resolve, reject) => {
       this.producer.abortTransaction(TRANSACTIONS_TIMEOUT_MS, (err) => {
         if (err) {
           return reject(err);
         }
-
         resolve();
       });
     });
