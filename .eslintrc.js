@@ -17,6 +17,7 @@ module.exports = {
     'rules': {
         'quotes': ['error', 'single'],
         'semi': ['error', 'always'],
-        'eqeqeq': ['error', 'always']
+        'eqeqeq': ['error', 'always'],
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
     }
 };
