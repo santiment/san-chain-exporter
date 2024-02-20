@@ -72,8 +72,10 @@ class ERC20Worker extends BaseWorker {
       logger.info(`Extracted unmodified contracts are: ${JSON.stringify(this.contractsUnmodified)}`);
     }
 
-    const hashFunction = this.settings.EVENTS_IN_SAME_PARTITION ? (event) => simpleHash(event.contract) : null;
-    await exporter.initPartitioner(hashFunction);
+    if (this.settings.EVENTS_IN_SAME_PARTITION) {
+      await exporter.initPartitioner((event) => simpleHash(event.contract));
+    }
+
   }
 
   getBlocksListInterval() {

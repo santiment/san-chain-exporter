@@ -24,7 +24,7 @@ class WorkerBase {
     throw new Error('"work" method need to be overriden');
   }
   // To be implemented on inheritance.
-  init() {
+  init(_exporter) {
     throw new Error('"init" method need to be overriden');
   }
 

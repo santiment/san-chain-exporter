@@ -1,8 +1,10 @@
 'use strict';
+import jayson from 'jayson/promise';
 import {logger} from '../../lib/logger';
 import {constructRPCClient} from '../../lib/http_client';
 import BaseWorker from '../../lib/worker_base';
-import jayson from 'jayson/promise';
+import { Exporter } from '../../lib/kafka_storage';
+
 
 class UtxoWorker extends BaseWorker {
   private readonly NODE_URL: string;
@@ -36,9 +38,10 @@ class UtxoWorker extends BaseWorker {
     });
   }
 
-  async init() {
+  async init(exporter: Exporter) {
     const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
     this.lastConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
+    await exporter.initPartitioner((event) => event['height']);
   }
 
   async sendRequest(method, params) {

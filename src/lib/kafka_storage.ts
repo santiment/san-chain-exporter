@@ -5,19 +5,19 @@ import ZookeeperClientAsync from './zookeeper_client_async';
 import {log_according_to_syslog_level, logger, SYSLOG_LOG_LEVEL} from './logger';
 
 
-const ZOOKEEPER_URL = process.env.ZOOKEEPER_URL || 'localhost:2181';
-const ZOOKEEPER_RETRIES = parseInt(process.env.ZOOKEEPER_RETRIES || '0');
-const ZOOKEEPER_SPIN_DELAY = parseInt(process.env.ZOOKEEPER_SPIN_DELAY || '1000');
-const ZOOKEEPER_SESSION_TIMEOUT = parseInt(process.env.ZOOKEEPER_SESSION_TIMEOUT || '30000');
+const ZOOKEEPER_URL: string = process.env.ZOOKEEPER_URL || 'localhost:2181';
+const ZOOKEEPER_RETRIES: number = parseInt(process.env.ZOOKEEPER_RETRIES || '0');
+const ZOOKEEPER_SPIN_DELAY: number = parseInt(process.env.ZOOKEEPER_SPIN_DELAY || '1000');
+const ZOOKEEPER_SESSION_TIMEOUT: number = parseInt(process.env.ZOOKEEPER_SESSION_TIMEOUT || '30000');
 
-const FORMAT_HEADER = 'format=json;';
-const RDKAFKA_DEBUG = process.env.RDKAFKA_DEBUG || null;
-const KAFKA_URL = process.env.KAFKA_URL || 'localhost:9092';
-const KAFKA_COMPRESSION_CODEC = process.env.KAFKA_COMPRESSION_CODEC || 'lz4';
-const KAFKA_FLUSH_TIMEOUT = parseInt(process.env.KAFKA_FLUSH_TIMEOUT || '10000');
-const BUFFERING_MAX_MESSAGES = parseInt(process.env.BUFFERING_MAX_MESSAGES || '150000');
-const TRANSACTIONS_TIMEOUT_MS = parseInt(process.env.TRANSACTIONS_TIMEOUT_MS || '60000');
-const KAFKA_MESSAGE_MAX_BYTES = parseInt(process.env.KAFKA_MESSAGE_MAX_BYTES || '10485760');
+const FORMAT_HEADER: string = 'format=json;';
+const RDKAFKA_DEBUG: string | null = process.env.RDKAFKA_DEBUG || null;
+const KAFKA_URL: string = process.env.KAFKA_URL || 'localhost:9092';
+const KAFKA_COMPRESSION_CODEC: string = process.env.KAFKA_COMPRESSION_CODEC || 'lz4';
+const KAFKA_FLUSH_TIMEOUT: number = parseInt(process.env.KAFKA_FLUSH_TIMEOUT || '10000');
+const BUFFERING_MAX_MESSAGES: number = parseInt(process.env.BUFFERING_MAX_MESSAGES || '150000');
+const TRANSACTIONS_TIMEOUT_MS: number = parseInt(process.env.TRANSACTIONS_TIMEOUT_MS || '60000');
+const KAFKA_MESSAGE_MAX_BYTES: number = parseInt(process.env.KAFKA_MESSAGE_MAX_BYTES || '10485760');
 
 process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void => {
   // Otherwise unhandled promises are not possible to trace with the information logged
@@ -34,20 +34,18 @@ process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void =>
  * A class to pick partition for an event.
  */
 class Partitioner {
-  private hashFunction: ((key: string) => number) | null;
+  private hashFunction: ((value: object) => number) | null;
   private partitionCount: number = -1;
 
   constructor() {
     this.hashFunction = null;
   }
 
-  async init(hashFunction: ((key: string) => number) | null, topicName: string, producer: Kafka.Producer) {
-    if (hashFunction) {
-      this.hashFunction = hashFunction;
-      this.partitionCount = await this.findPartitionCount(topicName, producer);
-      if (this.partitionCount <= 0) {
-        throw new Error('Partition count should be > 0');
-      }
+  async init(hashFunction: ((value: object) => number), topicName: string, producer: Kafka.Producer) {
+    this.hashFunction = hashFunction;
+    this.partitionCount = await this.findPartitionCount(topicName, producer);
+    if (this.partitionCount <= 0) {
+      throw new Error('Partition count should be > 0');
     }
   }
 
@@ -79,7 +77,7 @@ class Partitioner {
    * @param {object} event An event to be written to Kafka
    * @returns {number} A partition number chosen for this event
    */
-  getPartitionNumber(event) {
+  getPartitionNumber(event: object) {
     if (!this.hashFunction) {
       // Should be left to 'null' if we want library to choose partition for us
       throw new Error('Hash function in partitioner is not initialized');
@@ -101,14 +99,14 @@ function castCompression(compression: string): 'none' | 'gzip' | 'snappy' | 'lz4
   throw new Error(`Invalid compression value: ${compression}`);
 }
 
-class Exporter {
+export class Exporter {
   private readonly exporter_name: string;
   private readonly producer: Kafka.Producer;
   private readonly topicName: string;
   private readonly zookeeperClient: ZookeeperClientAsync;
   private partitioner: Partitioner;
 
-  constructor(exporter_name, transactional = false) {
+  constructor(exporter_name: string, transactional: boolean = false) {
     this.exporter_name = exporter_name;
 
     const producer_settings: ProducerGlobalConfig = {
@@ -435,13 +433,10 @@ class Exporter {
     await promise;
   }
 
-  async initPartitioner(hashFunction) {
+  async initPartitioner(hashFunction: ((value: object) => number)) {
     // We delay the finding of the partition count so that we are sure that we have a connected producer
     this.partitioner = new Partitioner();
     await this.partitioner.init(hashFunction, this.topicName, this.producer);
   }
 }
 
-module.exports = {
-  Exporter
-};
