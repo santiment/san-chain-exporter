@@ -6,7 +6,7 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "commonjs", // Change this to 'esnext' once all 'require' is changed to 'import'
     "noImplicitReturns": true
   },
   "include": ["./src/**/*"]
