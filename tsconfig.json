@@ -5,9 +5,14 @@
     "target": "es6",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
     "esModuleInterop": true,
     "module": "commonjs", // Change this to 'esnext' once all 'require' is changed to 'import'
     "noImplicitReturns": true
   },
-  "include": ["./src/**/*"]
+  "include": ["./src/**/*"],
+  "exclude": [
+    "node_modules",
+    "built"
+  ]
 }

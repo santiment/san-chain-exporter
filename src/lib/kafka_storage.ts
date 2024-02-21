@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import Kafka, {LibrdKafkaError, ProducerGlobalConfig} from 'node-rdkafka';
-import {BLOCKCHAIN} from './constants';
+import Kafka, { LibrdKafkaError, ProducerGlobalConfig } from 'node-rdkafka';
+import { BLOCKCHAIN } from './constants';
 import ZookeeperClientAsync from './zookeeper_client_async';
-import {log_according_to_syslog_level, logger, SYSLOG_LOG_LEVEL} from './logger';
+import { log_according_to_syslog_level, logger, SYSLOG_LOG_LEVEL } from './logger';
 
 
 const ZOOKEEPER_URL: string = process.env.ZOOKEEPER_URL || 'localhost:2181';
@@ -328,9 +328,10 @@ export class Exporter {
       const eventString = typeof event === 'object' ? JSON.stringify(event) : event;
       this.producer.produce(this.topicName, partitionNumberPayload, Buffer.from(eventString), event[keyField]);
       if (signalRecordData !== null) {
+        const signalRecordString = typeof signalRecordData === 'object' ? JSON.stringify(signalRecordData) : signalRecordData;
         for (let partitionNumber = 0; partitionNumber < this.partitioner.getPartitionCount(); ++partitionNumber) {
           if (partitionNumber !== partitionNumberPayload) {
-            this.producer.produce(this.topicName, partitionNumber, Buffer.from(eventString), event[keyField]);
+            this.producer.produce(this.topicName, partitionNumber, Buffer.from(signalRecordString), event[keyField]);
           }
         }
       }
@@ -380,7 +381,7 @@ export class Exporter {
     await this.beginTransaction();
     try {
       if (BLOCKCHAIN === 'utxo') {
-        await this.sendDataWithKey(events, 'height');
+        await this.sendDataWithKey(events, 'height', { 'santiment_signal_record': true });
       } else if (BLOCKCHAIN === 'receipts') {
         await this.sendDataWithKey(events, 'transactionHash');
       } else {
