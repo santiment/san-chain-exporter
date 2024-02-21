@@ -44,6 +44,18 @@ function setWorkerSleepTime(worker, context) {
  */
 function nextIntervalCalculator(worker) {
   return {
+    fromBlock: worker.lastExportedBlock + 1,
+    toBlock: Math.min(worker.lastExportedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
+  };
+}
+
+/**
+ * Function for calculating the next interval to be used in the worker's methods for querying the node.
+ * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
+ * @returns {object} The interval, derived from the progress of the worker
+ */
+function nextIntervalCalculatorV2(worker) {
+  return {
     fromBlock: worker.lastQueuedBlock + 1,
     toBlock: Math.min(worker.lastQueuedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
   };
@@ -55,5 +67,6 @@ module.exports = {
   WORK_NO_SLEEP,
   setWorkerSleepTime,
   analyzeWorkerContext,
-  nextIntervalCalculator
+  nextIntervalCalculator,
+  nextIntervalCalculatorV2
 };

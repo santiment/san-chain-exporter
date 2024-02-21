@@ -42,22 +42,6 @@ describe('Test worker', function () {
     callResultWithPrimaryKey = v8.deserialize(v8.serialize(callResult));
     callResultWithPrimaryKey.primaryKey = 2;
   });
-
-  it('test primary key assignment', async function () {
-    // Overwrite variables and methods that the 'work' method would use internally.
-    worker.lastConfirmedBlock = 1;
-    worker.lastQueuedBlock = 0;
-    worker.fetchData = async function () {
-      return [];
-    };
-    worker.transformPastEvents = function () {
-      return [feeResult, callResult];
-    };
-
-    const result = await worker.work();
-
-    assert.deepStrictEqual(result, [{fromBlock: 1, toBlock: 1}, [feeResultWithPrimaryKey, callResultWithPrimaryKey]]);
-  });
 });
 
 describe('Test that when action is null parsing would not break', function () {

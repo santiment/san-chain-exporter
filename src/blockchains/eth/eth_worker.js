@@ -4,13 +4,17 @@ const { logger } = require('../../lib/logger');
 const { constructRPCClient } = require('../../lib/http_client');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
 const { getGenesisTransfers } = require('./lib/genesis_transfers');
-const { transactionOrder, stableSort } = require('./lib/util');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
 const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } = require('./lib/next_interval_calculator');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
+const {
+  analyzeWorkerContext,
+  setWorkerSleepTime,
+  NO_WORK_SLEEP,
+  nextIntervalCalculatorV2 } = require('./lib/next_interval_calculator');
+
 
 class ETHWorker extends BaseWorker {
   constructor(settings) {
@@ -150,23 +154,12 @@ class ETHWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    const { fromBlock, toBlock } = nextIntervalCalculatorV2(this);
     this.lastQueuedBlock = toBlock;
 
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
     const events = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
-
-    if (events.length > 0) {
-      stableSort(events, transactionOrder);
-      for (let i = 0; i < events.length; i++) {
-        events[i].primaryKey = this.lastPrimaryKey + i + 1;
-      }
-
-      this.lastPrimaryKey += events.length;
-    }
-
-    this.lastExportedBlock = toBlock;
 
     return [{ fromBlock, toBlock }, events];
   }

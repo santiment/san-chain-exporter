@@ -55,6 +55,7 @@ describe('Main', () => {
     exporterStub.getLastPosition.returns(JSON.parse('{"blockNumber":123456,"primaryKey":0}'));
 
     const mainInstance = new Main();
+    mainInstance.taskManager = await TaskManager.create(1);
     mainInstance.exporter = exporterStub;
     mainInstance.worker = new BaseWorker(constants);
 
@@ -71,6 +72,7 @@ describe('Main', () => {
     exporterStub.getLastPosition.returns(null);
 
     const mainInstance = new Main();
+    mainInstance.taskManager = await TaskManager.create(1);
     mainInstance.exporter = exporterStub;
     mainInstance.worker = new BaseWorker(constants);
 
@@ -87,6 +89,7 @@ describe('Main', () => {
     exporterStub.getLastPosition.throws(new Error('Exporter getLastPosition failed'));
 
     const mainInstance = new Main();
+    mainInstance.taskManager = await TaskManager.create(1);
     mainInstance.exporter = exporterStub;
     mainInstance.worker = new BaseWorker(constants);
 
@@ -104,6 +107,7 @@ describe('Main', () => {
     exporterStub.savePosition.throws(new Error('Exporter savePosition failed'));
 
     const mainInstance = new Main();
+    mainInstance.taskManager = await TaskManager.create(1);
     mainInstance.exporter = exporterStub;
     mainInstance.worker = new BaseWorker(constants);
 
@@ -140,44 +144,29 @@ describe('Main', () => {
     }
   });
 
-  it('initWorker throws an error when handleInitPosition() fails', async () => {
-    const mainInstance = new Main();
-    mainInstance.exporter = new Exporter('test-exporter');
-    sinon.stub(worker.prototype, 'init').resolves();
-
-    sinon.stub(mainInstance, 'handleInitPosition').throws(new Error('Error when initializing position'));
-
-    try {
-      await mainInstance.initWorker();
-      expect.fail('initWorker should have thrown an error');
-    } catch (err) {
-      assert.strictEqual(err.message, 'Error when initializing position');
-    }
-  });
-
   it('initWorker success', async () => {
     const mainInstance = new Main();
+    mainInstance.taskManager = await TaskManager.create(1);
     mainInstance.exporter = new Exporter('test-exporter');
     sinon.stub(worker.prototype, 'init').resolves();
-    sinon.stub(mainInstance, 'handleInitPosition').resolves();
-    sinon.stub(TaskManager.prototype, 'initQueue').resolves();
     mainInstance.lastProcessedPosition = { blockNumber: 10, primaryKey: 1 };
 
     await mainInstance.initWorker();
-    assert(mainInstance.handleInitPosition.calledOnce);
-    assert.strictEqual(mainInstance.taskManager.currentFromBlock, 11);
+    expect(mainInstance.worker).to.be.instanceof(worker);
   });
 
   it('workLoop throws error when worker can\'t be initialised', async () => {
     sinon.stub(BaseWorker.prototype, 'work').rejects(new Error('Error in worker "work" method'));
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
-    mainInstance.taskManager = new TaskManager(0, 50);
-    await mainInstance.taskManager.initQueue(1);
+    mainInstance.taskManager = await TaskManager.create(1);
     sinon.spy(mainInstance, 'workLoop');
-    await mainInstance.workLoop();
-    assert(mainInstance.workLoop.calledOnce);
-    assert.strictEqual(mainInstance.shouldWork, false);
+    try {
+      await mainInstance.workLoop();
+    } catch(err) {
+      assert(mainInstance.workLoop.calledOnce);
+      assert.strictEqual(err.message, 'Error in worker "work" method');
+    }
   });
 
   it('workLoop throws error when storeEvents() fails', async () => {
@@ -238,7 +227,7 @@ describe('main function', () => {
 
   it('main function throws error when workLoop fails', async () => {
     sinon.stub(Main.prototype, 'init').resolves();
-    sinon.stub(Main.prototype, 'workLoop').rejects(new Error('Main workLoop failed'));
+    sinon.stub(Main.prototype, 'workLoopV2').rejects(new Error('Main workLoop failed'));
 
     try {
       await main();
@@ -250,7 +239,7 @@ describe('main function', () => {
 
   it('main function throws error when disconnecting fails', async () => {
     sinon.stub(Main.prototype, 'init').resolves();
-    sinon.stub(Main.prototype, 'workLoop').resolves();
+    sinon.stub(Main.prototype, 'workLoopV2').resolves();
     sinon.stub(Main.prototype, 'disconnect').rejects(new Error('Main disconnect failed'));
 
     try {
@@ -263,11 +252,11 @@ describe('main function', () => {
 
   it('main function works', async () => {
     sinon.stub(Main.prototype, 'init').resolves();
-    sinon.stub(Main.prototype, 'workLoop').resolves();
+    sinon.stub(Main.prototype, 'workLoopV2').resolves();
     sinon.stub(Main.prototype, 'disconnect').resolves();
 
     await main();
     assert(Main.prototype.init.calledOnce);
-    assert(Main.prototype.workLoop.calledOnce);
+    assert(Main.prototype.workLoopV2.calledOnce);
   });
 });
