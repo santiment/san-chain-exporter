@@ -4,11 +4,12 @@
   "description": "Exporter of all transfer events for a blockchain",
   "main": "index.js",
   "scripts": {
-    "test": "TEST_ENV=1 BLOCKCHAIN=eth CONTRACT_MAPPING_FILE_PATH=test/erc20/contract_mapping/contract_mapping.json LOG_LEVEL=error CONTRACT_MODE=extract_exact_overwrite mocha --recursive --reporter spec ./built/test/**/*.js",
+    "test": "TEST_ENV=1 BLOCKCHAIN=eth CONTRACT_MAPPING_FILE_PATH=test/erc20/contract_mapping/contract_mapping.json LOG_LEVEL=error CONTRACT_MODE=extract_exact_overwrite mocha --require source-map-support/register --recursive --reporter spec ./built/test/**/*.js",
     "integration_test": "mocha --recursive --reporter spec integration_test",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "start": "npm run build && node ./built/index.js",
-    "build": "tsc && node copy-assets.js"
+    "build": "rm -r -f ./built && tsc && node copy-assets.js",
+    "tsc_only": "tsc"
   },
   "repository": {
     "type": "git",
@@ -47,6 +48,7 @@
     "mocha": "^10.1.0",
     "rewire": "^6.0.0",
     "sinon": "^15.2.0",
+    "source-map-support": "^0.5.21",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }

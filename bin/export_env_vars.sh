@@ -1,12 +1,11 @@
 export KAFKA_URL=kafka-hz.stage.san:30911
 export ZOOKEEPER_URL=zookeeper-hz.stage.san:30921
-export NODE_URL=https://polygon.santiment.net
-export START_BLOCK="15676731"
+export NODE_URL=https://bitcoin.santiment.net
 export BLOCK_INTERVAL="50"
 export EXPORT_TIMEOUT_MLS=300000
 export CONTRACT_MODE="extract_exact_overwrite"
-export BLOCKCHAIN="matic"
-export KAFKA_TOPIC="erc20_exporter_test_topic"
+export BLOCKCHAIN="utxo"
+export KAFKA_TOPIC="btc_exporter_test_topic"
 export CARDANO_GRAPHQL_URL=https://cardano.santiment.net
 export ZOOKEEPER_SESSION_TIMEOUT=20000
 export CONTRACT_MAPPING_FILE_PATH="./test/erc20/contract_mapping/contract_mapping.json"
