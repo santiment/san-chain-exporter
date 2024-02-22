@@ -14,7 +14,7 @@ RUN apt-get update; \
 
 WORKDIR /opt
 
-COPY package.json package-lock.json* tsconfig.json copy-assets.js ./
+COPY package.json package-lock.json* tsconfig.json copy_assets.sh ./
 COPY src ./src
 
 RUN if [ "$BUILD_ENV" = "production" ]; \

@@ -5,6 +5,7 @@ const EXPORT_TIMEOUT_MLS = parseInt(process.env.EXPORT_TIMEOUT_MLS) || 1000 * 60
 const EXPORT_BLOCKS_LIST_MAX_INTERVAL = parseInt(process.env.EXPORT_BLOCKS_LIST_MAX_INTERVAL) || 50;
 const START_BLOCK = parseInt(process.env.START_BLOCK || '0') - 1;
 const START_PRIMARY_KEY = parseInt(process.env.START_PRIMARY_KEY || '-1');
+const WRITE_SIGNAL_RECORDS_KAFKA = process.env.WRITE_SIGNAL_RECORDS_KAFKA || false;
 
 module.exports = {
   BLOCKCHAIN,
@@ -13,5 +14,6 @@ module.exports = {
   EXPORT_TIMEOUT_MLS,
   EXPORT_BLOCKS_LIST_MAX_INTERVAL,
   START_BLOCK,
-  START_PRIMARY_KEY
+  START_PRIMARY_KEY,
+  WRITE_SIGNAL_RECORDS_KAFKA
 };

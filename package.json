@@ -8,7 +8,7 @@
     "integration_test": "mocha --recursive --reporter spec integration_test",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "start": "npm run build && node ./built/index.js",
-    "build": "rm -r -f ./built && tsc && node copy-assets.js",
+    "build": "rm -r -f ./built && tsc && ./copy_assets.sh",
     "tsc_only": "tsc"
   },
   "repository": {
@@ -24,7 +24,6 @@
   "dependencies": {
     "bignumber.js": "^9.0.0",
     "csv-parser": "^3.0.0",
-    "fs-extra": "^11.2.0",
     "got": "^11.8.5",
     "jayson": "^3.5.2",
     "lodash": "^4.17.21",

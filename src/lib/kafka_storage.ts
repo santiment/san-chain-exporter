@@ -314,16 +314,14 @@ export class Exporter {
     );
   }
 
-  async sendDataWithKey(events, keyField, signalRecordData = null) {
-    if (events.constructor !== Array) {
-      events = [events];
-    }
+  async sendDataWithKey(events: object | Array<object>, keyField: string, signalRecordData: object | null) {
+    const arrayEvents: Array<object> = (events.constructor !== Array) ? [events] : events
 
     if (signalRecordData !== null && this.partitioner === null) {
       throw new Error('Signal record logic needs partitioner');
     }
 
-    events.forEach(event => {
+    arrayEvents.forEach(event => {
       const partitionNumberPayload = this.partitioner ? this.partitioner.getPartitionNumber(event) : null;
       const eventString = typeof event === 'object' ? JSON.stringify(event) : event;
       this.producer.produce(this.topicName, partitionNumberPayload, Buffer.from(eventString), event[keyField]);
@@ -377,15 +375,16 @@ export class Exporter {
     await promise;
   }
 
-  async storeEvents(events) {
+  async storeEvents(events: object, writeSignalRecordsKafka: boolean) {
     await this.beginTransaction();
+    const signalRecord: object | null = writeSignalRecordsKafka ? { 'santiment_signal_record': true } : null
     try {
       if (BLOCKCHAIN === 'utxo') {
-        await this.sendDataWithKey(events, 'height', { 'santiment_signal_record': true });
+        await this.sendDataWithKey(events, 'height', signalRecord);
       } else if (BLOCKCHAIN === 'receipts') {
-        await this.sendDataWithKey(events, 'transactionHash');
+        await this.sendDataWithKey(events, 'transactionHash', signalRecord);
       } else {
-        await this.sendDataWithKey(events, 'primaryKey');
+        await this.sendDataWithKey(events, 'primaryKey', signalRecord);
       }
       await this.commitTransaction();
     } catch (exception) {

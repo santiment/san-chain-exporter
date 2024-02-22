@@ -83,7 +83,7 @@ class Main {
       this.lastProcessedPosition = this.worker.getLastProcessedPosition();
 
       if (events && events.length > 0) {
-        await this.exporter.storeEvents(events);
+        await this.exporter.storeEvents(events, constantsBase.WRITE_SIGNAL_RECORDS_KAFKA);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
