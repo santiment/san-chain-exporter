@@ -30,19 +30,23 @@ class Main {
       .catch((err) => { throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`); });
   }
 
-  async handleInitPosition() {
-    const lastRecoveredPosition = await this.exporter.getLastPosition();
-    if (BLOCKCHAIN === 'eth') {
-      this.lastProcessedPosition = this.taskManager.initPosition(lastRecoveredPosition);
-      this.worker.lastQueuedBlock = this.lastProcessedPosition.blockNumber;
+  initLastProcessedPosition(lastRecoveredPosition) {
+    if (lastRecoveredPosition) {
+      this.lastProcessedPosition = lastRecoveredPosition;
+      logger.info(`Resuming export from position ${JSON.stringify(lastRecoveredPosition)}`);
     } else {
-      this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
+      this.lastProcessedPosition = {
+        blockNumber: constants.START_BLOCK,
+        primaryKey: constants.START_PRIMARY_KEY
+      };
+      logger.info(`Initialized exporter with initial position ${JSON.stringify(lastRecoveredPosition)}`);
     }
-    await this.exporter.savePosition(this.lastProcessedPosition);
   }
 
-  async initTaskManager() {
-    this.taskManager = await TaskManager.create(MAX_CONCURRENT_REQUESTS);
+  async handleInitPosition() {
+    const lastRecoveredPosition = await this.exporter.getLastPosition();
+    this.initLastProcessedPosition(lastRecoveredPosition);
+    await this.exporter.savePosition(this.lastProcessedPosition);
   }
 
   #isWorkerSet() {
@@ -53,14 +57,21 @@ class Main {
     this.#isWorkerSet();
     const mergedConstants = { ...constantsBase, ...constants };
     this.worker = new worker.worker(mergedConstants);
+    this.worker.initFromLastPosition(this.lastProcessedPosition);
+
     await this.worker.init(this.exporter);
+  }
+
+  async initTaskManager() {
+    this.taskManager = await TaskManager.create(MAX_CONCURRENT_REQUESTS);
+    this.taskManager.initFromLastPosition(this.lastProcessedPosition);
   }
 
   async init() {
     await this.initExporter(EXPORTER_NAME, true);
-    await this.initWorker();
-    if (BLOCKCHAIN === 'eth') await this.initTaskManager(this.lastProcessedPosition);
     await this.handleInitPosition();
+    await this.initWorker();
+    if (BLOCKCHAIN === 'eth') await this.initTaskManager();
 
     metrics.startCollection();
 
@@ -83,7 +94,7 @@ class Main {
     metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
     metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
     if (BLOCKCHAIN === 'eth') {
-      metrics.lastExportedBlock.set(this.taskManager.lastExportedBlock);
+      metrics.lastExportedBlock.set(this.lastProcessedPosition.blockNumber);
     } else {
       metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
     }
@@ -92,10 +103,9 @@ class Main {
   async waitOnStoreEvents() {
     const buffer = this.taskManager.retrieveCompleted();
     if (buffer.length > 0) {
+      this.worker.decorateWithPrimaryKeys(buffer);
       await this.exporter.storeEvents(buffer);
     }
-
-    this.taskManager.restartQueueIfNeeded();
   }
 
   async updatePosition() {

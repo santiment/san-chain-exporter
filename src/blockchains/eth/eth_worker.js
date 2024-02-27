@@ -1,14 +1,16 @@
 const { Web3 } = require('web3');
-const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
-const { constructRPCClient } = require('../../lib/http_client');
-const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-const { getGenesisTransfers } = require('./lib/genesis_transfers');
-const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
-const { decodeTransferTrace } = require('./lib/decode_transfers');
+const BaseWorker = require('../../lib/worker_base');
 const { FeesDecoder } = require('./lib/fees_decoder');
+const { filterErrors } = require('./lib/filter_errors');
+const { stableSort } = require('./blockchains/erc20/lib/util');
+const { constructRPCClient } = require('../../lib/http_client');
+const { decodeTransferTrace } = require('./lib/decode_transfers');
+const { transactionOrder } = require('./blockchains/eth/lib/util');
+const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
+const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
 const {
   analyzeWorkerContext,
   setWorkerSleepTime,
@@ -149,8 +151,18 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
+  decorateWithPrimaryKeys(events) {
+    if (this.settings.BLOCKCHAIN === 'eth') {
+      stableSort(events, transactionOrder);
+      for (let i = 0; i < events.length; i++) {
+        events[i].primaryKey = this.lastPrimaryKey + i + 1;
+      }
+      this.lastPrimaryKey += events.length;
+    }
+  }
+
   async work() {
-    const workerContext = await analyzeWorkerContext(this);
+    const workerContext = await analyzeWorkerContext(this);//TODO: move into index.js loopv2 (?)
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 

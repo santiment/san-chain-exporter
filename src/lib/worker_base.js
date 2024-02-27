@@ -1,6 +1,4 @@
 'use strict';
-const { logger } = require('./logger');
-
 class WorkerBase {
   constructor(constants) {
     // To prevent healthcheck failing during initialization and processing first
@@ -56,20 +54,10 @@ class WorkerBase {
    * @param {JSON} lastProcessedPosition
    * @return {Object} The received or modified object describing the position to start from.
    */
-  initPosition(lastProcessedPosition) {
-    if (lastProcessedPosition) {
-      logger.info(`Resuming export from position ${JSON.stringify(lastProcessedPosition)}`);
-    } else {
-      lastProcessedPosition = {
-        blockNumber: this.settings.START_BLOCK,
-        primaryKey: this.settings.START_PRIMARY_KEY
-      };
-      logger.info(`Initialized exporter with initial position ${JSON.stringify(lastProcessedPosition)}`);
-    }
+  initFromLastPosition(lastProcessedPosition) {
     this.lastExportedBlock = lastProcessedPosition.blockNumber;
     this.lastPrimaryKey = lastProcessedPosition.primaryKey;
-    
-    this.lastQueuedBlock = this.lastExportedBlock;
+    if (this.settings.BLOCKCHAIN === 'eth') this.lastQueuedBlock = this.lastExportedBlock;
 
     return lastProcessedPosition;
   }
