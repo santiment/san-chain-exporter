@@ -35,6 +35,11 @@ ENV PATH /opt/node_modules/.bin:$PATH
 
 COPY --from=builder /opt/node_modules /opt/node_modules
 COPY --from=builder /opt/built /opt/app/built
+
+RUN if [ "$BUILD_ENV" = "production" ]; \
+    then rm -r --force /opt/app/built/test
+    fi
+
 #
 # Reason for multipe COPY commands is Docker CP limitation, it copies <src> contents only not preserving the directory
 #
