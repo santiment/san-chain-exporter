@@ -1,16 +1,21 @@
 {
   "compilerOptions": {
-    "outDir": "./built",
     "allowJs": true,
-    "target": "es6",
-    "moduleResolution": "node16",
     "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
+    "alwaysStrict": true,
     "esModuleInterop": true,
     "module": "node16", // Imporant. No other value really works for us. 'commonjs' does not play well with dynamic import(). 'esnext' pretty much require to migrate everything
-    "noImplicitReturns": true
+    "moduleResolution": "node16",
+    "noImplicitReturns": true,
+    "outDir": "./built",
+    "sourceMap": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "target": "es6"
   },
-  "include": ["./src/**/*"],
+  "include": [
+    "./src/**/*"
+  ],
   "exclude": [
     "node_modules",
     "built"

@@ -1,11 +1,11 @@
 import http from 'http';
 import https from 'https';
-import jayson, {HttpsClientOptions} from 'jayson/promise';
+import jayson, { HttpsClientOptions } from 'jayson/promise';
 // The TCP session constructed by Node HTTP module would get closed after 5 seconds of inactivity by default.
 // Extend this timeout to 30 to reduce the number of sessions constructed.
 const TCP_SESSION_KEEP_ALIVE_MSEC = 30000;
 
-export function constructRPCClient(nodeURL, extraOptions = {}): jayson.HttpClient | jayson.HttpsClient {
+export function constructRPCClient(nodeURL: string, extraOptions = {}): jayson.HttpClient | jayson.HttpsClient {
     const nodeUrl = new URL(nodeURL);
 
     const mergedOptions: HttpsClientOptions = {

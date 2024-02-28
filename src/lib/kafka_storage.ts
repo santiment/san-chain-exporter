@@ -104,7 +104,7 @@ export class Exporter {
   private readonly producer: Kafka.Producer;
   private readonly topicName: string;
   private readonly zookeeperClient: ZookeeperClientAsync;
-  private partitioner: Partitioner;
+  private partitioner: Partitioner | null;
 
   constructor(exporter_name: string, transactional: boolean = false) {
     this.exporter_name = exporter_name;
@@ -146,6 +146,8 @@ export class Exporter {
         retries: ZOOKEEPER_RETRIES
       }
     );
+
+    this.partitioner = null;
   }
 
   get zookeeperPositionNode() {
@@ -191,7 +193,7 @@ export class Exporter {
    * Disconnect from Zookeeper and Kafka.
    * This method is completed once the callback is invoked.
    */
-  disconnect(callback) {
+  disconnect(callback: () => void) {
     logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
     this.zookeeperClient.closeAsync().then(() => {
       if (this.producer.isConnected()) {
@@ -252,7 +254,7 @@ export class Exporter {
     return null;
   }
 
-  async savePosition(position) {
+  async savePosition(position: object) {
     if (typeof position !== 'undefined') {
       const newNodeValue = Buffer.from(
         FORMAT_HEADER + JSON.stringify(position),
@@ -273,7 +275,7 @@ export class Exporter {
     }
   }
 
-  async saveLastBlockTimestamp(blockTimestamp) {
+  async saveLastBlockTimestamp(blockTimestamp: number) {
     if (typeof blockTimestamp !== 'undefined') {
       const newNodeValue = Buffer.from(
         FORMAT_HEADER + JSON.stringify(blockTimestamp),
@@ -294,7 +296,7 @@ export class Exporter {
     }
   }
 
-  async sendData(events) {
+  async sendData(events: Array<any>) {
     if (events.constructor !== Array) {
       events = [events];
     }
@@ -321,11 +323,11 @@ export class Exporter {
       throw new Error('Signal record logic needs partitioner');
     }
 
-    arrayEvents.forEach(event => {
+    arrayEvents.forEach((event: any) => {
       const partitionNumberPayload = this.partitioner ? this.partitioner.getPartitionNumber(event) : null;
       const eventString = typeof event === 'object' ? JSON.stringify(event) : event;
       this.producer.produce(this.topicName, partitionNumberPayload, Buffer.from(eventString), event[keyField]);
-      if (signalRecordData !== null) {
+      if (signalRecordData !== null && this.partitioner !== null) {
         const signalRecordString = typeof signalRecordData === 'object' ? JSON.stringify(signalRecordData) : signalRecordData;
         for (let partitionNumber = 0; partitionNumber < this.partitioner.getPartitionCount(); ++partitionNumber) {
           if (partitionNumber !== partitionNumberPayload) {
@@ -347,7 +349,7 @@ export class Exporter {
    * Subscribe to delivery reports.
    * @param {Function} Callback to be invoked on message delivery.
    */
-  async subscribeDeliveryReports(callback) {
+  async subscribeDeliveryReports(callback: () => void) {
     this.producer.on('delivery-report', callback);
   }
 
