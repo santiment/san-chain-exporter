@@ -37,7 +37,7 @@ COPY --from=builder /opt/node_modules /opt/node_modules
 COPY --from=builder /opt/built /opt/app/built
 
 RUN if [ "$BUILD_ENV" = "production" ]; \
-    then rm -r --force /opt/app/built/test
+    then rm -r --force /opt/app/built/test; \
     fi
 
 #

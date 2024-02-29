@@ -5,15 +5,15 @@ srcDir="src"
 destDir="built"
 
 copyFiltered() {
-  local srcDir="$1"
-  local destDir="$2"
+  mapfile -d '' filesToBeCopied < <(find "$srcDir" \( -type f \( -name "*.csv" -o -name "*.json" \) \) -print0)
 
-  # Find and copy .csv and .json files
-  find "$srcDir" -type f -name "*.csv" -exec cp {} "$destDir" \;
-  find "$srcDir" -type f -name "*.json" -exec cp {} "$destDir" \;
+  for path in "${filesToBeCopied[@]}"; do
+    destPath="${path/$srcDir/$destDir}"
+    mkdir -p "$(dirname "$destPath")"
+    cp "$path" "$destPath"
+  done
 }
 
-# Start the copy process
-copyFiltered "$srcDir" "$destDir"
+copyFiltered
 
 echo "Selective copy completed!"
