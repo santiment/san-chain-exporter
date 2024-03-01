@@ -7,6 +7,8 @@ const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
 const { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount } = require('../../blockchains/erc20/lib/contract_overwrite');
 const { readJsonFile } = require('../../blockchains/erc20/lib/util');
 const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
+const constants = require("../../blockchains/erc20/lib/constants");
+const path = require("path");
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f';
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f';
@@ -123,7 +125,7 @@ let contractsOverwriteArray = null;
 
 async function singletonContractsOverwrite() {
   if (!contractsOverwriteArray) {
-    const parsedContracts = await readJsonFile('./test/erc20/contract_mapping/contract_mapping.json');
+    const parsedContracts = await readJsonFile(path.join(__dirname, 'contract_mapping', 'contract_mapping.json'));
     contractsOverwriteArray = parsedContracts.modified_contracts.map((parsedContract) => new ContractOverwrite(parsedContract));
   }
 

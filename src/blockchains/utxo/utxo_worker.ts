@@ -1,16 +1,28 @@
 'use strict';
-const { logger } = require('../../lib/logger');
-const { constructRPCClient } = require('../../lib/http_client');
-const BaseWorker = require('../../lib/worker_base');
+import jayson from 'jayson/promise';
+import { logger } from '../../lib/logger';
+import { constructRPCClient } from '../../lib/http_client';
+import BaseWorker from '../../lib/worker_base';
+import { Exporter } from '../../lib/kafka_storage';
 
 
 class UtxoWorker extends BaseWorker {
-  constructor(settings) {
+  private readonly NODE_URL: string;
+  private readonly MAX_RETRIES: number;
+  private readonly RPC_USERNAME: string;
+  private readonly RPC_PASSWORD: string;
+  private readonly CONFIRMATIONS: number;
+  private readonly DEFAULT_TIMEOUT: number;
+  private readonly MAX_CONCURRENT_REQUESTS: number;
+  private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
+  private client: jayson.HttpClient | jayson.HttpsClient;
+
+  constructor(settings: any) {
     super(settings);
 
     this.NODE_URL = settings.NODE_URL;
-    this.MAX_RETRIES = settings.MAX_RETRIES,
-      this.RPC_PASSWORD = settings.RPC_PASSWORD;
+    this.MAX_RETRIES = settings.MAX_RETRIES;
+    this.RPC_PASSWORD = settings.RPC_PASSWORD;
     this.RPC_USERNAME = settings.RPC_USERNAME;
     this.CONFIRMATIONS = settings.CONFIRMATIONS;
     this.DEFAULT_TIMEOUT = settings.DEFAULT_TIMEOUT;
@@ -26,12 +38,13 @@ class UtxoWorker extends BaseWorker {
     });
   }
 
-  async init() {
+  async init(exporter: Exporter) {
     const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
     this.lastConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
+    await exporter.initPartitioner((event: any) => event['height']);
   }
 
-  async sendRequest(method, params) {
+  async sendRequest(method: string, params: object) {
     return this.client.request(method, params).then(({ result, error }) => {
       if (error) {
         return Promise.reject(error);
@@ -41,7 +54,7 @@ class UtxoWorker extends BaseWorker {
     });
   }
 
-  async sendRequestWithRetry(method, params) {
+  async sendRequestWithRetry(method: string, params: object) {
     let retries = 0;
     let retryIntervalMs = 0;
     while (retries < this.MAX_RETRIES) {
@@ -55,7 +68,7 @@ class UtxoWorker extends BaseWorker {
           continue;
         }
         return response;
-      } catch (err) {
+      } catch (err: any) {
         retries++;
         retryIntervalMs += (2000 * retries);
         logger.error(
@@ -67,23 +80,8 @@ class UtxoWorker extends BaseWorker {
     return Promise.reject(`sendRequest for ${method} failed after ${this.MAX_RETRIES} retries`);
   }
 
-  async decodeTransaction(transaction_bytecode) {
-    return await this.sendRequestWithRetry('decoderawtransaction', [transaction_bytecode]);
-  }
-
-  async getTransactionData(transaction_hashes) {
-    const decodedTransactions = [];
-    for (const transaction_hash of transaction_hashes) {
-      const transactionBytecode = await this.sendRequestWithRetry('getrawtransaction', [transaction_hash]);
-      const decodedTransaction = await this.decodeTransaction(transactionBytecode);
-      decodedTransactions.push(decodedTransaction);
-    }
-
-    return decodedTransactions;
-  }
-
-  async fetchBlock(block_index) {
-    let blockHash = await this.sendRequestWithRetry('getblockhash', [block_index]);
+  async fetchBlock(block_index: number) {
+    const blockHash = await this.sendRequestWithRetry('getblockhash', [block_index]);
     return await this.sendRequestWithRetry('getblock', [blockHash, 2]);
   }
 

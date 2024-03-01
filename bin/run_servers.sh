@@ -6,10 +6,10 @@
 
 function handler() {
   echo "Cleaning docker containers"
-  docker-compose -f docker/docker-compose-servers.yaml rm -f
+  docker compose -f docker/docker-compose-servers.yaml rm -f
 }
 
 # On Ctrl+C do a cleanup of the docker containers
 trap handler SIGINT
 
-BLOCKCHAIN=eth docker-compose -f docker/docker-compose-servers.yaml up --build
+BLOCKCHAIN=eth docker compose -f docker/docker-compose-servers.yaml up --build

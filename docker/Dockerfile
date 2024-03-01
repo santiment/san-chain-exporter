@@ -14,10 +14,15 @@ RUN apt-get update; \
 
 WORKDIR /opt
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* tsconfig.json copy_assets.sh ./
+COPY src ./src
 
-RUN npm ci --${NODE_ENV}
-RUN npm cache clean --force
+RUN if [ "$BUILD_ENV" = "production" ]; \
+    then npm ci && npm prune --production; \
+    else npm ci; \
+    fi && \
+    npm run build && \
+    npm cache clean --force
 
 FROM node:21.4.0-slim
 
@@ -29,16 +34,19 @@ WORKDIR /opt/app
 ENV PATH /opt/node_modules/.bin:$PATH
 
 COPY --from=builder /opt/node_modules /opt/node_modules
+COPY --from=builder /opt/built /opt/app/built
+
+RUN if [ "$BUILD_ENV" = "production" ]; \
+    then rm -r --force /opt/app/built/test; \
+    fi
 
 #
 # Reason for multipe COPY commands is Docker CP limitation, it copies <src> contents only not preserving the directory
 #
-COPY package.json AUTHORS LICENSE index.js /opt/app/
-COPY blockchains /opt/app/blockchains
-COPY lib/ /opt/app/lib
-COPY test /opt/app/test
+COPY package.json AUTHORS LICENSE /opt/app/
+
 COPY docker/wait_for_services.sh /opt/app/docker/wait_for_services.sh
 
 EXPOSE 3000
 
-CMD ["node", "index.js"]
+CMD ["node", "/opt/app/built/index.js"]
