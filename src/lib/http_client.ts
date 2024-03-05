@@ -6,32 +6,31 @@ import jayson, { HttpsClientOptions } from 'jayson/promise';
 const TCP_SESSION_KEEP_ALIVE_MSEC = 30000;
 
 export function constructRPCClient(nodeURL: string, extraOptions = {}): jayson.HttpClient | jayson.HttpsClient {
-    const nodeUrl = new URL(nodeURL);
+  const nodeUrl = new URL(nodeURL);
 
-    const mergedOptions: HttpsClientOptions = {
-        hostname: nodeUrl.hostname,
-        port: nodeUrl.port,
-        path: nodeUrl.pathname,
-        ...extraOptions
-    };
+  const mergedOptions: HttpsClientOptions = {
+    hostname: nodeUrl.hostname,
+    port: nodeUrl.port,
+    path: nodeUrl.pathname,
+    ...extraOptions
+  };
 
-    const agentOptions = {
-        keepAlive: true, // Enable keep-alive
-        keepAliveMsecs: TCP_SESSION_KEEP_ALIVE_MSEC // Keep alive for 30 seconds
-    };
+  const agentOptions = {
+    keepAlive: true, // Enable keep-alive
+    keepAliveMsecs: TCP_SESSION_KEEP_ALIVE_MSEC // Keep alive for 30 seconds
+  };
 
-    if (nodeURL.substring(0, 5) === 'https') {
-        const agent = new https.Agent(agentOptions);
-        mergedOptions.agent = agent;
-        return jayson.client.https(mergedOptions);
-    } else {
-        const agent = new http.Agent(agentOptions);
-        mergedOptions.agent = agent;
-        return jayson.client.http(mergedOptions);
-    }
+  if (nodeURL.substring(0, 5) === 'https') {
+    const agent = new https.Agent(agentOptions);
+    mergedOptions.agent = agent;
+    return jayson.client.https(mergedOptions);
+  } else {
+    const agent = new http.Agent(agentOptions);
+    mergedOptions.agent = agent;
+    return jayson.client.http(mergedOptions);
+  }
 }
 
-
 module.exports = {
-    constructRPCClient
+  constructRPCClient
 };
