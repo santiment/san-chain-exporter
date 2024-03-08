@@ -5,7 +5,14 @@ import jayson, { HttpsClientOptions } from 'jayson/promise';
 // Extend this timeout to 30 to reduce the number of sessions constructed.
 const TCP_SESSION_KEEP_ALIVE_MSEC = 30000;
 
-export function constructRPCClient(nodeURL: string, extraOptions = {}): jayson.HttpClient | jayson.HttpsClient {
+interface ExtraOptions {
+  auth?: string,
+  method?: string,
+  timeout?: number,
+  version?: number
+}
+
+export function constructRPCClient(nodeURL: string, extraOptions: ExtraOptions = {}): jayson.HttpClient | jayson.HttpsClient {
   const nodeUrl = new URL(nodeURL);
 
   const mergedOptions: HttpsClientOptions = {
