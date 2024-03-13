@@ -1,17 +1,16 @@
 {
+  "extends": "@tsconfig/node21/tsconfig.json",
   "compilerOptions": {
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
     "esModuleInterop": true,
     "module": "node16", // Imporant. No other value really works for us. 'commonjs' does not play well with dynamic import(). 'esnext' pretty much require to migrate everything
-    "moduleResolution": "node16",
     "noImplicitReturns": true,
     "outDir": "./built",
     "sourceMap": true,
     "strict": true,
-    "strictNullChecks": true,
-    "target": "es6"
+    "strictNullChecks": true
   },
   "include": [
     "./src/**/*"
