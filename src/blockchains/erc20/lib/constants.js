@@ -13,6 +13,10 @@ const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
 const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
 // Should events for a contract land in the same Kafka partition
 const EVENTS_IN_SAME_PARTITION = process.env.EVENTS_IN_SAME_PARTITION || false;
+const RPC_USERNAME = process.env.RPC_USERNAME;
+const RPC_PASSWORD = process.env.RPC_PASSWORD;
+const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT) || 10000;
+
 
 const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
@@ -39,5 +43,8 @@ module.exports = {
     NODE_URL,
     CONTRACT_MAPPING_FILE_PATH,
     LOOP_INTERVAL_CURRENT_MODE_SEC,
-    EVENTS_IN_SAME_PARTITION
+    EVENTS_IN_SAME_PARTITION,
+    RPC_USERNAME,
+    RPC_PASSWORD,
+    DEFAULT_TIMEOUT
 };

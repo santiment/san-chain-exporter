@@ -36,9 +36,30 @@ class ERC20Worker extends BaseWorker {
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
-    this.web3Wrapper = web3Wrapper || new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
+    if (!web3Wrapper) {
+      const httpProviderOptions = {
+        providerOptions: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic ' + Buffer.from(authCredentials).toString('base64')
+          }
+        }
+      };
+      this.web3Wrapper = new Web3Wrapper(
+        new Web3(new Web3.providers.HttpProvider(settings.NODE_URL, httpProviderOptions)));
+    } else {
+      this.web3Wrapper = web3Wrapper;
+    }
+
     if (!ethClient) {
-      this.ethClient = constructRPCClient(settings.NODE_URL);
+      this.ethClient = constructRPCClient(settings.NODE_URL, {
+        method: 'POST',
+        auth: authCredentials,
+        timeout: settings.DEFAULT_TIMEOUT,
+        version: 2
+      });
       this.contractsOverwriteArray = [];
       this.contractsUnmodified = [];
       this.allOldContracts = [];
