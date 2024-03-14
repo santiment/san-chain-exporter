@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/santiment/san-chain-exporter#readme",
   "dependencies": {
+    "@tsconfig/node21": "^21.0.1",
     "bignumber.js": "^9.0.0",
     "csv-parser": "^3.0.0",
     "got": "^11.8.5",
