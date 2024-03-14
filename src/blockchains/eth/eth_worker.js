@@ -123,7 +123,9 @@ class ETHWorker extends BaseWorker {
 
     for (let i = 0; i < traces.length; i++) {
       const block_timestamp = this.web3Wrapper.parseHexToNumber(blocksMap.get(traces[i]['blockNumber']).timestamp);
-      result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));
+      const decoded_transfer = decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper)
+      if (!isNaN(decoded_transfer))
+        result.push(decoded_transfer);
     }
 
     return result;
