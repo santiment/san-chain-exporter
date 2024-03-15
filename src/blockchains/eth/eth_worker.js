@@ -145,6 +145,23 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
+  extractBlocksData(blocksMap) {
+    Object.entries(originalObject).map(([blockNumber, block]) => {
+      return {
+        hash: block["hash"],
+        miner: block["miner"],
+        difficulty: web3.utils.hexToNumberString(block["difficulty"]),
+        totalDifficulty: web3.utils.hexToNumberString(block["totalDifficulty"]),
+        timestamp: web3.utils.hexToNumberString(block["timestamp"]),
+        size: web3.utils.hexToNumber(block["size"]),
+        gasLimit: web3.utils.hexToNumberString(block["gasLimit"]),
+        gasUsed: web3.utils.hexToNumberString(block["gasUsed"]),
+        minGasPrice: web3.utils.hexToNumberString(block["minGasPrice"]),
+        number: web3.utils.hexToNumber(block["number"])
+      }
+    }
+  }
+
   async work() {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
@@ -166,7 +183,12 @@ class ETHWorker extends BaseWorker {
 
     this.lastExportedBlock = toBlock;
 
-    return events;
+    if (this.settings.PRODUCE_BLOCKS_DATA) {
+
+    }
+    else {
+      return events;
+    }
   }
 
   async init() {
