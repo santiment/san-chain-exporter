@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import Kafka, { LibrdKafkaError, ProducerGlobalConfig } from 'node-rdkafka';
-import { BLOCKCHAIN } from './constants';
+import { BLOCKCHAIN, KAFKA_TOPIC } from './constants';
 import ZookeeperClientAsync from './zookeeper_client_async';
 import { log_according_to_syslog_level, logger, SYSLOG_LOG_LEVEL } from './logger';
 
@@ -102,7 +102,7 @@ function castCompression(compression: string): 'none' | 'gzip' | 'snappy' | 'lz4
 export class Exporter {
   private readonly exporter_name: string;
   private readonly producer: Kafka.Producer;
-  private readonly topicName: string;
+  private readonly topicList: Array<string>;
   private readonly zookeeperClient: ZookeeperClientAsync;
   private partitioner: Partitioner | null;
 
@@ -123,12 +123,16 @@ export class Exporter {
       producer_settings['debug'] = RDKAFKA_DEBUG;
     }
 
-    this.topicName = process.env.KAFKA_TOPIC || this.exporter_name.replace('-exporter', '').replace('-', '_');
+    const parsedKafkaTopics = JSON.parse(KAFKA_TOPIC);
+    this.topicList = Array.isArray(parsedKafkaTopics) ? parsedKafkaTopics : [parsedKafkaTopics];
+    if (this.topicList.length < 1) {
+      throw Error("At least one topic is expected thorugh the KAFKA_TOPIC env varible")
+    }
 
     if (transactional) {
       const uniqueIdentifier = crypto.randomBytes(16).toString('hex');
       const timestamp = Date.now();
-      const transactionalID = `${this.topicName}-${uniqueIdentifier}-${timestamp}`;
+      const transactionalID = `${this.topicList[0]}-${uniqueIdentifier}-${timestamp}`;
       producer_settings['transactional.id'] = transactionalID;
       producer_settings['enable.idempotence'] = true;
     }
@@ -152,11 +156,11 @@ export class Exporter {
 
   get zookeeperPositionNode() {
     // Generally it may be an arbitrary position object, not necessarily block number. We keep this name for backward compatibility
-    return `/${this.exporter_name}/${this.topicName}/block-number`;
+    return `/${this.exporter_name}/${this.topicList[0]}/block-number`;
   }
 
   get zookeeperTimestampNode() {
-    return `/${this.exporter_name}/${this.topicName}/timestamp`;
+    return `/${this.exporter_name}/${this.topicList[0]}/timestamp`;
   }
 
   /**
@@ -296,7 +300,7 @@ export class Exporter {
     }
   }
 
-  async sendData(events: Array<any>) {
+  async sendData(events: Array<any>, topicIndex: number = 0) {
     if (events.constructor !== Array) {
       events = [events];
     }
@@ -305,7 +309,7 @@ export class Exporter {
       event => (typeof event === 'object' ? JSON.stringify(event) : event)
     );
     events.forEach(event => {
-      this.producer.produce(this.topicName, null, Buffer.from(event));
+      this.producer.produce(this.topicList[topicIndex], null, Buffer.from(event));
     });
 
     return new Promise<void>((resolve, reject) =>
@@ -316,7 +320,7 @@ export class Exporter {
     );
   }
 
-  async sendDataWithKey(events: object | Array<object>, keyField: string, signalRecordData: object | null) {
+  async sendDataWithKey(events: object | Array<object>, keyField: string, signalRecordData: object | null, topicIndex: number = 0) {
     const arrayEvents: Array<object> = (events.constructor !== Array) ? [events] : events
 
     if (signalRecordData !== null && this.partitioner === null) {
@@ -326,12 +330,12 @@ export class Exporter {
     arrayEvents.forEach((event: any) => {
       const partitionNumberPayload = this.partitioner ? this.partitioner.getPartitionNumber(event) : null;
       const eventString = typeof event === 'object' ? JSON.stringify(event) : event;
-      this.producer.produce(this.topicName, partitionNumberPayload, Buffer.from(eventString), event[keyField]);
+      this.producer.produce(this.topicList[topicIndex], partitionNumberPayload, Buffer.from(eventString), event[keyField]);
       if (signalRecordData !== null && this.partitioner !== null) {
         const signalRecordString = typeof signalRecordData === 'object' ? JSON.stringify(signalRecordData) : signalRecordData;
         for (let partitionNumber = 0; partitionNumber < this.partitioner.getPartitionCount(); ++partitionNumber) {
           if (partitionNumber !== partitionNumberPayload) {
-            this.producer.produce(this.topicName, partitionNumber, Buffer.from(signalRecordString), event[keyField]);
+            this.producer.produce(this.topicList[topicIndex], partitionNumber, Buffer.from(signalRecordString), event[keyField]);
           }
         }
       }
@@ -436,9 +440,12 @@ export class Exporter {
   }
 
   async initPartitioner(hashFunction: ((value: object) => number)) {
+    if (this.topicList.length > 1) {
+      throw Error("We do not support partition logic when working with multiple topics")
+    }
     // We delay the finding of the partition count so that we are sure that we have a connected producer
     this.partitioner = new Partitioner();
-    await this.partitioner.init(hashFunction, this.topicName, this.producer);
+    await this.partitioner.init(hashFunction, this.topicList[0], this.producer);
   }
 }
 
