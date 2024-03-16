@@ -4,18 +4,13 @@ const Web3Wrapper = require('./lib/web3_wrapper');
 const BaseWorker = require('../../lib/worker_base');
 const { FeesDecoder } = require('./lib/fees_decoder');
 const { filterErrors } = require('./lib/filter_errors');
-const { stableSort } = require('./blockchains/erc20/lib/util');
+const { stableSort } = require('../erc20/lib/util');
 const { constructRPCClient } = require('../../lib/http_client');
 const { decodeTransferTrace } = require('./lib/decode_transfers');
-const { transactionOrder } = require('./blockchains/eth/lib/util');
+const { transactionOrder } = require('./lib/util');
 const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-const {
-  analyzeWorkerContext,
-  setWorkerSleepTime,
-  NO_WORK_SLEEP,
-  nextIntervalCalculatorV2 } = require('./lib/next_interval_calculator');
 
 
 class ETHWorker extends BaseWorker {
@@ -28,6 +23,10 @@ class ETHWorker extends BaseWorker {
     this.ethClient = constructRPCClient(settings.NODE_URL);
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
+  }
+
+  getLastPrimaryKey() {
+    return this.lastPrimaryKey;
   }
 
   parseEthInternalTrx(result) {
@@ -152,28 +151,21 @@ class ETHWorker extends BaseWorker {
   }
 
   decorateWithPrimaryKeys(events) {
-    if (this.settings.BLOCKCHAIN === 'eth') {
-      stableSort(events, transactionOrder);
-      for (let i = 0; i < events.length; i++) {
-        events[i].primaryKey = this.lastPrimaryKey + i + 1;
-      }
-      this.lastPrimaryKey += events.length;
+    stableSort(events, transactionOrder);
+    for (let i = 0; i < events.length; i++) {
+      events[i].primaryKey = this.lastPrimaryKey + i + 1;
     }
+    this.lastPrimaryKey += events.length;
   }
 
-  async work() {
-    const workerContext = await analyzeWorkerContext(this);//TODO: move into index.js loopv2 (?)
-    setWorkerSleepTime(this, workerContext);
-    if (workerContext === NO_WORK_SLEEP) return [];
-
-    const { fromBlock, toBlock } = nextIntervalCalculatorV2(this);
-    this.lastQueuedBlock = toBlock;
+  async work(interval) {
+    const { fromBlock, toBlock } = interval;
 
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
     const events = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
 
-    return [{ fromBlock, toBlock }, events];
+    return events;
   }
 
   async init() {

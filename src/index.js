@@ -11,6 +11,11 @@ const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS, MAX_CONCURRENT_REQUESTS } = require('./l
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
 const constantsBase = require('./lib/constants');
+const {
+  analyzeWorkerContext,
+  setWorkerSleepTime,
+  NO_WORK_SLEEP,
+  nextIntervalCalculator } = require('./blockchains/eth/lib/next_interval_calculator');
 
 var SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
@@ -30,22 +35,9 @@ class Main {
       .catch((err) => { throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`); });
   }
 
-  initLastProcessedPosition(lastRecoveredPosition) {
-    if (lastRecoveredPosition) {
-      this.lastProcessedPosition = lastRecoveredPosition;
-      logger.info(`Resuming export from position ${JSON.stringify(lastRecoveredPosition)}`);
-    } else {
-      this.lastProcessedPosition = {
-        blockNumber: constants.START_BLOCK,
-        primaryKey: constants.START_PRIMARY_KEY
-      };
-      logger.info(`Initialized exporter with initial position ${JSON.stringify(lastRecoveredPosition)}`);
-    }
-  }
-
   async handleInitPosition() {
-    const lastRecoveredPosition = await this.exporter.getLastPosition();
-    this.initLastProcessedPosition(lastRecoveredPosition);
+    this.lastProcessedPosition = await this.exporter.getLastPosition();
+    this.worker.initPosition(this.lastProcessedPosition);
     await this.exporter.savePosition(this.lastProcessedPosition);
   }
 
@@ -57,20 +49,18 @@ class Main {
     this.#isWorkerSet();
     const mergedConstants = { ...constantsBase, ...constants };
     this.worker = new worker.worker(mergedConstants);
-    this.worker.initFromLastPosition(this.lastProcessedPosition);
 
     await this.worker.init(this.exporter);
   }
 
   async initTaskManager() {
     this.taskManager = await TaskManager.create(MAX_CONCURRENT_REQUESTS);
-    this.taskManager.initFromLastPosition(this.lastProcessedPosition);
   }
 
   async init() {
     await this.initExporter(EXPORTER_NAME, true);
-    await this.handleInitPosition();
     await this.initWorker();
+    await this.handleInitPosition();
     if (BLOCKCHAIN === 'eth') await this.initTaskManager();
 
     metrics.startCollection();
@@ -93,24 +83,22 @@ class Main {
     metrics.currentBlock.set(this.worker.lastConfirmedBlock);
     metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
     metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
-    if (BLOCKCHAIN === 'eth') {
-      metrics.lastExportedBlock.set(this.lastProcessedPosition.blockNumber);
-    } else {
-      metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
-    }
+    metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
   }
 
-  async waitOnStoreEvents() {
-    const buffer = this.taskManager.retrieveCompleted();
+  async waitOnStoreEvents(buffer) {
     if (buffer.length > 0) {
       this.worker.decorateWithPrimaryKeys(buffer);
       await this.exporter.storeEvents(buffer);
     }
   }
 
-  async updatePosition() {
-    if (this.taskManager.isChangedLastExportedBlock(this.lastProcessedPosition.blockNumber)) {
-      this.lastProcessedPosition = this.taskManager.getLastProcessedPosition();
+  async updatePosition(lastPrimaryKey, lastExportedBlock) {
+    if (lastExportedBlock > this.lastProcessedPosition.blockNumber) {
+      this.lastProcessedPosition = {
+        primaryKey: lastPrimaryKey,
+        blockNumber: lastExportedBlock
+      };
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
     }
@@ -138,18 +126,48 @@ class Main {
     }
   }
 
+  generateIntervals() {
+    const intervals = [];
+    for (let i = 0; i < MAX_CONCURRENT_REQUESTS; i++) {
+      const interval = nextIntervalCalculator(
+        this.worker.lastQueuedBlock,
+        this.worker.lastConfirmedBlock,
+        constantsBase.BLOCK_INTERVAL);
+      this.worker.lastQueuedBlock = interval.toBlock;
+      intervals.push(interval);
+      if (interval.toBlock - interval.fromBlock + 1 < constantsBase.BLOCK_INTERVAL) break; //We've caught up with the head, no new intervals needed
+    }
+    return intervals;
+  }
+
+  pushTasks(intervals) {
+    for (const interval of intervals) {
+      const taskMetadata = {
+        interval: interval,
+        lambda: (interval) => this.worker.work(interval)
+      };
+      this.taskManager.pushToQueue(taskMetadata);
+    }
+  }
+
   async workLoopV2() {
     while (this.shouldWork) {
       await this.taskManager.queue.onSizeLessThan(constantsBase.PQUEUE_MAX_SIZE);
-      this.taskManager.pushToQueue(() => this.worker.work().catch(err => {
-        logger.error(err.toString());
-        this.shouldWork = false;
-      }));
+
+      const workerContext = await analyzeWorkerContext(this.worker);
+      setWorkerSleepTime(this.worker, workerContext);
+      if (workerContext === NO_WORK_SLEEP) return [];//TODO:
+
+      const intervals = this.generateIntervals();
+      this.pushTasks(intervals);
+      
       this.worker.lastRequestStartTime = new Date();
       this.worker.lastExportTime = Date.now();
 
-      await this.waitOnStoreEvents();
-      await this.updatePosition();
+      const [lastExportedBlock, buffer] = this.taskManager.retrieveCompleted();
+      await this.waitOnStoreEvents(buffer);
+      const lastPrimaryKey = this.worker.getLastPrimaryKey();
+      await this.updatePosition(lastPrimaryKey, lastExportedBlock);
       this.updateMetrics();
 
       if (this.shouldWork) {
