@@ -26,7 +26,10 @@ class MaticWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const result = nextIntervalCalculator(this);
+    const result = nextIntervalCalculator(
+      this.lastExportedBlock,
+      this.lastConfirmedBlock,
+      this.settings.BLOCK_INTERVAL);
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 

@@ -106,7 +106,10 @@ class ERC20Worker extends BaseWorker {
 
     const interval = this.settings.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
-      nextIntervalCalculator(this);
+      nextIntervalCalculator(
+        this.lastExportedBlock,
+        this.lastConfirmedBlock,
+        this.settings.BLOCK_INTERVAL);
 
     logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 
