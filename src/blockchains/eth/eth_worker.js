@@ -29,6 +29,10 @@ class ETHWorker extends BaseWorker {
     return this.lastPrimaryKey;
   }
 
+  setLastExportedBlock(block) {
+    this.lastExportedBlock = block;
+  }
+
   parseEthInternalTrx(result) {
     const traces = filterErrors(result);
 

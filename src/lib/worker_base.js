@@ -29,6 +29,10 @@ class WorkerBase {
     throw new Error('"init" method need to be overriden');
   }
 
+  decorateWithPrimaryKeys() {
+    throw new Error('"decorateWithPrimaryKeys" method needs to be overriden');
+  }
+
   /**
    * Should be overriden depending on blockchain implementation.
    *

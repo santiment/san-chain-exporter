@@ -88,7 +88,6 @@ class Main {
 
   async waitOnStoreEvents(buffer) {
     if (buffer.length > 0) {
-      this.worker.decorateWithPrimaryKeys(buffer);
       await this.exporter.storeEvents(buffer);
     }
   }
@@ -133,9 +132,9 @@ class Main {
         this.worker.lastQueuedBlock,
         this.worker.lastConfirmedBlock,
         constantsBase.BLOCK_INTERVAL);
+      if (interval.fromBlock >= interval.toBlock) break;
       this.worker.lastQueuedBlock = interval.toBlock;
       intervals.push(interval);
-      if (interval.toBlock - interval.fromBlock + 1 < constantsBase.BLOCK_INTERVAL) break; //We've caught up with the head, no new intervals needed
     }
     return intervals;
   }
@@ -156,20 +155,22 @@ class Main {
 
       const workerContext = await analyzeWorkerContext(this.worker);
       setWorkerSleepTime(this.worker, workerContext);
-      if (workerContext === NO_WORK_SLEEP) return [];//TODO:
+      if (workerContext !== NO_WORK_SLEEP) {
+        const intervals = this.generateIntervals();
+        this.pushTasks(intervals);
+        
+        this.worker.lastRequestStartTime = new Date();
+        this.worker.lastExportTime = Date.now();
 
-      const intervals = this.generateIntervals();
-      this.pushTasks(intervals);
-      
-      this.worker.lastRequestStartTime = new Date();
-      this.worker.lastExportTime = Date.now();
+        const [lastExportedBlock, buffer] = this.taskManager.retrieveCompleted();
+        this.worker.setLastExportedBlock(lastExportedBlock);
+        this.worker.decorateWithPrimaryKeys(buffer);
+        await this.waitOnStoreEvents(buffer);
 
-      const [lastExportedBlock, buffer] = this.taskManager.retrieveCompleted();
-      await this.waitOnStoreEvents(buffer);
-      const lastPrimaryKey = this.worker.getLastPrimaryKey();
-      await this.updatePosition(lastPrimaryKey, lastExportedBlock);
-      this.updateMetrics();
-
+        const lastPrimaryKey = this.worker.getLastPrimaryKey();
+        await this.updatePosition(lastPrimaryKey, lastExportedBlock);
+        this.updateMetrics();
+      }
       if (this.shouldWork) {
         await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));
       }
