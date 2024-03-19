@@ -32,11 +32,9 @@ class TaskManager {
   }
 
   /**
-   * On the completion of a task in the p-queue, the task
-   * should return an array in the form of [interval, events].
-   * These would be set up in the taskData object accordingly in the
-   * correct format
-   * @param {object} interval
+   * Handles the values that the queue task has returned,
+   * deletes the function for the task as it's not needed anymore.
+   * @param {number} index
    * @param {Array} newTransformedData 
    */
   #handleNewData(index, newTransformedData) {
@@ -45,11 +43,11 @@ class TaskManager {
   }
 
   /**
-   * Method for pushing the sequential intervals that are ready.
-   * While the loop hits sequential intervals in the taskData property,
+   * Method for pushing the sequential indeces that are ready.
+   * While the loop hits sequential indeces in the taskData property,
    * the data should be pushed to the buffer array. When the while loop hits
    * an undefined (yet) key of taskData, the function should stop.
-   * @returns Array of the events' data
+   * @returns Array of the last exported block, along with the array of the events' data
    */
   retrieveCompleted() {
     let lastExportedBlock;
@@ -66,9 +64,11 @@ class TaskManager {
   }
 
   /**
-   * Takes a `() => worker.work()` function and pushes it
-   * into the TaskManager's p-queue.
-   * @param {Function} workTask 
+   * Method for generating a function, using the taskMetadata object
+   * and pushing it into the p-queue. The method also updates the
+   * taskData class property with the task indeces as keys and the taskMetadata object
+   * as values.
+   * @param {object} taskMetadata Object with interval and lambda properties
    */
   pushToQueue(taskMetadata) {
     this.lastTaskIndex++;
