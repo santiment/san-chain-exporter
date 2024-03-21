@@ -36,8 +36,8 @@ class Main {
   }
 
   async handleInitPosition() {
-    this.lastProcessedPosition = await this.exporter.getLastPosition();
-    this.worker.initPosition(this.lastProcessedPosition);
+    const lastRecoveredPosition = await this.exporter.getLastPosition();
+    this.lastProcessedPosition = this.worker.initPosition(lastRecoveredPosition);
     await this.exporter.savePosition(this.lastProcessedPosition);
   }
 

@@ -144,6 +144,20 @@ describe('Main', () => {
     }
   });
 
+  it('init throws an error when handleInitPosition() fails', async () => {
+    const mainInstance = new Main();
+    sinon.stub(mainInstance, 'initExporter').resolves();
+    sinon.stub(mainInstance, 'initWorker').resolves();
+    sinon.stub(mainInstance, 'handleInitPosition').throws(new Error('Error when initializing position'));
+
+    try {
+      await mainInstance.init();
+      expect.fail('init should have thrown an error');
+    } catch (err) {
+      assert.strictEqual(err.message, 'Error when initializing position');
+    }
+  });
+
   it('initWorker success', async () => {
     const mainInstance = new Main();
     mainInstance.taskManager = await TaskManager.create(1);

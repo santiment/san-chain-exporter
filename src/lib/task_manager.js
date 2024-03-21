@@ -52,7 +52,7 @@ class TaskManager {
   retrieveCompleted() {
     let lastExportedBlock;
     const buffer = [];
-    while (this.taskData[this.lastExportedIndex + 1].data) {
+    while (this.taskData[this.lastExportedIndex + 1] && this.taskData[this.lastExportedIndex + 1].data) {
       const events = this.taskData[this.lastExportedIndex + 1].data;
       for (const event of events) buffer.push(event);
 

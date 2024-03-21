@@ -42,6 +42,13 @@ describe('Test worker', function () {
     callResultWithPrimaryKey = v8.deserialize(v8.serialize(callResult));
     callResultWithPrimaryKey.primaryKey = 2;
   });
+
+  it('test primary key assignment', function () {
+    const data = [feeResult, callResult];
+    worker.decorateWithPrimaryKeys(data);
+
+    assert.deepStrictEqual(data, [feeResultWithPrimaryKey, callResultWithPrimaryKey]);
+  });
 });
 
 describe('Test that when action is null parsing would not break', function () {
