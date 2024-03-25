@@ -83,7 +83,10 @@ describe('nextIntervalCalculator', () => {
     worker.lastExportedBlock = 0;
     worker.lastConfirmedBlock = 150;
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(worker);
+    const { fromBlock, toBlock } = nextIntervalCalculator(
+      worker.lastExportedBlock,
+      worker.lastConfirmedBlock,
+      worker.settings.BLOCK_INTERVAL);
     assert.deepStrictEqual(fromBlock, 1);
     assert.deepStrictEqual(toBlock, 100);
   });
@@ -93,7 +96,10 @@ describe('nextIntervalCalculator', () => {
     worker.lastExportedBlock = 0;
     worker.lastConfirmedBlock = 37;
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(worker);
+    const { fromBlock, toBlock } = nextIntervalCalculator(
+      worker.lastExportedBlock,
+      worker.lastConfirmedBlock,
+      worker.settings.BLOCK_INTERVAL);
     assert.deepStrictEqual(fromBlock, 1);
     assert.deepStrictEqual(toBlock, 37);
   });

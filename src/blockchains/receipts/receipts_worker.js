@@ -100,7 +100,10 @@ class ReceiptsWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    const { fromBlock, toBlock } = nextIntervalCalculator(
+      this.lastExportedBlock,
+      this.lastConfirmedBlock,
+      this.settings.BLOCK_INTERVAL);
     logger.info(`Fetching receipts for interval ${fromBlock}:${toBlock}`);
     const receipts = await this.getReceiptsForBlocks(fromBlock, toBlock);
 
