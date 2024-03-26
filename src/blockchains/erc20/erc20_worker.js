@@ -139,7 +139,7 @@ class ERC20Worker extends BaseWorker {
     }
 
     if (events.length > 0) {
-      extendEventsWithPrimaryKey(events, overwritten_events);
+      extendEventsWithPrimaryKey(events, this.settings.PRIMARY_KEY_MULTIPLIER, overwritten_events);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${interval.fromBlock}:${interval.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }

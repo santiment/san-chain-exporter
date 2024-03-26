@@ -5,7 +5,6 @@ const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
 const TaskManager = require('./lib/task_manager');
 const { Exporter } = require('./lib/kafka_storage');
-const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
 const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
 const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS, MAX_CONCURRENT_REQUESTS } = require('./lib/constants');
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
@@ -158,12 +157,12 @@ class Main {
       if (workerContext !== NO_WORK_SLEEP) {
         const intervals = this.generateIntervals();
         this.pushTasks(intervals);
-        
+
         this.worker.lastRequestStartTime = new Date();
         this.worker.lastExportTime = Date.now();
 
         const [lastExportedBlock, buffer] = this.taskManager.retrieveCompleted();
-        this.worker.setLastExportedBlock(lastExportedBlock);
+        if (lastExportedBlock) this.worker.setLastExportedBlock(lastExportedBlock);
         this.worker.decorateWithPrimaryKeys(buffer);
         await this.waitOnStoreEvents(buffer);
 

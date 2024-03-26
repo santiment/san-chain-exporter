@@ -1,5 +1,6 @@
 const assert = require('assert');
 
+const PRIMARY_KEY_MULTIPLIER = 10000;
 const { extendEventsWithPrimaryKey } = require('../../blockchains/erc20/lib/extend_events_key');
 const { setExpectedEventPrimaryKey, calculatePrimaryKeyNonOverwrittenEvent } = require('./helpers');
 
@@ -46,7 +47,7 @@ describe('assignPrimaryKeys', function () {
 
   it('assign primary keys, single event', async function () {
     const expectedEvent = JSON.parse(JSON.stringify(inputEvent1));
-    extendEventsWithPrimaryKey([inputEvent1], []);
+    extendEventsWithPrimaryKey([inputEvent1], PRIMARY_KEY_MULTIPLIER, []);
 
     setExpectedEventPrimaryKey(expectedEvent);
 
@@ -55,7 +56,7 @@ describe('assignPrimaryKeys', function () {
 
   it('assign primary keys, event list, overwritten are empty', async function () {
     const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
-    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], []);
+    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], PRIMARY_KEY_MULTIPLIER, []);
 
     setExpectedEventPrimaryKey(expectedEvents[0]);
     setExpectedEventPrimaryKey(expectedEvents[1]);
@@ -66,7 +67,7 @@ describe('assignPrimaryKeys', function () {
   it('assign primary keys, event list, overwritten not empty', async function () {
     const copyEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
     const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
-    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], copyEvents);
+    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], PRIMARY_KEY_MULTIPLIER, copyEvents);
 
     setExpectedEventPrimaryKey(expectedEvents[0]);
     setExpectedEventPrimaryKey(expectedEvents[1]);
@@ -77,7 +78,7 @@ describe('assignPrimaryKeys', function () {
   it('assign primary keys, event list, check keys of overwritten', async function () {
     const copyEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
     const expectedEvents = JSON.parse(JSON.stringify(copyEvents));
-    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], copyEvents);
+    extendEventsWithPrimaryKey([inputEvent1, inputEvent2], PRIMARY_KEY_MULTIPLIER, copyEvents);
 
     const primaryKeyLastNonOverwritten = calculatePrimaryKeyNonOverwrittenEvent(inputEvent2);
     // Primary keys of overwritten contracts start from last non-overwritten and increase by 1

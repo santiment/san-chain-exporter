@@ -21,7 +21,11 @@ class ETHWorker extends BaseWorker {
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
     this.ethClient = constructRPCClient(settings.NODE_URL);
-    this.feesDecoder = new FeesDecoder(this.web3Wrapper);
+    this.feesDecoder = new FeesDecoder(
+      this.web3Wrapper,
+      this.settings.BURN_ADDRESS,
+      this.settings.IS_ETH,
+      this.settings.LONDON_FORK_BLOCK);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }
 
@@ -146,7 +150,11 @@ class ETHWorker extends BaseWorker {
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
       if (this.settings.IS_ETH && blockNumber >= this.settings.SHANGHAI_FORK_BLOCK) {
         const blockTimestamp = this.web3Wrapper.parseHexToNumber(block.timestamp);
-        decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
+        decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(
+          block.withdrawals,
+          blockNumber,
+          blockTimestamp,
+          this.settings.ETH_WITHDRAWAL));
       }
       result.push(...decoded_transactions);
     }

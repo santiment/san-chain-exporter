@@ -1,15 +1,13 @@
-const constants = require('./constants');
-
 class WithdrawalsDecoder {
   constructor(web3Wrapper) {
     this.web3Wrapper = web3Wrapper;
   }
 
-  getBeaconChainWithdrawals(withdrawals, blockNumber, blockTimestamp) {
+  getBeaconChainWithdrawals(withdrawals, blockNumber, blockTimestamp, ethWithdrawal) {
     return withdrawals.map((withdrawal) => {
       const gweiAmount = BigInt(this.web3Wrapper.gweiToWei(withdrawal.amount));
       return {
-        from: constants.ETH_WITHDRAWAL,
+        from: ethWithdrawal,
         to: withdrawal.address,
         value: Number(gweiAmount),
         valueExactBase36: gweiAmount.toString(36),

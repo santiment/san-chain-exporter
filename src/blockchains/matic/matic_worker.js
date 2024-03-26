@@ -36,7 +36,7 @@ class MaticWorker extends BaseWorker {
     const events = await getPastEvents(this.ethClient, this.web3Wrapper, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
-      extendEventsWithPrimaryKey(events);
+      extendEventsWithPrimaryKey(events, this.settings.PRIMARY_KEY_MULTIPLIER);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
