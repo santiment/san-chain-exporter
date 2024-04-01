@@ -202,6 +202,8 @@ class CardanoWorker extends BaseWorker {
     else {
       transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
       if (transactions.length === 0) {
+        // Move the export interval by one block. This would prevent entering a loop asking for same interval.
+        this.lastExportedBlock = fromBlock;
         return [];
       }
     }
