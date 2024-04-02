@@ -42,10 +42,10 @@ function setWorkerSleepTime(worker, context) {
  * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
  * @returns {object} The interval, derived from the progress of the worker
  */
-function nextIntervalCalculator(worker) {
+function nextIntervalCalculator(lastExportedBlock, lastConfirmedBlock, blockInterval) {
   return {
-    fromBlock: worker.lastExportedBlock + 1,
-    toBlock: Math.min(worker.lastExportedBlock + worker.settings.BLOCK_INTERVAL, worker.lastConfirmedBlock)
+    fromBlock: lastExportedBlock + 1,
+    toBlock: Math.min(lastExportedBlock + blockInterval, lastConfirmedBlock)
   };
 }
 

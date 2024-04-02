@@ -1,9 +1,9 @@
 const { Web3 } = require('web3');
 const assert = require('assert');
 
+const ETH_WITHDRAWAL = 'withdrawal';
 const { WithdrawalsDecoder } = require('../../blockchains/eth/lib/withdrawals_decoder');
 const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
-const constants = require('../../blockchains/eth/lib/constants');
 const web3Wrapper = new Web3Wrapper(new Web3());
 
 describe('withdrawals decoder test', function () {
@@ -17,10 +17,10 @@ describe('withdrawals decoder test', function () {
       amount: '0x10ac320'
     };
 
-    const result = decoder.getBeaconChainWithdrawals([withdrawal], 18742200, 1702046471);
+    const result = decoder.getBeaconChainWithdrawals([withdrawal], 18742200, 1702046471, ETH_WITHDRAWAL);
 
     const expected = [{
-      from: constants.ETH_WITHDRAWAL,
+      from: ETH_WITHDRAWAL,
       to: withdrawal.address,
       value: 17482528000000000,
       valueExactBase36: '4s51ehlpbls',

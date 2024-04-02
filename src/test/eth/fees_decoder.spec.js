@@ -1,8 +1,11 @@
 const assert = require('assert');
 const { Web3 } = require('web3');
+const constants = require('../../blockchains/eth/lib/constants');
 const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
 const { FeesDecoder } = require('../../blockchains/eth/lib/fees_decoder');
-const constants = require('../../blockchains/eth/lib/constants');
+const BURN_ADDRESS = 'burn';
+const IS_ETH = 1;
+const LONDON_FORK_BLOCK = 12965000;
 
 /**
  * A transaction for which there is zero 'maxPriorityFeePerGas' and also 'maxFeePerGas' - 'baseFeePerGas' = 0.
@@ -210,7 +213,11 @@ function turnReceiptsToMap(receipts) {
 
 describe('Fees decoder test', function () {
   const web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(constants.NODE_URL)));
-  const feesDecoder = new FeesDecoder(web3Wrapper);
+  const feesDecoder = new FeesDecoder(
+    web3Wrapper,
+    BURN_ADDRESS,
+    IS_ETH,
+    LONDON_FORK_BLOCK);
 
   it('test fees post London zero priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,
@@ -219,7 +226,7 @@ describe('Fees decoder test', function () {
 
     const expected = [{
       from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-      to: constants.BURN_ADDRESS,
+      to: BURN_ADDRESS,
       value: 1049725694283000,
       valueExactBase36: 'ac3hbr9fco',
       blockNumber: 13447057,

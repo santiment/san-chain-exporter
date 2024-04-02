@@ -1,6 +1,7 @@
 'use strict';
 const { logger } = require('./logger');
 
+
 class WorkerBase {
   constructor(constants) {
     // To prevent healthcheck failing during initialization and processing first
@@ -20,12 +21,16 @@ class WorkerBase {
    * Upon returning from the method call the implementation should have updated all the member variables of the
    * base class.
    */
-  work() {
+  async work() {
     throw new Error('"work" method need to be overriden');
   }
   // To be implemented on inheritance.
   init(_exporter) {
     throw new Error('"init" method need to be overriden');
+  }
+
+  decorateWithPrimaryKeys() {
+    throw new Error('"decorateWithPrimaryKeys" method needs to be overriden');
   }
 
   /**
@@ -68,6 +73,7 @@ class WorkerBase {
     }
     this.lastExportedBlock = lastProcessedPosition.blockNumber;
     this.lastPrimaryKey = lastProcessedPosition.primaryKey;
+    this.lastQueuedBlock = this.lastExportedBlock;
 
     return lastProcessedPosition;
   }

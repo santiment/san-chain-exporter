@@ -1,8 +1,9 @@
-const constants = require('./constants');
-
 class FeesDecoder {
-  constructor(web3Wrapper) {
+  constructor(web3Wrapper, burnAddress, isEth, londonForkBlock) {
     this.web3Wrapper = web3Wrapper;
+    this.BURN_ADDRESS = burnAddress;
+    this.IS_ETH = isEth;
+    this.LONDON_FORK_BLOCK = londonForkBlock;
   }
 
   getPreLondonForkFees(transaction, block, receipts) {
@@ -23,7 +24,7 @@ class FeesDecoder {
     const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     result.push({
       from: transaction.from,
-      to: constants.BURN_ADDRESS,
+      to: this.BURN_ADDRESS,
       value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
@@ -72,7 +73,7 @@ class FeesDecoder {
     const result = [];
     block.transactions.forEach((transaction) => {
       const feeTransfers =
-        constants.IS_ETH && blockNumber >= constants.LONDON_FORK_BLOCK ?
+        this.IS_ETH && blockNumber >= this.LONDON_FORK_BLOCK ?
           this.getPostLondonForkFees(transaction, block, receipts) :
           this.getPreLondonForkFees(transaction, block, receipts);
 

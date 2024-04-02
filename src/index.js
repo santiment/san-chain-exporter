@@ -3,12 +3,18 @@ const url = require('url');
 const micro = require('micro');
 const metrics = require('./lib/metrics');
 const { logger } = require('./lib/logger');
+const TaskManager = require('./lib/task_manager');
 const { Exporter } = require('./lib/kafka_storage');
 const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
-const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
+const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS, MAX_CONCURRENT_REQUESTS } = require('./lib/constants');
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
 const constantsBase = require('./lib/constants');
+const {
+  analyzeWorkerContext,
+  setWorkerSleepTime,
+  NO_WORK_SLEEP,
+  nextIntervalCalculator } = require('./blockchains/eth/lib/next_interval_calculator');
 
 var SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
@@ -42,13 +48,20 @@ class Main {
     this.#isWorkerSet();
     const mergedConstants = { ...constantsBase, ...constants };
     this.worker = new worker.worker(mergedConstants);
-    await this.worker.init(this.exporter, metrics);
-    await this.handleInitPosition();
+
+    await this.worker.init(this.exporter);
+  }
+
+  async initTaskManager() {
+    this.taskManager = await TaskManager.create(MAX_CONCURRENT_REQUESTS);
   }
 
   async init() {
     await this.initExporter(EXPORTER_NAME, true);
     await this.initWorker();
+    await this.handleInitPosition();
+    if (BLOCKCHAIN === 'eth') await this.initTaskManager();
+
     metrics.startCollection();
 
     this.microServer = micro(microHandler);
@@ -72,6 +85,23 @@ class Main {
     metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
   }
 
+  async waitOnStoreEvents(buffer) {
+    if (buffer.length > 0) {
+      await this.exporter.storeEvents(buffer);
+    }
+  }
+
+  async updatePosition(lastPrimaryKey, lastExportedBlock) {
+    if (lastExportedBlock > this.lastProcessedPosition.blockNumber) {
+      this.lastProcessedPosition = {
+        primaryKey: lastPrimaryKey,
+        blockNumber: lastExportedBlock
+      };
+      await this.exporter.savePosition(this.lastProcessedPosition);
+      logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
+    }
+  }
+
   async workLoop() {
     while (this.shouldWork) {
       this.worker.lastRequestStartTime = new Date();
@@ -83,11 +113,63 @@ class Main {
       this.lastProcessedPosition = this.worker.getLastProcessedPosition();
 
       if (events && events.length > 0) {
-        await this.exporter.storeEvents(events, constantsBase.WRITE_SIGNAL_RECORDS_KAFKA);
+        await this.exporter.storeEvents(events);
       }
       await this.exporter.savePosition(this.lastProcessedPosition);
       logger.info(`Progressed to position ${JSON.stringify(this.lastProcessedPosition)}, last confirmed Node block: ${this.worker.lastConfirmedBlock}`);
 
+      if (this.shouldWork) {
+        await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));
+      }
+    }
+  }
+
+  generateIntervals() {
+    const intervals = [];
+    for (let i = 0; i < MAX_CONCURRENT_REQUESTS; i++) {
+      const interval = nextIntervalCalculator(
+        this.worker.lastQueuedBlock,
+        this.worker.lastConfirmedBlock,
+        constantsBase.BLOCK_INTERVAL);
+      if (interval.fromBlock >= interval.toBlock) break;
+      this.worker.lastQueuedBlock = interval.toBlock;
+      intervals.push(interval);
+    }
+    return intervals;
+  }
+
+  pushTasks(intervals) {
+    for (const interval of intervals) {
+      const taskMetadata = {
+        interval: interval,
+        lambda: (interval) => this.worker.work(interval)
+      };
+      this.taskManager.pushToQueue(taskMetadata);
+    }
+  }
+
+  async workLoopV2() {
+    while (this.shouldWork) {
+      await this.taskManager.queue.onSizeLessThan(constantsBase.PQUEUE_MAX_SIZE);
+
+      const workerContext = await analyzeWorkerContext(this.worker);
+      setWorkerSleepTime(this.worker, workerContext);
+      if (workerContext !== NO_WORK_SLEEP) {
+        const intervals = this.generateIntervals();
+        this.pushTasks(intervals);
+
+        this.worker.lastRequestStartTime = new Date();
+        this.worker.lastExportTime = Date.now();
+
+        const [lastExportedBlock, buffer] = this.taskManager.retrieveCompleted();
+        if (lastExportedBlock) this.worker.setLastExportedBlock(lastExportedBlock);
+        this.worker.decorateWithPrimaryKeys(buffer);
+        await this.waitOnStoreEvents(buffer);
+
+        const lastPrimaryKey = this.worker.getLastPrimaryKey();
+        await this.updatePosition(lastPrimaryKey, lastExportedBlock);
+        this.updateMetrics();
+      }
       if (this.shouldWork) {
         await new Promise((resolve) => setTimeout(resolve, this.worker.sleepTimeMsec));
       }
@@ -174,7 +256,11 @@ async function main() {
     throw new Error(`Error initializing exporter: ${err.message}`);
   }
   try {
-    await mainInstance.workLoop();
+    if (BLOCKCHAIN === 'eth') {
+      await mainInstance.workLoopV2();
+    } else {
+      await mainInstance.workLoop();
+    }
     await mainInstance.disconnect();
     logger.info('Bye!');
   } catch (err) {

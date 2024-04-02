@@ -106,7 +106,10 @@ class ERC20Worker extends BaseWorker {
 
     const interval = this.settings.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
-      nextIntervalCalculator(this);
+      nextIntervalCalculator(
+        this.lastExportedBlock,
+        this.lastConfirmedBlock,
+        this.settings.BLOCK_INTERVAL);
 
     logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 
@@ -136,7 +139,7 @@ class ERC20Worker extends BaseWorker {
     }
 
     if (events.length > 0) {
-      extendEventsWithPrimaryKey(events, overwritten_events);
+      extendEventsWithPrimaryKey(events, this.settings.PRIMARY_KEY_MULTIPLIER, overwritten_events);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${interval.fromBlock}:${interval.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }

@@ -85,7 +85,7 @@ class UtxoWorker extends BaseWorker {
     return await this.sendRequestWithRetry('getblock', [blockHash, 2]);
   }
 
-  async work() {
+  async work(): Promise<any> {
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
       this.sleepTimeMsec = this.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 

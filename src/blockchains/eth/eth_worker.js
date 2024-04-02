@@ -1,16 +1,17 @@
 const { Web3 } = require('web3');
-const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
-const { constructRPCClient } = require('../../lib/http_client');
-const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-const { getGenesisTransfers } = require('./lib/genesis_transfers');
-const { transactionOrder, stableSort } = require('./lib/util');
-const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('./lib/web3_wrapper');
-const { decodeTransferTrace } = require('./lib/decode_transfers');
+const BaseWorker = require('../../lib/worker_base');
 const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } = require('./lib/next_interval_calculator');
+const { filterErrors } = require('./lib/filter_errors');
+const { stableSort } = require('../erc20/lib/util');
+const { constructRPCClient } = require('../../lib/http_client');
+const { decodeTransferTrace } = require('./lib/decode_transfers');
+const { transactionOrder } = require('./lib/util');
+const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
+const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
+
 
 class ETHWorker extends BaseWorker {
   constructor(settings) {
@@ -20,9 +21,20 @@ class ETHWorker extends BaseWorker {
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
     this.ethClient = constructRPCClient(settings.NODE_URL);
-
-    this.feesDecoder = new FeesDecoder(this.web3Wrapper);
+    this.feesDecoder = new FeesDecoder(
+      this.web3Wrapper,
+      this.settings.BURN_ADDRESS,
+      this.settings.IS_ETH,
+      this.settings.LONDON_FORK_BLOCK);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
+  }
+
+  getLastPrimaryKey() {
+    return this.lastPrimaryKey;
+  }
+
+  setLastExportedBlock(block) {
+    this.lastExportedBlock = block;
   }
 
   parseEthInternalTrx(result) {
@@ -40,7 +52,8 @@ class ETHWorker extends BaseWorker {
     return this.ethClient.request('trace_filter', [{
       fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
       toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
-    }]).then((data) => this.parseEthInternalTrx(data['result']));
+    }])
+      .then((data) => this.parseEthInternalTrx(data['result']));
   }
 
   async fetchBlocks(fromBlock, toBlock) {
@@ -137,7 +150,11 @@ class ETHWorker extends BaseWorker {
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
       if (this.settings.IS_ETH && blockNumber >= this.settings.SHANGHAI_FORK_BLOCK) {
         const blockTimestamp = this.web3Wrapper.parseHexToNumber(block.timestamp);
-        decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
+        decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(
+          block.withdrawals,
+          blockNumber,
+          blockTimestamp,
+          this.settings.ETH_WITHDRAWAL));
       }
       result.push(...decoded_transactions);
     }
@@ -145,26 +162,20 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async work() {
-    const workerContext = await analyzeWorkerContext(this);
-    setWorkerSleepTime(this, workerContext);
-    if (workerContext === NO_WORK_SLEEP) return [];
+  decorateWithPrimaryKeys(events) {
+    stableSort(events, transactionOrder);
+    for (let i = 0; i < events.length; i++) {
+      events[i].primaryKey = this.lastPrimaryKey + i + 1;
+    }
+    this.lastPrimaryKey += events.length;
+  }
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+  async work(interval) {
+    const { fromBlock, toBlock } = interval;
+
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
     const events = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
-
-    if (events.length > 0) {
-      stableSort(events, transactionOrder);
-      for (let i = 0; i < events.length; i++) {
-        events[i].primaryKey = this.lastPrimaryKey + i + 1;
-      }
-
-      this.lastPrimaryKey += events.length;
-    }
-
-    this.lastExportedBlock = toBlock;
 
     return events;
   }

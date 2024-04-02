@@ -26,14 +26,17 @@ class MaticWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const result = nextIntervalCalculator(this);
+    const result = nextIntervalCalculator(
+      this.lastExportedBlock,
+      this.lastConfirmedBlock,
+      this.settings.BLOCK_INTERVAL);
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
     const events = await getPastEvents(this.ethClient, this.web3Wrapper, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
-      extendEventsWithPrimaryKey(events);
+      extendEventsWithPrimaryKey(events, this.settings.PRIMARY_KEY_MULTIPLIER);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
       this.lastPrimaryKey = events[events.length - 1].primaryKey;
     }
