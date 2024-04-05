@@ -20,8 +20,10 @@ class CardanoWorker extends BaseWorker {
         json: {
           jsonrpc: '2.0',
           id: uuidv1(),
-          query: query
+          query: query,
         },
+        username: this.settings.RPC_USERNAME,
+        password: this.settings.RPC_PASSWORD,
         responseType: 'json',
         timeout: DEFAULT_TIMEOUT_MSEC
       }).json();
