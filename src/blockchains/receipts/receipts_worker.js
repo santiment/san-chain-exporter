@@ -3,6 +3,7 @@ const { Web3 } = require('web3');
 const helper = require('./lib/helper');
 const { logger } = require('../../lib/logger');
 const { constructRPCClient } = require('../../lib/http_client');
+const { buildHttpOptions } = require('../../lib/build_http_options');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
 const {
@@ -18,15 +19,7 @@ class ReceiptsWorker extends BaseWorker {
 
     logger.info(`Connecting to node ${settings.NODE_URL}`);
     const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
-    const httpProviderOptions = {
-      providerOptions: {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + Buffer.from(authCredentials).toString('base64')
-        }
-      }
-    };
+    const httpProviderOptions = buildHttpOptions(authCredentials);
     this.client = constructRPCClient(settings.NODE_URL, {
       method: 'POST',
       auth: authCredentials,

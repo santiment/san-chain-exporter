@@ -1,5 +1,6 @@
 const { Web3 } = require('web3');
 const { logger } = require('../../lib/logger');
+const { buildHttpOptions } = require('../../lib/build_http_options');
 const { constructRPCClient } = require('../../lib/http_client');
 const BaseWorker = require('../../lib/worker_base');
 const Web3Wrapper = require('../eth/lib/web3_wrapper');
@@ -18,15 +19,7 @@ class MaticWorker extends BaseWorker {
 
     logger.info(`Connecting to Polygon node ${settings.NODE_URL}`);
     const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
-    const httpProviderOptions = {
-      providerOptions: {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic ' + Buffer.from(authCredentials).toString('base64')
-        }
-      }
-    };
+    const httpProviderOptions = buildHttpOptions(authCredentials);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(
       settings.NODE_URL,
       httpProviderOptions
