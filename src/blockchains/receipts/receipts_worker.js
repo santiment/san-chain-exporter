@@ -17,8 +17,23 @@ class ReceiptsWorker extends BaseWorker {
     super(settings);
 
     logger.info(`Connecting to node ${settings.NODE_URL}`);
-    this.client = constructRPCClient(settings.NODE_URL);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
+    const httpProviderOptions = {
+      providerOptions: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + Buffer.from(authCredentials).toString('base64')
+        }
+      }
+    };
+    this.client = constructRPCClient(settings.NODE_URL, {
+      method: 'POST',
+      auth: authCredentials,
+      timeout: this.DEFAULT_TIMEOUT,
+      version: 2
+    });
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL, httpProviderOptions)));
   }
 
   async init() {

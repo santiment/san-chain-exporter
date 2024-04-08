@@ -1,3 +1,5 @@
+const RPC_USERNAME = process.env.RPC_USERNAME;
+const RPC_PASSWORD = process.env.RPC_PASSWORD;
 const DRY_RUN = parseInt(process.env.DRY_RUN || '1');
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '50');
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
@@ -9,6 +11,8 @@ const GET_BLOCK_ENDPOINT = process.env.GET_BLOCK_ENDPOINT || 'eth_getBlockByNumb
 
 module.exports = {
   DRY_RUN,
+  RPC_USERNAME,
+  RPC_PASSWORD,
   BLOCK_INTERVAL,
   CONFIRMATIONS,
   START_BLOCK,
