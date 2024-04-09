@@ -2,6 +2,7 @@ const { Web3 } = require('web3');
 const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
 const { constructRPCClient } = require('../../lib/http_client');
+const { buildHttpOptions } = require('../../lib/build_http_options');
 const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
 const { getGenesisTransfers } = require('./lib/genesis_transfers');
 const { transactionOrder, stableSort } = require('./lib/util');
@@ -18,8 +19,15 @@ class ETHWorker extends BaseWorker {
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
-    this.ethClient = constructRPCClient(settings.NODE_URL);
+    const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
+    const httpProviderOptions = buildHttpOptions(authCredentials);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL, httpProviderOptions)));
+    this.ethClient = constructRPCClient(settings.NODE_URL, {
+      method: 'POST',
+      auth: authCredentials,
+      timeout: this.DEFAULT_TIMEOUT,
+      version: 2
+    });
 
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);

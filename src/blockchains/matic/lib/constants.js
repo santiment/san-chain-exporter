@@ -4,8 +4,8 @@ const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://local
 const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || '30');
 
 module.exports = {
-    BLOCK_INTERVAL,
-    CONFIRMATIONS,
-    NODE_URL,
-    LOOP_INTERVAL_CURRENT_MODE_SEC
+  BLOCK_INTERVAL,
+  CONFIRMATIONS,
+  NODE_URL,
+  LOOP_INTERVAL_CURRENT_MODE_SEC
 };

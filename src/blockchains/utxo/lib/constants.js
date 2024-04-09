@@ -1,5 +1,3 @@
-const RPC_USERNAME = process.env.RPC_USERNAME || 'rpcuser';
-const RPC_PASSWORD = process.env.RPC_PASSWORD || 'rpcpassword';
 const NODE_URL = process.env.NODE_URL;
 
 const MAX_RETRIES = parseInt(process.env.MAX_RETRIES) || 3;
@@ -12,8 +10,6 @@ const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURREN
 module.exports = {
   NODE_URL,
   MAX_RETRIES,
-  RPC_USERNAME,
-  RPC_PASSWORD,
   CONFIRMATIONS,
   DEFAULT_TIMEOUT,
   EXPORT_TIMEOUT_MLS,

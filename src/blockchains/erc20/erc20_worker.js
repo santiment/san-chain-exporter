@@ -2,6 +2,7 @@
 const { Web3 } = require('web3');
 const { logger } = require('../../lib/logger');
 const { constructRPCClient } = require('../../lib/http_client');
+const { buildHttpOptions } = require('../../lib/build_http_options');
 const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
 const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
 const { stableSort, readJsonFile } = require('./lib/util');
@@ -36,9 +37,22 @@ class ERC20Worker extends BaseWorker {
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
-    this.web3Wrapper = web3Wrapper || new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL)));
+    const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
+    if (!web3Wrapper) {
+      const httpProviderOptions = buildHttpOptions(authCredentials);
+      this.web3Wrapper = new Web3Wrapper(
+        new Web3(new Web3.providers.HttpProvider(settings.NODE_URL, httpProviderOptions)));
+    } else {
+      this.web3Wrapper = web3Wrapper;
+    }
+
     if (!ethClient) {
-      this.ethClient = constructRPCClient(settings.NODE_URL);
+      this.ethClient = constructRPCClient(settings.NODE_URL, {
+        method: 'POST',
+        auth: authCredentials,
+        timeout: settings.DEFAULT_TIMEOUT,
+        version: 2
+      });
       this.contractsOverwriteArray = [];
       this.contractsUnmodified = [];
       this.allOldContracts = [];
