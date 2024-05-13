@@ -12,6 +12,7 @@ import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
 import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
+import { EOB, collectEndOfBlocks } from './lib/end_of_block';
 
 
 export class ETHWorker extends BaseWorker {
@@ -94,7 +95,7 @@ export class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async work(): Promise<ETHTransfer[]> {
+  async work(): Promise<(ETHTransfer | EOB)[]> {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
@@ -102,8 +103,9 @@ export class ETHWorker extends BaseWorker {
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
-    const events = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
+    let events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
 
+    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
     if (events.length > 0) {
       stableSort(events, transactionOrder);
       extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
@@ -121,7 +123,7 @@ export class ETHWorker extends BaseWorker {
   }
 }
 
-export function extendEventsWithPrimaryKey(events: ETHTransfer[], lastPrimaryKey: number) {
+export function extendEventsWithPrimaryKey<T extends { primaryKey?: number }>(events: T[], lastPrimaryKey: number) {
   for (let i = 0; i < events.length; i++) {
     events[i].primaryKey = lastPrimaryKey + i + 1;
   }
