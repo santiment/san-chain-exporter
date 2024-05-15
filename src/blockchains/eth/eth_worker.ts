@@ -1,31 +1,39 @@
-const { Web3 } = require('web3');
-const { logger } = require('../../lib/logger');
-const { constructRPCClient } = require('../../lib/http_client');
-const { buildHttpOptions } = require('../../lib/build_http_options');
-const { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } = require('./lib/dao_hack');
-const { getGenesisTransfers } = require('./lib/genesis_transfers');
-const { transactionOrder, stableSort } = require('./lib/util');
-const BaseWorker = require('../../lib/worker_base');
-const Web3Wrapper = require('./lib/web3_wrapper');
-const { decodeTransferTrace } = require('./lib/decode_transfers');
-const { FeesDecoder } = require('./lib/fees_decoder');
-const { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } = require('./lib/next_interval_calculator');
-const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
-const { fetchEthInternalTrx, fetchBlocks, fetchReceipts } = require('./lib/fetch_data');
+import { Web3 } from 'web3';
+import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
+import jayson from 'jayson/promise';
+import { logger } from '../../lib/logger';
+import { constructRPCClient } from '../../lib/http_client';
+import { buildHttpOptions } from '../../lib/build_http_options';
+import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
+import { getGenesisTransfers } from './lib/genesis_transfers';
+import { transactionOrder, stableSort } from './lib/util';
+import BaseWorker from '../../lib/worker_base';
+import Web3Wrapper from './lib/web3_wrapper';
+import { decodeTransferTrace } from './lib/decode_transfers';
+import { FeesDecoder } from './lib/fees_decoder';
+import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from './lib/next_interval_calculator';
+import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
+import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
+import { Trace, Block } from './eth_types';
 
 class ETHWorker extends BaseWorker {
-  constructor(settings) {
+  private web3Wrapper: Web3Wrapper;
+  private ethClient: jayson.HttpClient | jayson.HttpsClient;
+  private feesDecoder: FeesDecoder;
+  private withdrawalsDecoder: WithdrawalsDecoder;
+
+  constructor(settings: any) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
-    const httpProviderOptions = buildHttpOptions(authCredentials);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3.providers.HttpProvider(settings.NODE_URL, httpProviderOptions)));
+    const httpProviderOptions: HttpProviderOptions = buildHttpOptions(authCredentials);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3HttpProvider(settings.NODE_URL, httpProviderOptions)));
     this.ethClient = constructRPCClient(settings.NODE_URL, {
       method: 'POST',
       auth: authCredentials,
-      timeout: this.DEFAULT_TIMEOUT,
+      timeout: settings.DEFAULT_TIMEOUT,
       version: 2
     });
 
@@ -33,15 +41,17 @@ class ETHWorker extends BaseWorker {
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }
 
-  async fetchData(fromBlock, toBlock) {
+  async fetchData(fromBlock: number, toBlock: number) {
     return await Promise.all([
-      fetchEthInternalTrx(fromBlock, toBlock),
-      fetchBlocks(fromBlock, toBlock),
-      fetchReceipts(fromBlock, toBlock),
+      fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock),
+      fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock),
+      fetchReceipts(this.ethClient, this.web3Wrapper,
+        this.settings.RECEIPTS_API_METHOD, fromBlock, toBlock),
     ]);
   }
 
-  transformPastEvents(fromBlock, toBlock, traces, blocks, receipts) {
+  transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[],
+    blocks: any, receipts: any) {
     let events = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
@@ -60,24 +70,30 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-  transformPastTransferEvents(traces, blocksMap) {
+  transformPastTransferEvents(traces: Trace[], blocksMap: Map<number, Block>) {
     const result = [];
 
     for (let i = 0; i < traces.length; i++) {
-      const block_timestamp = this.web3Wrapper.parseHexToNumber(blocksMap.get(traces[i]['blockNumber']).timestamp);
-      result.push(decodeTransferTrace(traces[i], block_timestamp, this.web3Wrapper));
+      const blockNumber = traces[i]['blockNumber'];
+      const block = blocksMap.get(blockNumber);
+      if (block === undefined) {
+        throw Error(`Block ${blockNumber} is not found in block map`)
+      }
+      const blockTimestamp = this.web3Wrapper.parseHexToNumber(block.timestamp);
+      result.push(decodeTransferTrace(traces[i], blockTimestamp, this.web3Wrapper));
     }
 
     return result;
   }
 
-  transformPastTransactionEvents(blocks, receipts) {
+  transformPastTransactionEvents(blocks: Block[], receipts: any) {
     const result = [];
 
     for (const block of blocks) {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
-      const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts);
-      if (this.settings.IS_ETH && blockNumber >= this.settings.SHANGHAI_FORK_BLOCK) {
+      const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts,
+        this.settings.IS_ETH, this.settings.BURN_ADDRESS, this.settings.LONDON_FORK_BLOCK);
+      if (block.withdrawals !== undefined) {
         const blockTimestamp = this.web3Wrapper.parseHexToNumber(block.timestamp);
         decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
       }

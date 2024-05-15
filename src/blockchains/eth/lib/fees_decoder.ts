@@ -1,11 +1,14 @@
-const constants = require('./constants');
+import Web3Wrapper from './web3_wrapper';
+import { Block, Transaction, Transfer } from '../eth_types';
 
-class FeesDecoder {
-  constructor(web3Wrapper) {
+export class FeesDecoder {
+  private web3Wrapper: Web3Wrapper;
+
+  constructor(web3Wrapper: Web3Wrapper) {
     this.web3Wrapper = web3Wrapper;
   }
 
-  getPreLondonForkFees(transaction, block, receipts) {
+  getPreLondonForkFees(transaction: any, block: Block, receipts: any) {
     const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     return [{
       from: transaction.from,
@@ -19,18 +22,19 @@ class FeesDecoder {
     }];
   }
 
-  pushBurntFee(transaction, block, receipts, result) {
+  getBurntFee(transaction: any, block: Block, receipts: any,
+    burnAddress: string): Transfer {
     const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
-    result.push({
+    return {
       from: transaction.from,
-      to: constants.BURN_ADDRESS,
+      to: burnAddress,
       value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
       blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
       timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
       transactionHash: transaction.hash,
       type: 'fee_burnt'
-    });
+    };
   }
 
   /**
@@ -43,11 +47,11 @@ class FeesDecoder {
    *
    * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
    **/
-  pushMinerFee(transaction, block, receipts, result) {
+  getMinerFee(transaction: Transaction, block: Block, receipts: any): Transfer | undefined {
     const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
     const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     if (tipMinerPerGas > 0) {
-      result.push({
+      return {
         from: transaction.from,
         to: block.miner,
         value: Number(gasExpense),
@@ -56,24 +60,31 @@ class FeesDecoder {
         timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
         transactionHash: transaction.hash,
         type: 'fee'
-      });
+      };
+    }
+    else {
+      return undefined
     }
   }
 
-  getPostLondonForkFees(transaction, block, receipts) {
-    const result = [];
-    this.pushBurntFee(transaction, block, receipts, result);
-    this.pushMinerFee(transaction, block, receipts, result);
+  getPostLondonForkFees(transaction: Transaction, block: Block, receipts: any, burnAddress: string): Transfer[] {
+    const result: Transfer[] = [];
+    result.push(this.getBurntFee(transaction, block, receipts, burnAddress));
+    const minerFee = this.getMinerFee(transaction, block, receipts);
+    if (minerFee !== undefined) {
+      result.push(minerFee)
+    }
 
     return result;
   }
 
-  getFeesFromTransactionsInBlock(block, blockNumber, receipts) {
-    const result = [];
-    block.transactions.forEach((transaction) => {
+  getFeesFromTransactionsInBlock(block: Block, blockNumber: number, receipts: any, isETH: boolean,
+    burnAddress: string, londonForkBlock: number): Transfer[] {
+    const result: Transfer[] = [];
+    block.transactions.forEach((transaction: Transaction) => {
       const feeTransfers =
-        constants.IS_ETH && blockNumber >= constants.LONDON_FORK_BLOCK ?
-          this.getPostLondonForkFees(transaction, block, receipts) :
+        isETH && blockNumber >= londonForkBlock ?
+          this.getPostLondonForkFees(transaction, block, receipts, burnAddress) :
           this.getPreLondonForkFees(transaction, block, receipts);
 
       result.push(...feeTransfers);

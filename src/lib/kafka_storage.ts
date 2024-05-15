@@ -106,7 +106,7 @@ export class Exporter {
   private readonly zookeeperClient: ZookeeperClientAsync;
   private partitioner: Partitioner | null;
 
-  constructor(exporter_name: string, transactional: boolean = false) {
+  constructor(exporter_name: string, transactional: boolean, topicName: string) {
     this.exporter_name = exporter_name;
 
     const producer_settings: ProducerGlobalConfig = {
@@ -123,7 +123,7 @@ export class Exporter {
       producer_settings['debug'] = RDKAFKA_DEBUG;
     }
 
-    this.topicName = process.env.KAFKA_TOPIC || this.exporter_name.replace('-exporter', '').replace('-', '_');
+    this.topicName = topicName;
 
     if (transactional) {
       const uniqueIdentifier = crypto.randomBytes(16).toString('hex');

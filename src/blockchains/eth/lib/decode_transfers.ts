@@ -1,6 +1,9 @@
+import Web3Wrapper from './web3_wrapper';
+import { Trace } from '../eth_types';
+
 const { logger } = require('../../../lib/logger');
 
-function decodeTransferTrace(trace, timestamp, web3Wrapper) {
+export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper: Web3Wrapper) {
   // Block & uncle rewards
   if (trace['type'] === 'reward') {
     return {

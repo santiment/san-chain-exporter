@@ -19,9 +19,9 @@ class Main {
     this.shouldWork = true;
   }
 
-  async initExporter(exporterName, isTransactions) {
+  async initExporter(exporterName, isTransactions, kafkaTopic) {
     const INIT_EXPORTER_ERR_MSG = 'Error when initializing exporter: ';
-    this.exporter = new Exporter(exporterName, isTransactions);
+    this.exporter = new Exporter(exporterName, isTransactions, kafkaTopic);
     await this.exporter
       .connect()
       .then(() => this.exporter.initTransactions())
@@ -38,17 +38,17 @@ class Main {
     if (this.worker) throw new Error('Worker is already set');
   }
 
-  async initWorker() {
+  async initWorker(mergedConstants) {
     this.#isWorkerSet();
-    const mergedConstants = { ...constantsBase, ...constants };
     this.worker = new worker.worker(mergedConstants);
     await this.worker.init(this.exporter, metrics);
     await this.handleInitPosition();
   }
 
   async init() {
-    await this.initExporter(EXPORTER_NAME, true);
-    await this.initWorker();
+    const mergedConstants = { ...constantsBase, ...constants };
+    await this.initExporter(EXPORTER_NAME, true, mergedConstants.KAFKA_TOPIC);
+    await this.initWorker(mergedConstants);
     metrics.startCollection();
 
     this.microServer = micro(microHandler);

@@ -1,11 +1,15 @@
 const constants = require('./constants');
+import Web3Wrapper from './web3_wrapper';
+import { Transfer, BeaconChainWithdrawal } from '../eth_types';
 
-class WithdrawalsDecoder {
-  constructor(web3Wrapper) {
+export class WithdrawalsDecoder {
+  private web3Wrapper: Web3Wrapper;
+
+  constructor(web3Wrapper: Web3Wrapper) {
     this.web3Wrapper = web3Wrapper;
   }
 
-  getBeaconChainWithdrawals(withdrawals, blockNumber, blockTimestamp) {
+  getBeaconChainWithdrawals(withdrawals: BeaconChainWithdrawal[], blockNumber: number, blockTimestamp: number): Transfer[] {
     return withdrawals.map((withdrawal) => {
       const gweiAmount = BigInt(this.web3Wrapper.gweiToWei(withdrawal.amount));
       return {

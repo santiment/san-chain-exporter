@@ -1,8 +1,8 @@
-const assert = require('assert');
-const { Web3 } = require('web3');
-const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
-const { FeesDecoder } = require('../../blockchains/eth/lib/fees_decoder');
-const constants = require('../../blockchains/eth/lib/constants');
+import assert from 'assert';
+import { Web3 } from 'web3';
+import Web3Wrapper from '../../blockchains/eth/lib/web3_wrapper';
+import { FeesDecoder } from '../../blockchains/eth/lib/fees_decoder';
+import constants from '../../blockchains/eth/lib/constants';
 
 /**
  * A transaction for which there is zero 'maxPriorityFeePerGas' and also 'maxFeePerGas' - 'baseFeePerGas' = 0.
@@ -199,9 +199,9 @@ const receipts_json_pre_london = [{
 }];
 
 
-function turnReceiptsToMap(receipts) {
-  const result = {};
-  receipts.forEach(receipt => {
+function turnReceiptsToMap(receipts: any) {
+  const result: any = {};
+  receipts.forEach((receipt: any) => {
     result[receipt.transactionHash] = receipt;
   });
 
@@ -215,7 +215,8 @@ describe('Fees decoder test', function () {
   it('test fees post London zero priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,
       web3Wrapper.parseHexToNumber(block_json_post_london_zero_priority.number),
-      turnReceiptsToMap(receipts_json_post_london_no_priority));
+      turnReceiptsToMap(receipts_json_post_london_no_priority), true, constants.BURN_ADDRESS,
+      constants.LONDON_FORK_BLOCK);
 
     const expected = [{
       from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
@@ -235,13 +236,14 @@ describe('Fees decoder test', function () {
   it('test fees post London with priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_with_priority,
       web3Wrapper.parseHexToNumber(block_json_post_london_with_priority.number),
-      turnReceiptsToMap(receipts_json_post_london_with_priority));
+      turnReceiptsToMap(receipts_json_post_london_with_priority), true, constants.BURN_ADDRESS,
+      constants.LONDON_FORK_BLOCK);
 
     const expected = [{
       blockNumber: 13447057,
       from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
       timestamp: 1634631172,
-      to: 'burn',
+      to: constants.BURN_ADDRESS,
       transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
       type: 'fee_burnt',
       value: 3653345337731778,
@@ -265,13 +267,14 @@ describe('Fees decoder test', function () {
   it('test old type fees post London', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_old_tx_type,
       web3Wrapper.parseHexToNumber(block_json_post_london_old_tx_type.number),
-      turnReceiptsToMap(receipts_json_post_london_old_tx_type));
+      turnReceiptsToMap(receipts_json_post_london_old_tx_type), true, constants.BURN_ADDRESS,
+      constants.LONDON_FORK_BLOCK);
 
     const expected = [{
       blockNumber: 13318440,
       from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
       timestamp: 1632888074,
-      to: 'burn',
+      to: constants.BURN_ADDRESS,
       transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
       type: 'fee_burnt',
       value: 1391883443307000,
@@ -295,7 +298,7 @@ describe('Fees decoder test', function () {
   it('test fees pre London', async function () {
     const preLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_pre_london,
       web3Wrapper.parseHexToNumber(block_json_pre_london.number),
-      turnReceiptsToMap(receipts_json_pre_london));
+      turnReceiptsToMap(receipts_json_pre_london), true, constants.BURN_ADDRESS, constants.LONDON_FORK_BLOCK);
 
     const expected = [{
       from: '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',
