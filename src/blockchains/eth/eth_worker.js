@@ -1,5 +1,4 @@
 const { Web3 } = require('web3');
-const { filterErrors } = require('./lib/filter_errors');
 const { logger } = require('../../lib/logger');
 const { constructRPCClient } = require('../../lib/http_client');
 const { buildHttpOptions } = require('../../lib/build_http_options');
@@ -12,6 +11,7 @@ const { decodeTransferTrace } = require('./lib/decode_transfers');
 const { FeesDecoder } = require('./lib/fees_decoder');
 const { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } = require('./lib/next_interval_calculator');
 const { WithdrawalsDecoder } = require('./lib/withdrawals_decoder');
+const { fetchEthInternalTrx, fetchBlocks, fetchReceipts } = require('./lib/fetch_data');
 
 class ETHWorker extends BaseWorker {
   constructor(settings) {
@@ -33,77 +33,11 @@ class ETHWorker extends BaseWorker {
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }
 
-  parseEthInternalTrx(result) {
-    const traces = filterErrors(result);
-
-    return traces
-      .filter((trace) =>
-        trace['action']['value'] !== '0x0' &&
-        trace['action']['balance'] !== '0x0' &&
-        !(trace['type'] === 'call' && trace['action']['callType'] !== 'call')
-      );
-  }
-
-  fetchEthInternalTrx(fromBlock, toBlock) {
-    return this.ethClient.request('trace_filter', [{
-      fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
-      toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
-    }]).then((data) => this.parseEthInternalTrx(data['result']));
-  }
-
-  async fetchBlocks(fromBlock, toBlock) {
-    const blockRequests = [];
-    for (let i = fromBlock; i <= toBlock; i++) {
-      blockRequests.push(
-        this.ethClient.request(
-          'eth_getBlockByNumber',
-          [this.web3Wrapper.parseNumberToHex(i), true],
-          undefined,
-          false
-        )
-      );
-    }
-
-    const responses = await this.ethClient.request(blockRequests);
-    const result = new Map();
-    responses.forEach((response, index) => result.set(fromBlock + index, response.result));
-    return result;
-  }
-
-  async fetchReceipts(fromBlock, toBlock) {
-    const batch = [];
-    for (let currBlock = fromBlock; currBlock <= toBlock; currBlock++) {
-      batch.push(
-        this.ethClient.request(
-          this.settings.RECEIPTS_API_METHOD,
-          [this.web3Wrapper.parseNumberToHex(currBlock)],
-          undefined,
-          false
-        )
-      );
-    }
-    const finishedRequests = await this.ethClient.request(batch);
-    const result = {};
-
-    finishedRequests.forEach((response) => {
-      if (response.result) {
-        response.result.forEach((receipt) => {
-          result[receipt.transactionHash] = receipt;
-        });
-      }
-      else {
-        throw new Error(JSON.stringify(response));
-      }
-    });
-
-    return result;
-  }
-
   async fetchData(fromBlock, toBlock) {
     return await Promise.all([
-      this.fetchEthInternalTrx(fromBlock, toBlock),
-      this.fetchBlocks(fromBlock, toBlock),
-      this.fetchReceipts(fromBlock, toBlock),
+      fetchEthInternalTrx(fromBlock, toBlock),
+      fetchBlocks(fromBlock, toBlock),
+      fetchReceipts(fromBlock, toBlock),
     ]);
   }
 

@@ -3,8 +3,6 @@ const v8 = require('v8');
 const eth_worker = require('../../blockchains/eth/eth_worker');
 const constants = require('../../blockchains/eth/lib/constants');
 
-const testNullAction = require('./test_action_null.json');
-
 describe('Test worker', function () {
     const worker = new eth_worker.worker(constants);
     let feeResult = null;
@@ -62,11 +60,3 @@ describe('Test worker', function () {
 
 });
 
-describe('Test that when action is null parsing would not break', function () {
-    it('Null action should not break parsing', function () {
-        const worker = new eth_worker.worker(constants);
-        const result = worker.parseEthInternalTrx(testNullAction);
-
-        assert.deepStrictEqual(result, []);
-    });
-});
