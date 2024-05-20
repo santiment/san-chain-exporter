@@ -33,7 +33,7 @@ services:
       context: ../
       dockerfile: docker/Dockerfile
       args:
-        NODE_ENV: development
+        NODE_ENV: production 
     depends_on:
       - zookeeper
       - kafka

@@ -8,7 +8,8 @@
     "integration_test": "mocha --recursive --reporter spec integration_test",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "start": "npm run build && node ./built/index.js",
-    "build": "rm -r -f ./built && tsc && ./copy_assets.sh",
+    "build:dev": "rm -r -f ./built && tsc && ./copy_assets.sh",
+    "build:production": "rm -r -f ./built && tsc -p tsconfig.production.json && ./copy_assets.sh",
     "tsc_only": "tsc"
   },
   "repository": {
