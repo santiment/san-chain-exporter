@@ -1,7 +1,7 @@
 FROM node:21.4.0-slim AS builder
 
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
+ARG BUILD_ENV=production
+ENV BUILD_ENV=${BUILD_ENV}
 
 RUN apt-get update; \
     apt-get install -y bash \
