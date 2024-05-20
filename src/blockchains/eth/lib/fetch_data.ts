@@ -2,9 +2,10 @@ import jayson from 'jayson/promise';
 import { filterErrors } from './filter_errors';
 import Web3Wrapper from './web3_wrapper';
 import { Trace, Block } from '../eth_types';
+import { JSONRPCRequest } from 'jayson';
 
 
-export function parseEthInternalTrx(result: Trace[]) {
+export function parseEthInternalTrx(result: Trace[]): Trace[] {
   const traces = filterErrors(result);
 
   return traces
@@ -16,7 +17,7 @@ export function parseEthInternalTrx(result: Trace[]) {
 }
 
 export function fetchEthInternalTrx(ethClient: jayson.HttpClient | jayson.HttpsClient,
-  web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number) {
+  web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Trace[]> {
   return ethClient.request('trace_filter', [{
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
     toBlock: web3Wrapper.parseNumberToHex(toBlock)
@@ -25,7 +26,7 @@ export function fetchEthInternalTrx(ethClient: jayson.HttpClient | jayson.HttpsC
 
 export async function fetchBlocks(ethClient: jayson.HttpClient | jayson.HttpsClient,
   web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Map<number, Block>> {
-  const blockRequests = [];
+  const blockRequests: JSONRPCRequest[] = [];
   for (let i = fromBlock; i <= toBlock; i++) {
     blockRequests.push(
       ethClient.request(
@@ -45,7 +46,7 @@ export async function fetchBlocks(ethClient: jayson.HttpClient | jayson.HttpsCli
 
 export async function fetchReceipts(ethClient: jayson.HttpClient | jayson.HttpsClient,
   web3Wrapper: Web3Wrapper, receiptsAPIMethod: string, fromBlock: number, toBlock: number) {
-  const batch = [];
+  const batch: JSONRPCRequest[] = [];
   for (let currBlock = fromBlock; currBlock <= toBlock; currBlock++) {
     batch.push(
       ethClient.request(

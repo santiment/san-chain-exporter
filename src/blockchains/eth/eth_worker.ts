@@ -14,7 +14,7 @@ import { FeesDecoder } from './lib/fees_decoder';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from './lib/next_interval_calculator';
 import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
-import { Trace, Block } from './eth_types';
+import { Trace, Block, Transfer } from './eth_types';
 
 class ETHWorker extends BaseWorker {
   private web3Wrapper: Web3Wrapper;
@@ -41,7 +41,7 @@ class ETHWorker extends BaseWorker {
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
   }
 
-  async fetchData(fromBlock: number, toBlock: number) {
+  async fetchData(fromBlock: number, toBlock: number): Promise<[Trace[], Map<number, Block>, any]> {
     return await Promise.all([
       fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock),
       fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock),
@@ -51,8 +51,8 @@ class ETHWorker extends BaseWorker {
   }
 
   transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[],
-    blocks: any, receipts: any) {
-    let events = [];
+    blocks: any, receipts: any): Transfer[] {
+    let events: Transfer[] = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
       events.push(...getGenesisTransfers(this.web3Wrapper));
@@ -70,8 +70,8 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-  transformPastTransferEvents(traces: Trace[], blocksMap: Map<number, Block>) {
-    const result = [];
+  transformPastTransferEvents(traces: Trace[], blocksMap: Map<number, Block>): Transfer[] {
+    const result: Transfer[] = [];
 
     for (let i = 0; i < traces.length; i++) {
       const blockNumber = traces[i]['blockNumber'];
@@ -86,8 +86,8 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  transformPastTransactionEvents(blocks: Block[], receipts: any) {
-    const result = [];
+  transformPastTransactionEvents(blocks: Block[], receipts: any): Transfer[] {
+    const result: Transfer[] = [];
 
     for (const block of blocks) {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
@@ -103,7 +103,7 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async work() {
+  async work(): Promise<Transfer[]> {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
@@ -127,7 +127,7 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-  async init() {
+  async init(): Promise<void> {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
   }
 }

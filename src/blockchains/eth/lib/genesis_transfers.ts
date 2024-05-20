@@ -1,5 +1,7 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { Transfer } from '../eth_types';
+import Web3Wrapper from './web3_wrapper';
 
 const GENESIS_TRANSFERS = fs.readFileSync(path.resolve(__dirname) + '/ethereum_genesis.csv', { encoding: 'utf8' })
   .split('\n')
@@ -8,8 +10,8 @@ const GENESIS_TRANSFERS = fs.readFileSync(path.resolve(__dirname) + '/ethereum_g
 
 const GENESIS_TIMESTAMP = 1438269973;
 
-exports.getGenesisTransfers = function (web3Wrapper) {
-  const result = [];
+export function getGenesisTransfers(web3Wrapper: Web3Wrapper): Transfer[] {
+  const result: Transfer[] = [];
   GENESIS_TRANSFERS.forEach((transfer) => {
     const [id, from, to, amount] = transfer;
     const wei = web3Wrapper.etherToWei(parseFloat(amount));
@@ -29,7 +31,7 @@ exports.getGenesisTransfers = function (web3Wrapper) {
   result.push({
     from: 'mining_block',
     to: '0x0000000000000000000000000000000000000000',
-    value: '5000000000000000000',
+    value: 5000000000000000000,
     valueExactBase36: BigInt('5000000000000000000').toString(36),
     blockNumber: 0,
     timestamp: GENESIS_TIMESTAMP,
@@ -38,3 +40,5 @@ exports.getGenesisTransfers = function (web3Wrapper) {
 
   return result;
 };
+
+

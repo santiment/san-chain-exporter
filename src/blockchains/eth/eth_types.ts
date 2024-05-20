@@ -73,6 +73,8 @@ export interface Transfer {
   valueExactBase36: string,
   blockNumber: number,
   timestamp: number,
-  transactionHash: string,
-  type: string
+  transactionHash?: string,
+  transactionPosition?: number,
+  type: string,
+  primaryKey?: number,
 }
