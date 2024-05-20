@@ -10,9 +10,6 @@ const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
 const constantsBase = require('./lib/constants');
 
-var SegfaultHandler = require('segfault-handler');
-SegfaultHandler.registerHandler(`${EXPORTER_NAME}_crash.log`);
-
 class Main {
   constructor() {
     this.worker = null;
