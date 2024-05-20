@@ -14,14 +14,13 @@ RUN apt-get update; \
 
 WORKDIR /opt
 
-COPY package.json package-lock.json* tsconfig.json copy_assets.sh ./
+COPY package.json package-lock.json* tsconfig*.json copy_assets.sh ./
 COPY src ./src
 
 RUN if [ "$BUILD_ENV" = "production" ]; \
-    then npm ci --only=production; npm run build:production; \
+    then npm ci npm ci --omit=dev; npm run build:production; \
     else npm ci; npm run build:dev; \
-    fi && \
-    npm cache clean --force
+    fi
 
 FROM node:21.4.0-slim
 
