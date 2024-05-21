@@ -131,3 +131,8 @@ export class ETHWorker extends BaseWorker {
   }
 }
 
+module.exports = {
+  worker: ETHWorker
+};
+
+

@@ -1,11 +1,16 @@
 'use strict';
-const xrpl = require('xrpl');
-const assert = require('assert');
-const { logger } = require('../../lib/logger');
-const BaseWorker = require('../../lib/worker_base');
+import xrpl, { LedgerRequest } from 'xrpl';
+import assert from 'assert';
+import { logger } from '../../lib/logger';
+import { BaseWorker } from '../../lib/worker_base';
+import { XRPConnection } from './xrp_types';
 
 class XRPWorker extends BaseWorker {
-  constructor(settings) {
+  private nodeURLs: string;
+  private connections: XRPConnection[];
+  private retryIntervalMs: number;
+
+  constructor(settings: any) {
     super(settings);
 
     this.nodeURLs = settings.XRP_NODE_URLS.split(',');
@@ -31,7 +36,7 @@ class XRPWorker extends BaseWorker {
       });
       await api.connect();
 
-      const pQueueSettings = { concurrency: this.settings.MAX_CONNECTION_CONCURRENCY };
+      const pQueueSettings: any = { concurrency: this.settings.MAX_CONNECTION_CONCURRENCY };
       if (this.settings.REQUEST_RATE_INTERVAL_MSEC > 0 && this.settings.REQUEST_RATE_INTERVAL_CAP > 0) {
         pQueueSettings.interval = this.settings.REQUEST_RATE_INTERVAL_MSEC;
         pQueueSettings.intervalCap = this.settings.REQUEST_RATE_INTERVAL_CAP;
@@ -47,9 +52,9 @@ class XRPWorker extends BaseWorker {
     }
   }
 
-  async connectionSend({ connection, queue }, params) {
-    return queue.add(() => {
-      return connection.request(params);
+  async connectionSend(connection: XRPConnection, params: LedgerRequest) {
+    return connection.queue.add(() => {
+      return connection.connection.request(params);
     });
   }
 
@@ -65,7 +70,7 @@ class XRPWorker extends BaseWorker {
     this.lastConfirmedBlock = parseInt(lastValidatedLedgerData.ledger.ledger_index) - this.settings.CONFIRMATIONS;
   }
 
-  isEmptyTransactionHash(transaction_hash) {
+  isEmptyTransactionHash(transaction_hash: string) {
     for (const char of transaction_hash) {
       if (char !== '0') {
         return false;
