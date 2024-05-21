@@ -1,14 +1,24 @@
 'use strict';
-const { logger } = require('./logger');
+import { logger } from './logger';
+import { Exporter } from './kafka_storage';
+import { ExporterPosition } from '../types'
 
-class WorkerBase {
-  constructor(constants) {
+export class BaseWorker {
+  public lastExportTime: number;
+  public lastConfirmedBlock: number;
+  public lastExportedBlock: number;
+  public lastRequestStartTime: number;
+  public lastPrimaryKey: number;
+  public sleepTimeMsec: number;
+  public settings: any;
+
+  constructor(constants: any) {
     // To prevent healthcheck failing during initialization and processing first
     // part of data, we set lastExportTime to current time.
     this.lastExportTime = Date.now();
     this.lastConfirmedBlock = -1;
     this.lastExportedBlock = -1;
-    this.lastRequestStartTime;
+    this.lastRequestStartTime = 0;
     this.lastPrimaryKey = 0;
     this.sleepTimeMsec = 0;
     this.settings = constants;
@@ -24,7 +34,7 @@ class WorkerBase {
     throw new Error('"work" method need to be overriden');
   }
   // To be implemented on inheritance.
-  init(_exporter) {
+  init(_exporter: Exporter) {
     throw new Error('"init" method need to be overriden');
   }
 
@@ -33,7 +43,7 @@ class WorkerBase {
    *
    * @returns Number of new requests made towards the Node endpoint. Used for metrics purposes.
    */
-  getNewRequestsCount() {
+  getNewRequestsCount(): number {
     return 1;
   }
 
@@ -41,7 +51,7 @@ class WorkerBase {
    * @param {Object} Return an object that is to be stored in Zookeeper. Overwrite with the exact fields that are
    * needed to later recover position.
    */
-  getLastProcessedPosition() {
+  getLastProcessedPosition(): ExporterPosition {
     return {
       blockNumber: this.lastExportedBlock,
       primaryKey: this.lastPrimaryKey
@@ -56,7 +66,7 @@ class WorkerBase {
    * @param {JSON} lastProcessedPosition
    * @return {Object} The received or modified object describing the position to start from.
    */
-  initPosition(lastProcessedPosition) {
+  initPosition(lastProcessedPosition: ExporterPosition) {
     if (lastProcessedPosition) {
       logger.info(`Resuming export from position ${JSON.stringify(lastProcessedPosition)}`);
     } else {
@@ -81,4 +91,3 @@ class WorkerBase {
   }
 }
 
-module.exports = WorkerBase;

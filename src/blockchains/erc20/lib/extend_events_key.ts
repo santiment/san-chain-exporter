@@ -1,10 +1,11 @@
 'use strict';
 
-const { stableSort } = require('./util');
-const constants = require('./constants');
-const { logger } = require('../../../lib/logger');
+import { stableSort } from './util';
+import constants from './constants';
+import { logger } from '../../../lib/logger';
+import { ERC20Transfer } from '../erc20_types';
 
-function transactionOrder(a, b) {
+function transactionOrder(a: ERC20Transfer, b: ERC20Transfer) {
   const blockDif = a.blockNumber - b.blockNumber;
   if (blockDif !== 0) {
     return blockDif;
@@ -14,7 +15,7 @@ function transactionOrder(a, b) {
   }
 }
 
-function extendEventsWithPrimaryKey(events, overwritten_events = []) {
+export function extendEventsWithPrimaryKey(events: ERC20Transfer[], overwritten_events: ERC20Transfer[] = []) {
   stableSort(events, transactionOrder);
   const lastEvent = events[events.length - 1];
   if (lastEvent.logIndex + overwritten_events.length >= constants.PRIMARY_KEY_MULTIPLIER) {
@@ -23,7 +24,7 @@ function extendEventsWithPrimaryKey(events, overwritten_events = []) {
   }
 
   // Store the last log index of the original events per block
-  let lastLogIndexPerBlock = {};
+  let lastLogIndexPerBlock: { [key: number]: number } = {};
   events.forEach(function (event) {
     event.primaryKey = event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + event.logIndex;
     // We depend on the events being sorted by log index above
@@ -37,6 +38,3 @@ function extendEventsWithPrimaryKey(events, overwritten_events = []) {
   });
 }
 
-module.exports = {
-  extendEventsWithPrimaryKey
-};

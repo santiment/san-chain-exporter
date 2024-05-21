@@ -1,20 +1,24 @@
 /* jslint es6 */
 'use strict';
-const got = require('got');
-const { v1: uuidv1 } = require('uuid');
-const BaseWorker = require('../../lib/worker_base');
-const util = require('./lib/util');
-const { logger } = require('../../lib/logger');
+import got from 'got';
+import { v1 as uuidv1 } from 'uuid';
+import { BaseWorker } from '../../lib/worker_base';
+import { Transaction } from './cardano_types';
+import util from './lib/util';
+import { logger } from '../../lib/logger';
+
 
 const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || 'http://localhost:3100/graphql';
 const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
 
-class CardanoWorker extends BaseWorker {
-  constructor(settings) {
+export class CardanoWorker extends BaseWorker {
+  private pRetry: any;
+
+  constructor(settings: any) {
     super(settings);
   }
 
-  async sendRequest(query) {
+  async sendRequest(query: string): Promise<any> {
     try {
       return await got.post(CARDANO_GRAPHQL_URL, {
         json: {
@@ -28,13 +32,13 @@ class CardanoWorker extends BaseWorker {
         timeout: DEFAULT_TIMEOUT_MSEC
       }).json();
     }
-    catch (error) {
+    catch (error: any) {
       throw new Error(`Error sending request to Cardano GraphQL: ${error.message}`);
     }
   }
 
   async getCurrentBlock() {
-    const response = await this.sendRequest('{ cardano { tip { number } } }');
+    const response: any = await this.sendRequest('{ cardano { tip { number } } }');
 
     if (response.data === null) {
       throw new Error('Error getting Cardano current block number');
@@ -42,7 +46,7 @@ class CardanoWorker extends BaseWorker {
     return response.data.cardano.tip.number;
   }
 
-  async getGenesisTransactionsPage(offset) {
+  async getGenesisTransactionsPage(offset: number): Promise<Transaction[]> {
     const response = await this.sendRequest(`
     {
       transactions(
@@ -101,7 +105,7 @@ class CardanoWorker extends BaseWorker {
 
   // Genesis transfers have block number set to 'null'. For our computation purposes we need some block number.
   // We set it to 0.
-  setBlockZeroForGenesisTransfers(transactions) {
+  setBlockZeroForGenesisTransfers(transactions: Transaction[]) {
     transactions.forEach(transaction => {
       if (transaction.block.number) {
         throw new Error(`Unexpected block number ${transaction.block.number} for genesis transaction
@@ -111,7 +115,7 @@ class CardanoWorker extends BaseWorker {
     });
   }
 
-  async getTransactions(blockNumber, lastConfirmedBlock) {
+  async getTransactions(blockNumber: number, lastConfirmedBlock: number) {
     logger.info(`Getting transactions for interval ${blockNumber} - ${lastConfirmedBlock}`);
     const query = `
     {
@@ -149,7 +153,7 @@ class CardanoWorker extends BaseWorker {
 
     const response = await this.pRetry(() => this.sendRequest(query),
       {
-        onFailedAttempt: error => {
+        onFailedAttempt: (error: any) => {
           logger.warn(`Request ${blockNumber} - ${lastConfirmedBlock} is retried. There are ${error.retriesLeft} retries left.`);
         },
         retries: this.settings.NODE_REQUEST_RETRY
@@ -223,7 +227,3 @@ class CardanoWorker extends BaseWorker {
     return transactions;
   }
 }
-
-module.exports = {
-  worker: CardanoWorker
-};

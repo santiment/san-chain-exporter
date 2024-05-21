@@ -7,16 +7,16 @@ import { buildHttpOptions } from '../../lib/build_http_options';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
 import { transactionOrder, stableSort } from './lib/util';
-import BaseWorker from '../../lib/worker_base';
+import { BaseWorker } from '../../lib/worker_base';
 import Web3Wrapper from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
 import { FeesDecoder } from './lib/fees_decoder';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from './lib/next_interval_calculator';
 import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
-import { Trace, Block, Transfer } from './eth_types';
+import { Trace, Block, ETHTransfer } from './eth_types';
 
-class ETHWorker extends BaseWorker {
+export class ETHWorker extends BaseWorker {
   private web3Wrapper: Web3Wrapper;
   private ethClient: jayson.HttpClient | jayson.HttpsClient;
   private feesDecoder: FeesDecoder;
@@ -26,7 +26,6 @@ class ETHWorker extends BaseWorker {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
     const httpProviderOptions: HttpProviderOptions = buildHttpOptions(authCredentials);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3HttpProvider(settings.NODE_URL, httpProviderOptions)));
@@ -51,8 +50,8 @@ class ETHWorker extends BaseWorker {
   }
 
   transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[],
-    blocks: any, receipts: any): Transfer[] {
-    let events: Transfer[] = [];
+    blocks: any, receipts: any): ETHTransfer[] {
+    let events: ETHTransfer[] = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
       events.push(...getGenesisTransfers(this.web3Wrapper));
@@ -70,8 +69,8 @@ class ETHWorker extends BaseWorker {
     return events;
   }
 
-  transformPastTransferEvents(traces: Trace[], blocksMap: Map<number, Block>): Transfer[] {
-    const result: Transfer[] = [];
+  transformPastTransferEvents(traces: Trace[], blocksMap: Map<number, Block>): ETHTransfer[] {
+    const result: ETHTransfer[] = [];
 
     for (let i = 0; i < traces.length; i++) {
       const blockNumber = traces[i]['blockNumber'];
@@ -86,8 +85,8 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  transformPastTransactionEvents(blocks: Block[], receipts: any): Transfer[] {
-    const result: Transfer[] = [];
+  transformPastTransactionEvents(blocks: Block[], receipts: any): ETHTransfer[] {
+    const result: ETHTransfer[] = [];
 
     for (const block of blocks) {
       const blockNumber = this.web3Wrapper.parseHexToNumber(block.number);
@@ -103,7 +102,7 @@ class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async work(): Promise<Transfer[]> {
+  async work(): Promise<ETHTransfer[]> {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
@@ -132,6 +131,3 @@ class ETHWorker extends BaseWorker {
   }
 }
 
-module.exports = {
-  worker: ETHWorker
-};

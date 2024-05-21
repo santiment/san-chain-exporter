@@ -193,7 +193,7 @@ export class Exporter {
    * Disconnect from Zookeeper and Kafka.
    * This method is completed once the callback is invoked.
    */
-  disconnect(callback: () => void) {
+  disconnect(callback?: () => void) {
     logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
     this.zookeeperClient.closeAsync().then(() => {
       if (this.producer.isConnected()) {
@@ -439,6 +439,10 @@ export class Exporter {
     // We delay the finding of the partition count so that we are sure that we have a connected producer
     this.partitioner = new Partitioner();
     await this.partitioner.init(hashFunction, this.topicName, this.producer);
+  }
+
+  isConnected(): boolean {
+    return this.producer.isConnected();
   }
 }
 

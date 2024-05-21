@@ -1,22 +1,31 @@
 'use strict';
-const url = require('url');
-const micro = require('micro');
-const metrics = require('./lib/metrics');
-const { logger } = require('./lib/logger');
-const { Exporter } = require('./lib/kafka_storage');
+import url from 'url';
+import { Server, IncomingMessage, ServerResponse } from 'http'
+import serve, { send } from 'micro';
+import metrics from './lib/metrics';
+import { logger } from './lib/logger';
+import { Exporter } from './lib/kafka_storage';
 const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
-const { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } = require('./lib/constants');
+import { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } from './lib/constants';
 const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
-const constantsBase = require('./lib/constants');
+import constantsBase from './lib/constants';
+import { ExporterPosition } from './types'
 
 class Main {
+  // TODO to be migrated to proper TS type once all workers are migrated to TS
+  private worker: any;
+  private shouldWork: boolean;
+  private exporter!: Exporter;
+  private lastProcessedPosition!: ExporterPosition;
+  private microServer?: Server;
+
   constructor() {
     this.worker = null;
     this.shouldWork = true;
   }
 
-  async initExporter(exporterName, isTransactions, kafkaTopic) {
+  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string) {
     const INIT_EXPORTER_ERR_MSG = 'Error when initializing exporter: ';
     this.exporter = new Exporter(exporterName, isTransactions, kafkaTopic);
     await this.exporter
@@ -35,8 +44,9 @@ class Main {
     if (this.worker) throw new Error('Worker is already set');
   }
 
-  async initWorker(mergedConstants) {
+  async initWorker(mergedConstants: any) {
     this.#isWorkerSet();
+    logger.info(`Applying the following settings: ${JSON.stringify(mergedConstants)}`);
     this.worker = new worker.worker(mergedConstants);
     await this.worker.init(this.exporter, metrics);
     await this.handleInitPosition();
@@ -48,12 +58,12 @@ class Main {
     await this.initWorker(mergedConstants);
     metrics.startCollection();
 
-    this.microServer = micro(microHandler);
-    this.microServer.listen(3000, err => {
-      if (err) {
-        logger.error('Failed to start Micro server:', err);
-        process.exit(1);
-      }
+    this.microServer = new Server(serve(microHandler));
+    this.microServer.on('error', (err) => {
+      logger.error('Monitoring Micro server failure:', err);
+      process.exit(1);
+    });
+    this.microServer.listen(3000, () => {
       logger.info('Micro Server started on port 3000');
     });
   }
@@ -65,7 +75,7 @@ class Main {
   updateMetrics() {
     metrics.currentBlock.set(this.worker.lastConfirmedBlock);
     metrics.requestsCounter.inc(this.worker.getNewRequestsCount());
-    metrics.requestsResponseTime.observe(new Date() - this.worker.lastRequestStartTime);
+    metrics.requestsResponseTime.observe(Date.now() - this.worker.lastRequestStartTime);
     metrics.lastExportedBlock.set(this.worker.lastExportedBlock);
   }
 
@@ -93,8 +103,12 @@ class Main {
 
   async disconnect() {
     // This call should be refactored to work with async/await
-    this.exporter.disconnect();
-    await this.microServer.close();
+    if (this.exporter !== undefined) {
+      this.exporter.disconnect();
+    }
+    if (this.microServer !== undefined) {
+      this.microServer.close();
+    }
   }
 
   stop() {
@@ -109,7 +123,7 @@ class Main {
   }
 
   healthcheckKafka() {
-    if (this.exporter.producer.isConnected()) {
+    if (this.exporter.isConnected()) {
       return Promise.resolve();
     } else {
       return Promise.reject('Kafka client is not connected to any brokers');
@@ -144,29 +158,38 @@ process.on('SIGTERM', () => {
 });
 
 
-const microHandler = async (request, response) => {
-  const req = url.parse(request.url, true);
+const microHandler = async (request: IncomingMessage, response: ServerResponse) => {
+  let requestURL: string;
+
+  if (request.url !== undefined) {
+    requestURL = request.url;
+  }
+  else {
+    throw Error('URL needs to be set in micro call')
+  }
+
+  const req = url.parse(requestURL, true);
 
   switch (req.pathname) {
     case '/healthcheck':
       return mainInstance.healthcheck()
-        .then(() => micro.send(response, 200, 'ok'))
+        .then(() => send(response, 200, 'ok'))
         .catch((err) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
-          micro.send(response, 500, err.toString());
+          send(response, 500, err.toString());
         });
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
-      return micro.send(response, 200, await metrics.register.metrics());
+      return send(response, 200, await metrics.register.metrics());
     default:
-      return micro.send(response, 404, 'Not found');
+      return send(response, 404, 'Not found');
   }
 };
 
 async function main() {
   try {
     await mainInstance.init();
-  } catch (err) {
+  } catch (err: any) {
     logger.error(err.stack);
     throw new Error(`Error initializing exporter: ${err.message}`);
   }
@@ -174,7 +197,7 @@ async function main() {
     await mainInstance.workLoop();
     await mainInstance.disconnect();
     logger.info('Bye!');
-  } catch (err) {
+  } catch (err: any) {
     logger.error(err.stack);
     throw new Error(`Error in exporter work loop: ${err.message}`);
   }

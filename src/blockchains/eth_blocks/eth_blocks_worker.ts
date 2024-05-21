@@ -4,7 +4,7 @@ import jayson from 'jayson/promise';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { buildHttpOptions } from '../../lib/build_http_options';
-import BaseWorker from '../../lib/worker_base';
+import { BaseWorker } from '../../lib/worker_base';
 import Web3Wrapper from '../eth/lib/web3_wrapper';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 import { fetchBlocks } from '../eth/lib/fetch_data';
@@ -19,7 +19,6 @@ class ETHBlocksWorker extends BaseWorker {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
     const httpProviderOptions: HttpProviderOptions = buildHttpOptions(authCredentials);
     this.web3Wrapper = new Web3Wrapper(new Web3(new Web3HttpProvider(settings.NODE_URL, httpProviderOptions)));

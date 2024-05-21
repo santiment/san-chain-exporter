@@ -2,7 +2,7 @@
 import jayson from 'jayson/promise';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
-import BaseWorker from '../../lib/worker_base';
+import { BaseWorker } from '../../lib/worker_base';
 import { Exporter } from '../../lib/kafka_storage';
 
 

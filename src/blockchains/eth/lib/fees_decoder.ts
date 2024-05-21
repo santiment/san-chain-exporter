@@ -1,5 +1,5 @@
 import Web3Wrapper from './web3_wrapper';
-import { Block, Transaction, Transfer } from '../eth_types';
+import { Block, Transaction, ETHTransfer } from '../eth_types';
 
 export class FeesDecoder {
   private web3Wrapper: Web3Wrapper;
@@ -23,7 +23,7 @@ export class FeesDecoder {
   }
 
   getBurntFee(transaction: any, block: Block, receipts: any,
-    burnAddress: string): Transfer {
+    burnAddress: string): ETHTransfer {
     const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     return {
       from: transaction.from,
@@ -47,7 +47,7 @@ export class FeesDecoder {
    *
    * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
    **/
-  getMinerFee(transaction: Transaction, block: Block, receipts: any): Transfer | undefined {
+  getMinerFee(transaction: Transaction, block: Block, receipts: any): ETHTransfer | undefined {
     const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
     const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
     if (tipMinerPerGas > 0) {
@@ -67,8 +67,8 @@ export class FeesDecoder {
     }
   }
 
-  getPostLondonForkFees(transaction: Transaction, block: Block, receipts: any, burnAddress: string): Transfer[] {
-    const result: Transfer[] = [];
+  getPostLondonForkFees(transaction: Transaction, block: Block, receipts: any, burnAddress: string): ETHTransfer[] {
+    const result: ETHTransfer[] = [];
     result.push(this.getBurntFee(transaction, block, receipts, burnAddress));
     const minerFee = this.getMinerFee(transaction, block, receipts);
     if (minerFee !== undefined) {
@@ -79,8 +79,8 @@ export class FeesDecoder {
   }
 
   getFeesFromTransactionsInBlock(block: Block, blockNumber: number, receipts: any, isETH: boolean,
-    burnAddress: string, londonForkBlock: number): Transfer[] {
-    const result: Transfer[] = [];
+    burnAddress: string, londonForkBlock: number): ETHTransfer[] {
+    const result: ETHTransfer[] = [];
     block.transactions.forEach((transaction: Transaction) => {
       const feeTransfers =
         isETH && blockNumber >= londonForkBlock ?

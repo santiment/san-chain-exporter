@@ -66,7 +66,7 @@ export interface Transaction {
   value: string
 };
 
-export interface Transfer {
+export interface ETHTransfer {
   from: string,
   to: string,
   value: number,

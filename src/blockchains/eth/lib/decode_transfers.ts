@@ -1,9 +1,9 @@
 import Web3Wrapper from './web3_wrapper';
-import { Trace, Transfer } from '../eth_types';
+import { Trace, ETHTransfer } from '../eth_types';
 
 const { logger } = require('../../../lib/logger');
 
-export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper: Web3Wrapper): Transfer {
+export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper: Web3Wrapper): ETHTransfer {
   // Block & uncle rewards
   if (trace['type'] === 'reward') {
     return {

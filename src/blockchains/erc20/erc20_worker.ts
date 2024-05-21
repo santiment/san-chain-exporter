@@ -1,24 +1,28 @@
 'use strict';
-const { Web3 } = require('web3');
-const { logger } = require('../../lib/logger');
-const { constructRPCClient } = require('../../lib/http_client');
-const { buildHttpOptions } = require('../../lib/build_http_options');
-const { extendEventsWithPrimaryKey } = require('./lib/extend_events_key');
-const { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } = require('./lib/contract_overwrite');
-const { stableSort, readJsonFile } = require('./lib/util');
-const BaseWorker = require('../../lib/worker_base');
-const { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } = require('../eth/lib/next_interval_calculator');
-const Web3Wrapper = require('../eth/lib/web3_wrapper');
-const { TimestampsCache } = require('./lib/timestamps_cache');
-const { getPastEvents } = require('./lib/fetch_events');
-const { initBlocksList } = require('../../lib/fetch_blocks_list');
+import { Web3 } from 'web3';
+import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
+import jayson from 'jayson/promise';
+import { logger } from '../../lib/logger';
+import { Exporter } from '../../lib/kafka_storage';
+import { constructRPCClient } from '../../lib/http_client';
+import { buildHttpOptions } from '../../lib/build_http_options';
+import { extendEventsWithPrimaryKey } from './lib/extend_events_key';
+import { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } from './lib/contract_overwrite';
+import { stableSort, readJsonFile } from './lib/util';
+import { BaseWorker } from '../../lib/worker_base';
+import { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
+import Web3Wrapper from '../eth/lib/web3_wrapper';
+import { TimestampsCache } from './lib/timestamps_cache';
+import { getPastEvents } from './lib/fetch_events';
+import { initBlocksList } from '../../lib/fetch_blocks_list';
+import { ERC20Transfer } from './erc20_types';
 
 /**
  * A simple non cryptographic hash function similar to Java's 'hashCode'
  * @param {string} input A string input
  * @returns {number} A 32 bit positive integer
  */
-function simpleHash(input) {
+function simpleHash(input: string) {
   var hash = 0, i, chr;
 
   if (input.length === 0) return hash;
@@ -31,38 +35,34 @@ function simpleHash(input) {
   return Math.abs(hash);
 }
 
-class ERC20Worker extends BaseWorker {
-  constructor(settings, web3Wrapper, ethClient) {
+export class ERC20Worker extends BaseWorker {
+  private web3Wrapper: Web3Wrapper;
+  private ethClient: jayson.HttpClient | jayson.HttpsClient;
+  private contractsOverwriteArray: any;
+  private contractsUnmodified: any;
+  private allOldContracts: any;
+  private blocksList: any;
+
+  constructor(settings: any) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    logger.info(`Applying the following settings: ${JSON.stringify(settings)}`);
     const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
-    if (!web3Wrapper) {
-      const httpProviderOptions = buildHttpOptions(authCredentials);
-      this.web3Wrapper = new Web3Wrapper(
-        new Web3(new Web3.providers.HttpProvider(settings.NODE_URL, httpProviderOptions)));
-    } else {
-      this.web3Wrapper = web3Wrapper;
-    }
+    const httpProviderOptions: HttpProviderOptions = buildHttpOptions(authCredentials);
+    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3HttpProvider(settings.NODE_URL, httpProviderOptions)));
+    this.ethClient = constructRPCClient(settings.NODE_URL, {
+      method: 'POST',
+      auth: authCredentials,
+      timeout: settings.DEFAULT_TIMEOUT,
+      version: 2
+    });
+    this.contractsOverwriteArray = [];
+    this.contractsUnmodified = [];
+    this.allOldContracts = [];
 
-    if (!ethClient) {
-      this.ethClient = constructRPCClient(settings.NODE_URL, {
-        method: 'POST',
-        auth: authCredentials,
-        timeout: settings.DEFAULT_TIMEOUT,
-        version: 2
-      });
-      this.contractsOverwriteArray = [];
-      this.contractsUnmodified = [];
-      this.allOldContracts = [];
-    }
-    else {
-      this.ethClient = ethClient;
-    }
   }
 
-  async init(exporter) {
+  async init(exporter: Exporter) {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
     if (this.settings.EXPORT_BLOCKS_LIST) {
@@ -73,11 +73,11 @@ class ERC20Worker extends BaseWorker {
       const parsedContracts = await readJsonFile(this.settings.CONTRACT_MAPPING_FILE_PATH);
 
       if (parsedContracts.modified_contracts) {
-        this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract) => new ContractOverwrite(contract));
-        this.allOldContracts = this.contractsOverwriteArray.flatMap(obj => obj.oldAddresses);
+        this.contractsOverwriteArray = parsedContracts.modified_contracts.map((contract: any) => new ContractOverwrite(contract));
+        this.allOldContracts = this.contractsOverwriteArray.flatMap((obj: any) => obj.oldAddresses);
       }
       if (parsedContracts.unmodified_contracts) {
-        this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract) => contract.toLowerCase());
+        this.contractsUnmodified = parsedContracts.unmodified_contracts.map((contract: any) => contract.toLowerCase());
       }
 
       logger.info(`Running in '${this.settings.CONTRACT_MODE}' contracts mode', ` +
@@ -87,7 +87,7 @@ class ERC20Worker extends BaseWorker {
     }
 
     if (this.settings.EVENTS_IN_SAME_PARTITION) {
-      await exporter.initPartitioner((event) => simpleHash(event.contract));
+      await exporter.initPartitioner((event: any) => simpleHash(event.contract));
     }
 
   }
@@ -125,7 +125,7 @@ class ERC20Worker extends BaseWorker {
     logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 
     let events = [];
-    let overwritten_events = [];
+    let overwritten_events: any = [];
     const timestampsCache = new TimestampsCache(this.ethClient, this.web3Wrapper, interval.fromBlock, interval.toBlock);
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
@@ -160,7 +160,7 @@ class ERC20Worker extends BaseWorker {
 
     // If overwritten events have been generated, they need to be merged into the original events
     if (overwritten_events.length > 0) {
-      stableSort(resultEvents, function primaryKeyOrder(a, b) {
+      stableSort(resultEvents, function primaryKeyOrder(a: ERC20Transfer, b: ERC20Transfer) {
         return a.primaryKey - b.primaryKey;
       });
     }
@@ -168,7 +168,3 @@ class ERC20Worker extends BaseWorker {
     return resultEvents;
   }
 }
-
-module.exports = {
-  worker: ERC20Worker
-};
