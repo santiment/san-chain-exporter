@@ -1,6 +1,5 @@
 import { Web3 } from 'web3';
 import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
-import jayson from 'jayson/promise';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { buildHttpOptions } from '../../lib/build_http_options';
@@ -9,11 +8,12 @@ import Web3Wrapper from '../eth/lib/web3_wrapper';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 import { fetchBlocks } from '../eth/lib/fetch_data';
 import { Block } from '../eth/eth_types';
+import { HTTPClientInterface } from '../../types';
 
 
 class ETHBlocksWorker extends BaseWorker {
   private web3Wrapper: Web3Wrapper;
-  private ethClient: jayson.HttpClient | jayson.HttpsClient;
+  private ethClient: HTTPClientInterface;
 
   constructor(settings: any) {
     super(settings);

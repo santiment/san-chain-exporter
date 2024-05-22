@@ -43,11 +43,12 @@ export class ERC20Worker extends BaseWorker {
   public ethClient: HTTPClientInterface;
   public getPastEventsFun: (web3Wrapper: Web3Wrapper, from: number, to: number, allOldContracts: any,
     timestampsCache: any) => any = getPastEvents;
+  public contractsOverwriteArray: any;
+  public contractsUnmodified: any;
+  public blocksList: any;
 
-  private contractsOverwriteArray: any;
-  private contractsUnmodified: any;
   private allOldContracts: any;
-  private blocksList: any;
+
 
   constructor(settings: any) {
     super(settings);
@@ -65,10 +66,9 @@ export class ERC20Worker extends BaseWorker {
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
     this.allOldContracts = [];
-
   }
 
-  async init(exporter: Exporter) {
+  async init(exporter: Exporter | undefined) {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
     if (this.settings.EXPORT_BLOCKS_LIST) {
@@ -93,9 +93,11 @@ export class ERC20Worker extends BaseWorker {
     }
 
     if (this.settings.EVENTS_IN_SAME_PARTITION) {
+      if (exporter === undefined) {
+        throw Error('Exporter reference need to be provided for events in same partition')
+      }
       await exporter.initPartitioner((event: any) => simpleHash(event.contract));
     }
-
   }
 
   getBlocksListInterval() {
@@ -178,8 +180,4 @@ export class ERC20Worker extends BaseWorker {
     return resultEvents;
   }
 }
-
-module.exports = {
-  worker: ERC20Worker
-};
 

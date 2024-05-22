@@ -1,5 +1,3 @@
-import jayson from 'jayson/promise';
-import { JSONRPCRequest } from 'jayson';
 import { filterErrors } from './filter_errors';
 import Web3Wrapper from './web3_wrapper';
 import { Trace, Block } from '../eth_types';
@@ -27,38 +25,34 @@ export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
 
 export async function fetchBlocks(ethClient: HTTPClientInterface,
   web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Map<number, Block>> {
-  const blockRequests: JSONRPCRequest[] = [];
+  const blockRequests: any[] = [];
   for (let i = fromBlock; i <= toBlock; i++) {
     blockRequests.push(
-      ethClient.request(
+      ethClient.generateRequest(
         'eth_getBlockByNumber',
-        [web3Wrapper.parseNumberToHex(i), true],
-        undefined,
-        false
+        [web3Wrapper.parseNumberToHex(i), true]
       )
     );
   }
 
-  const responses = await ethClient.request(blockRequests);
+  const responses = await ethClient.requestBulk(blockRequests);
   const result = new Map();
   responses.forEach((response: any, index: number) => result.set(fromBlock + index, response.result));
   return result;
 }
 
-export async function fetchReceipts(ethClient: jayson.HttpClient | jayson.HttpsClient,
+export async function fetchReceipts(ethClient: HTTPClientInterface,
   web3Wrapper: Web3Wrapper, receiptsAPIMethod: string, fromBlock: number, toBlock: number) {
-  const batch: JSONRPCRequest[] = [];
+  const batch: any[] = [];
   for (let currBlock = fromBlock; currBlock <= toBlock; currBlock++) {
     batch.push(
-      ethClient.request(
+      ethClient.generateRequest(
         receiptsAPIMethod,
-        [web3Wrapper.parseNumberToHex(currBlock)],
-        undefined,
-        false
+        [web3Wrapper.parseNumberToHex(currBlock)]
       )
     );
   }
-  const finishedRequests = await ethClient.request(batch);
+  const finishedRequests = await ethClient.requestBulk(batch);
   const result: any = {};
 
   finishedRequests.forEach((response: any) => {

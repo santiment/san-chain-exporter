@@ -1,7 +1,7 @@
 import http from 'http';
 import https from 'https';
-import jayson, { HttpsClientOptions } from 'jayson/promise';
-import { HTTPClientInterface, HTTPRequest } from '../types';
+import jayson, { HttpsClientOptions, JSONRPCRequest } from 'jayson/promise';
+import { HTTPClientInterface } from '../types';
 
 // The TCP session constructed by Node HTTP module would get closed after 5 seconds of inactivity by default.
 // Extend this timeout to 30 to reduce the number of sessions constructed.
@@ -19,17 +19,18 @@ class JaysonHTTPClient implements HTTPClientInterface {
   constructor(_client: jayson.HttpClient) {
     this.client = _client;
   }
+
   request(method: string, params: any[], id?: string | number): Promise<any> {
-    return this.client.request(method, params, id)
+    return this.client.request(method, params, id);
   }
 
-  generateRequest(method: string, params: any[], id: string | number): HTTPRequest {
-    return {
-      method: "test",
-      params: [],
-      id: ""
-    }
-    //return this.client.request(method, params, id, shouldCall)
+  requestBulk(requests: any[]) {
+    return this.client.request(requests);
+  }
+
+  generateRequest(method: string, params: any[]): any {
+    const request: JSONRPCRequest = this.client.request(method, params, undefined, false);
+    return request;
   }
 }
 

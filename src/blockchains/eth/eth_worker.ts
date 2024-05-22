@@ -13,8 +13,9 @@ import { FeesDecoder } from './lib/fees_decoder';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from './lib/next_interval_calculator';
 import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
+import { HTTPClientInterface } from '../../types';
 import { Trace, Block, ETHTransfer } from './eth_types';
-HTTPClientInterface
+
 
 export class ETHWorker extends BaseWorker {
   private web3Wrapper: Web3Wrapper;

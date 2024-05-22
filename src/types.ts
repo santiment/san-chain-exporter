@@ -8,14 +8,9 @@ export class ExporterPosition {
   }
 }
 
-export interface HTTPRequest {
-  method: string;
-  params: Array<any>;
-  id: string;
-}
-
 // This interface is modeled agains the jayson Client that we actually use
 export interface HTTPClientInterface {
   request(method: string, params: any[], id?: string | number): Promise<any>;
-  request(method: string, params: any[], id: string | number, shouldCall: boolean): HTTPRequest;
+  requestBulk(requests: any[]): Promise<any>;
+  generateRequest(method: string, params: any[]): any;
 }
