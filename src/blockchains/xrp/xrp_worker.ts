@@ -5,7 +5,7 @@ import { logger } from '../../lib/logger';
 import { BaseWorker } from '../../lib/worker_base';
 import { XRPConnection } from './xrp_types';
 
-class XRPWorker extends BaseWorker {
+export class XRPWorker extends BaseWorker {
   private nodeURLs: string;
   private connections: XRPConnection[];
   private retryIntervalMs: number;
@@ -79,11 +79,11 @@ class XRPWorker extends BaseWorker {
     return true;
   }
 
-  async fetchLedger(connection, ledger_index, should_expand) {
+  async fetchLedger(connection: XRPConnection, ledger_index: number, should_expand: boolean) {
     for (let i = 0; i < this.settings.XRP_ENDPOINT_RETRIES; i++) {
       const result = await this.connectionSend(connection, {
         command: 'ledger',
-        ledger_index: parseInt(ledger_index),
+        ledger_index: ledger_index,
         transactions: true,
         expand: should_expand
       });
@@ -107,7 +107,7 @@ class XRPWorker extends BaseWorker {
     throw new Error(`Error: Exhausted retry attempts for block ${ledger_index}.`);
   }
 
-  async fetchLedgerTransactions(connection, ledger_index) {
+  async fetchLedgerTransactions(connection: XRPConnection, ledger_index: number) {
     /**
      * Request the expanded transactions. We have seen cases in the past where the XRPL Node would respond that
      * the response is too big. In this case in the past we have resolved to fetching per-tx, but this exhausts the
@@ -132,13 +132,13 @@ class XRPWorker extends BaseWorker {
      *  }
      *
      **/
-    const transactionList = ledger.transactions.map(transaction => transaction.hash);
+    const transactionList = ledger.transactions.map((transaction: any) => transaction.hash);
     const expandedTransactions = ledger.transactions;
     ledger.transactions = transactionList;
     return { ledger: ledger, transactions: expandedTransactions };
   }
 
-  checkAllTransactionsValid(ledgers) {
+  checkAllTransactionsValid(ledgers: any) {
     for (let indexLedger = 0; indexLedger < ledgers.length; indexLedger++) {
       const transactions = ledgers[indexLedger].transactions;
       const blockNumber = ledgers[indexLedger].ledger.ledger_index;
@@ -178,7 +178,6 @@ class XRPWorker extends BaseWorker {
     let fromBlock = this.lastExportedBlock + 1;
 
     const requests = [];
-    let transfers = [];
     logger.info(`Fetching transfers for interval ${fromBlock}:${toBlock}`);
     for (fromBlock; fromBlock <= toBlock; fromBlock++) {
       requests.push(
@@ -196,9 +195,7 @@ class XRPWorker extends BaseWorker {
       this.lastPrimaryKey = ledgers[ledgers.length - 1].primaryKey;
     }
 
-    transfers = transfers.concat(ledgers);
-
-    return transfers;
+    return ledgers;
   }
 }
 

@@ -1,6 +1,5 @@
 import { Web3 } from 'web3';
 import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
-import jayson from 'jayson/promise';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { buildHttpOptions } from '../../lib/build_http_options';
@@ -15,10 +14,11 @@ import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WO
 import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
 import { Trace, Block, ETHTransfer } from './eth_types';
+HTTPClientInterface
 
 export class ETHWorker extends BaseWorker {
   private web3Wrapper: Web3Wrapper;
-  private ethClient: jayson.HttpClient | jayson.HttpsClient;
+  private ethClient: HTTPClientInterface;
   private feesDecoder: FeesDecoder;
   private withdrawalsDecoder: WithdrawalsDecoder;
 

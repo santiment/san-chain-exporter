@@ -7,7 +7,8 @@ export interface ERC20Transfer {
   blockNumber: number,
   timestamp: number,
   transactionHash: string,
-  logIndex: number,
-  type: string,
-  primaryKey: number
+  logIndex: number
+  type?: string,
+  primaryKey?: number
 }
+

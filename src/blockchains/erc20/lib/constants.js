@@ -1,6 +1,6 @@
 const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '100');
 const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
-const EXPORT_BLOCKS_LIST = process.env.EXPORT_BLOCKS_LIST || false;
+const EXPORT_BLOCKS_LIST = parseBoolean(process.env.EXPORT_BLOCKS_LIST);
 // This multiplier is used to expand the space of the output primary keys.
 //This allows for the event indexes to be added to the primary key.
 const PRIMARY_KEY_MULTIPLIER = 10000;
@@ -28,6 +28,12 @@ function checkEnvVariables() {
     if (!CONTRACT_MODES_SUPPORTED.includes(CONTRACT_MODE)) {
         throw new Error(`"${CONTRACT_MODE}" mode is not supported`);
     }
+}
+
+function parseBoolean(value) {
+    if (value === undefined) return false;
+    const lowerCasedValue = value.trim().toLowerCase();
+    return lowerCasedValue === 'true' || lowerCasedValue === '1';
 }
 
 checkEnvVariables();

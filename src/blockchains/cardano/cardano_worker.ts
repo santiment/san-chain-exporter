@@ -227,3 +227,7 @@ export class CardanoWorker extends BaseWorker {
     return transactions;
   }
 }
+
+module.exports = {
+  worker: CardanoWorker
+};

@@ -78,3 +78,5 @@ export interface ETHTransfer {
   type: string,
   primaryKey?: number,
 }
+
+

@@ -1,8 +1,9 @@
 import jayson from 'jayson/promise';
+import { JSONRPCRequest } from 'jayson';
 import { filterErrors } from './filter_errors';
 import Web3Wrapper from './web3_wrapper';
 import { Trace, Block } from '../eth_types';
-import { JSONRPCRequest } from 'jayson';
+import { HTTPClientInterface } from '../../../types'
 
 
 export function parseEthInternalTrx(result: Trace[]): Trace[] {
@@ -16,7 +17,7 @@ export function parseEthInternalTrx(result: Trace[]): Trace[] {
     );
 }
 
-export function fetchEthInternalTrx(ethClient: jayson.HttpClient | jayson.HttpsClient,
+export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
   web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Trace[]> {
   return ethClient.request('trace_filter', [{
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
@@ -24,7 +25,7 @@ export function fetchEthInternalTrx(ethClient: jayson.HttpClient | jayson.HttpsC
   }]).then((data: any) => parseEthInternalTrx(data['result']));
 }
 
-export async function fetchBlocks(ethClient: jayson.HttpClient | jayson.HttpsClient,
+export async function fetchBlocks(ethClient: HTTPClientInterface,
   web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Map<number, Block>> {
   const blockRequests: JSONRPCRequest[] = [];
   for (let i = fromBlock; i <= toBlock; i++) {

@@ -5,10 +5,3 @@ export interface XRPConnection {
   queue: any,
   index: number
 }
-
-export interface XRPParams {
-  command: string,
-  ledger_index: string,
-  transactions: boolean,
-  expand: boolean
-}

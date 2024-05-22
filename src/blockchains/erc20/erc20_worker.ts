@@ -1,7 +1,7 @@
 'use strict';
+import assert from 'assert'
 import { Web3 } from 'web3';
 import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
-import jayson from 'jayson/promise';
 import { logger } from '../../lib/logger';
 import { Exporter } from '../../lib/kafka_storage';
 import { constructRPCClient } from '../../lib/http_client';
@@ -15,7 +15,9 @@ import Web3Wrapper from '../eth/lib/web3_wrapper';
 import { TimestampsCache } from './lib/timestamps_cache';
 import { getPastEvents } from './lib/fetch_events';
 import { initBlocksList } from '../../lib/fetch_blocks_list';
+import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
+
 
 /**
  * A simple non cryptographic hash function similar to Java's 'hashCode'
@@ -36,8 +38,12 @@ function simpleHash(input: string) {
 }
 
 export class ERC20Worker extends BaseWorker {
-  private web3Wrapper: Web3Wrapper;
-  private ethClient: jayson.HttpClient | jayson.HttpsClient;
+  // Those methods are left public to be easily mocked in test
+  public web3Wrapper: Web3Wrapper;
+  public ethClient: HTTPClientInterface;
+  public getPastEventsFun: (web3Wrapper: Web3Wrapper, from: number, to: number, allOldContracts: any,
+    timestampsCache: any) => any = getPastEvents;
+
   private contractsOverwriteArray: any;
   private contractsUnmodified: any;
   private allOldContracts: any;
@@ -66,7 +72,7 @@ export class ERC20Worker extends BaseWorker {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
     if (this.settings.EXPORT_BLOCKS_LIST) {
-      this.blocksList = await initBlocksList();
+      this.blocksList = initBlocksList();
     }
 
     if (this.settings.CONTRACT_MODE !== 'vanilla') {
@@ -129,12 +135,12 @@ export class ERC20Worker extends BaseWorker {
     const timestampsCache = new TimestampsCache(this.ethClient, this.web3Wrapper, interval.fromBlock, interval.toBlock);
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
-        events = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
+        events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
 
       if (this.contractsUnmodified.length > 0) {
-        const rawEvents = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.contractsUnmodified,
+        const rawEvents = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.contractsUnmodified,
           timestampsCache);
 
         for (const event of rawEvents) {
@@ -143,7 +149,7 @@ export class ERC20Worker extends BaseWorker {
       }
     }
     else {
-      events = await getPastEvents(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
+      events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
@@ -161,6 +167,10 @@ export class ERC20Worker extends BaseWorker {
     // If overwritten events have been generated, they need to be merged into the original events
     if (overwritten_events.length > 0) {
       stableSort(resultEvents, function primaryKeyOrder(a: ERC20Transfer, b: ERC20Transfer) {
+        assert
+        if (typeof a.primaryKey !== 'number' || typeof b.primaryKey !== 'number') {
+          throw Error('Primary keys should be set to number before event')
+        }
         return a.primaryKey - b.primaryKey;
       });
     }
@@ -168,3 +178,8 @@ export class ERC20Worker extends BaseWorker {
     return resultEvents;
   }
 }
+
+module.exports = {
+  worker: ERC20Worker
+};
+
