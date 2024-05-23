@@ -1,17 +1,17 @@
-const constants = require('./constants');
-import Web3Wrapper from './web3_wrapper';
+import constants from './constants';
+import { Web3Interface } from './web3_wrapper';
 import { ETHTransfer, BeaconChainWithdrawal } from '../eth_types';
 
 export class WithdrawalsDecoder {
-  private web3Wrapper: Web3Wrapper;
+  private web3Wrapper: Web3Interface;
 
-  constructor(web3Wrapper: Web3Wrapper) {
+  constructor(web3Wrapper: Web3Interface) {
     this.web3Wrapper = web3Wrapper;
   }
 
   getBeaconChainWithdrawals(withdrawals: BeaconChainWithdrawal[], blockNumber: number, blockTimestamp: number): ETHTransfer[] {
     return withdrawals.map((withdrawal) => {
-      const gweiAmount = BigInt(this.web3Wrapper.gweiToWei(withdrawal.amount));
+      const gweiAmount = this.web3Wrapper.gweiToWei(withdrawal.amount);
       return {
         from: constants.ETH_WITHDRAWAL,
         to: withdrawal.address,

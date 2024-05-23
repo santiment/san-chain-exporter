@@ -228,6 +228,3 @@ export class CardanoWorker extends BaseWorker {
   }
 }
 
-module.exports = {
-  worker: CardanoWorker
-};

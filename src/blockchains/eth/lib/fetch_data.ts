@@ -1,6 +1,6 @@
 import { filterErrors } from './filter_errors';
-import Web3Wrapper from './web3_wrapper';
-import { Trace, Block } from '../eth_types';
+import { Web3Interface } from './web3_wrapper';
+import { Trace, ETHBlock, ETHReceiptsMap, ETHReceipt } from '../eth_types';
 import { HTTPClientInterface } from '../../../types'
 
 
@@ -16,7 +16,7 @@ export function parseEthInternalTrx(result: Trace[]): Trace[] {
 }
 
 export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Trace[]> {
+  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<Trace[]> {
   return ethClient.request('trace_filter', [{
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
     toBlock: web3Wrapper.parseNumberToHex(toBlock)
@@ -24,7 +24,7 @@ export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
 }
 
 export async function fetchBlocks(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Wrapper, fromBlock: number, toBlock: number): Promise<Map<number, Block>> {
+  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<Map<number, ETHBlock>> {
   const blockRequests: any[] = [];
   for (let i = fromBlock; i <= toBlock; i++) {
     blockRequests.push(
@@ -42,7 +42,7 @@ export async function fetchBlocks(ethClient: HTTPClientInterface,
 }
 
 export async function fetchReceipts(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Wrapper, receiptsAPIMethod: string, fromBlock: number, toBlock: number) {
+  web3Wrapper: Web3Interface, receiptsAPIMethod: string, fromBlock: number, toBlock: number): Promise<ETHReceiptsMap> {
   const batch: any[] = [];
   for (let currBlock = fromBlock; currBlock <= toBlock; currBlock++) {
     batch.push(
@@ -53,11 +53,11 @@ export async function fetchReceipts(ethClient: HTTPClientInterface,
     );
   }
   const finishedRequests = await ethClient.requestBulk(batch);
-  const result: any = {};
+  const result: ETHReceiptsMap = {};
 
   finishedRequests.forEach((response: any) => {
     if (response.result) {
-      response.result.forEach((receipt: any) => {
+      response.result.forEach((receipt: ETHReceipt) => {
         result[receipt.transactionHash] = receipt;
       });
     }

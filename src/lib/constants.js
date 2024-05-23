@@ -1,4 +1,4 @@
-const BLOCKCHAIN = process.env.BLOCKCHAIN;
+const BLOCKCHAIN = requireString('BLOCKCHAIN');
 const CONFIG_PATH = process.env.CONFIG_PATH;
 const RPC_USERNAME = process.env.RPC_USERNAME || 'rpcuser';
 const RPC_PASSWORD = process.env.RPC_PASSWORD || 'rpcpassword';
@@ -14,6 +14,16 @@ function parseBoolean(value) {
   if (value === undefined) return false;
   const lowerCasedValue = value.trim().toLowerCase();
   return lowerCasedValue === 'true' || lowerCasedValue === '1';
+}
+
+function requireString(name) {
+  const value = process.env[name];
+  if (value === undefined) {
+    throw Error(`${name} env variable is required`);
+  }
+  else {
+    return value;
+  }
 }
 
 module.exports = {

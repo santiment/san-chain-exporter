@@ -5,16 +5,41 @@ import constants from '../../blockchains/erc20/lib/constants';
 import { ContractOverwrite } from '../../blockchains/erc20/lib/contract_overwrite';
 import helpers from './helpers';
 import { ERC20Transfer } from '../../blockchains/erc20/erc20_types';
-import Web3Wrapper from '../../blockchains/eth/lib/web3_wrapper';
+import { Web3Interface } from '../../blockchains/eth/lib/web3_wrapper';
 
 
+class MockWeb3Wrapper implements Web3Interface {
 
-class MockWeb3Wrapper extends Web3Wrapper {
-    async getBlockNumber() {
-        return 1;
+    parseHexToNumberString(field: string): string {
+        throw Error("Should not be called")
     }
 
-    parseNumberToHex() {
+    parseHexToNumber(field: string): number | bigint {
+        throw Error("Should not be called")
+    }
+
+    parseNumberToHex(field: number): string {
+        throw Error("Should not be called")
+    }
+
+    parseHexToBase36String(field: string): string {
+        throw Error("Should not be called")
+    }
+
+    getBlockNumber(): Promise<number> {
+        return Promise.resolve(1)
+    }
+
+    getPastLogs(queryObject: any): Promise<any> {
+        throw Error("Should not be called")
+    }
+
+    etherToWei(amount: number): number {
+        throw Error("Should not be called")
+    }
+
+    gweiToWei(amount: number): number {
+        throw Error("Should not be called")
     }
 }
 

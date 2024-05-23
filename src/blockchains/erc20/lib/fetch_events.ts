@@ -1,8 +1,9 @@
 'use strict';
 
-const { decodeAddress } = require('./util');
-const { addCustomTokenDistribution } = require('./custom_token_distribution');
-const { logger } = require('../../../lib/logger');
+import { decodeAddress } from './util';
+import { addCustomTokenDistribution } from './custom_token_distribution';
+import { logger } from '../../../lib/logger';
+import { Web3Interface } from '../../eth/lib/web3_wrapper';
 
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -14,10 +15,10 @@ const QNT_contract = '0x4a220e6096b25eadb88358cb44068a3248254675';
 const WETH_contract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
 
-function decodeEventBasicInfo(event, timestampsCache, addContract = true) {
+function decodeEventBasicInfo(event: any, timestampsCache: any, addContract = true): any {
   const timestamp = timestampsCache.getBlockTimestamp(event['blockNumber']);
 
-  const decodedEvent = {
+  const decodedEvent: any = {
     blockNumber: Number(event['blockNumber']),
     timestamp: timestamp,
     transactionHash: event['transactionHash'],
@@ -34,7 +35,7 @@ function decodeEventBasicInfo(event, timestampsCache, addContract = true) {
 /**Transfer(address,address,uint256)
  * Used by all ERC20 tokens
  **/
-function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
+function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['topics'].length !== 3) {
     return null;
   }
@@ -59,7 +60,7 @@ function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
 /**Burn(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeBurnEvent(web3Wrapper, event, timestampsCache) {
+function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['topics'].length !== 2) {
     return null;
   }
@@ -77,7 +78,7 @@ function decodeBurnEvent(web3Wrapper, event, timestampsCache) {
 /**Mint(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeMintEvent(web3Wrapper, event, timestampsCache) {
+function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['topics'].length !== 2) {
     return null;
   }
@@ -95,7 +96,7 @@ function decodeMintEvent(web3Wrapper, event, timestampsCache) {
 /**Freeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBFreezeEvent(web3Wrapper, event, timestampsCache) {
+function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
@@ -114,7 +115,7 @@ function decodeBNBFreezeEvent(web3Wrapper, event, timestampsCache) {
 /**Unfreeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBUnfreezeEvent(web3Wrapper, event, timestampsCache) {
+function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
@@ -133,7 +134,7 @@ function decodeBNBUnfreezeEvent(web3Wrapper, event, timestampsCache) {
 /**Deposit(address indexed dst, uint wad)
  * Only for WETH
  **/
-function decodeWETHDepositEvent(web3Wrapper, event, timestampsCache) {
+function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
@@ -152,7 +153,7 @@ function decodeWETHDepositEvent(web3Wrapper, event, timestampsCache) {
 /**Withdrawal(address,uint256)
  * Only for WETH
  **/
-function decodeWETHWithdrawalEvent(web3Wrapper, event, timestampsCache) {
+function decodeWETHWithdrawalEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: any) {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
@@ -181,7 +182,8 @@ const decodeFunctionsMap = {
 };
 
 
-async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, timestampsCache) {
+export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number,
+  contractAddress: string, timestampsCache: any) {
   console.log("Real function got called")
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
   const startTime = Date.now();
@@ -190,14 +192,14 @@ async function getPastEvents(web3Wrapper, fromBlock, toBlock, contractAddress, t
   const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
   const result = filterEvents(decodedEvents);
 
-  addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress, web3Wrapper);
+  addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress);
 
   return result;
 }
 
 
-async function getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress) {
-  let queryObject = {
+async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, contractAddress: string) {
+  let queryObject: any = {
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
     toBlock: web3Wrapper.parseNumberToHex(toBlock),/*,
     // Parity has a bug when filtering topics: https://github.com/paritytech/parity-ethereum/issues/9629
@@ -212,7 +214,7 @@ async function getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress) {
   return await web3Wrapper.getPastLogs(queryObject);
 }
 
-function decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions = decodeFunctionsMap) {
+export function decodeEvents(web3Wrapper: Web3Interface, events: any, timestampsCache: any, decodeFunctions: any = decodeFunctionsMap) {
   const result = [];
   for (const event of events) {
     if (event.topics && event.topics[0]) {
@@ -227,8 +229,8 @@ function decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions = de
   return result;
 }
 
-function filterEvents(events) {
-  const result = [];
+function filterEvents(events: any[]) {
+  const result: any[] = [];
   const eventsByTransactionIter = getEventsByTransaction(events);
   for (let curTransactionEvents of eventsByTransactionIter) {
     let curResult = filterTransactionEvents(curTransactionEvents);
@@ -240,7 +242,7 @@ function filterEvents(events) {
 
 // returns an array of arrays - all events in one transaction are grouped together
 // assumes that all events in one transaction are next to one another in the log
-function* getEventsByTransaction(events) {
+function* getEventsByTransaction(events: any[]) {
   if (events.length === 0) {
     return;
   }
@@ -268,9 +270,9 @@ function* getEventsByTransaction(events) {
 }
 
 // Within a transaction removes the transfer events from/to the zero address that match a corresponding mint/burn event
-function filterTransactionEvents(eventsInTransaction) {
-  const mintEvents = [];
-  const burnEvents = [];
+function filterTransactionEvents(eventsInTransaction: any[]) {
+  const mintEvents: any[] = [];
+  const burnEvents: any[] = [];
   eventsInTransaction.forEach((event) => {
     if (event.from === MINT_ADDRESS) {
       mintEvents.push(event);
@@ -280,7 +282,7 @@ function filterTransactionEvents(eventsInTransaction) {
     }
   });
 
-  const result = [];
+  const result: any[] = [];
   eventsInTransaction.forEach((event) => {
     if (event.from === ZERO_ADDRESS) {
       const exists = mintEvents.some((mintEvent) =>
@@ -307,10 +309,3 @@ function filterTransactionEvents(eventsInTransaction) {
 
   return result;
 }
-
-
-module.exports = {
-  getPastEvents,
-  decodeEvents,
-  decodeEventBasicInfo
-};

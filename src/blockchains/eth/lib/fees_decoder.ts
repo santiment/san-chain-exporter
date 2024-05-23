@@ -1,38 +1,44 @@
-import Web3Wrapper from './web3_wrapper';
-import { Block, Transaction, ETHTransfer } from '../eth_types';
+import { Web3Interface, safeCastToNumber } from './web3_wrapper';
+import { ETHBlock, ETHTransaction, ETHTransfer, ETHReceiptsMap } from '../eth_types';
 
 export class FeesDecoder {
-  private web3Wrapper: Web3Wrapper;
+  private web3Wrapper: Web3Interface;
 
-  constructor(web3Wrapper: Web3Wrapper) {
+  constructor(web3Wrapper: Web3Interface) {
     this.web3Wrapper = web3Wrapper;
   }
 
-  getPreLondonForkFees(transaction: any, block: Block, receipts: any) {
-    const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
+  getPreLondonForkFees(transaction: ETHTransaction, block: ETHBlock, receipts: any): ETHTransfer[] {
+    const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) *
+      BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.transactionHash].gasUsed));
     return [{
       from: transaction.from,
       to: block.miner,
       value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
-      blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
-      timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
-      transactionHash: transaction.hash,
+      blockNumber: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.blockNumber)),
+      timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+      transactionHash: transaction.transactionHash,
       type: 'fee'
     }];
   }
 
-  getBurntFee(transaction: any, block: Block, receipts: any,
+  getBurntFee(transaction: ETHTransaction, block: ETHBlock, receipts: ETHReceiptsMap,
     burnAddress: string): ETHTransfer {
-    const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
+    const gasExpense = (block.baseFeePerGas === undefined) ?
+      0
+      :
+      BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) *
+      BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.transactionHash].gasUsed))
+
     return {
       from: transaction.from,
       to: burnAddress,
       value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
-      blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
-      timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
-      transactionHash: transaction.hash,
+      blockNumber: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.blockNumber)),
+      timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+      transactionHash: transaction.transactionHash,
       type: 'fee_burnt'
     };
   }
@@ -47,18 +53,23 @@ export class FeesDecoder {
    *
    * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
    **/
-  getMinerFee(transaction: Transaction, block: Block, receipts: any): ETHTransfer | undefined {
-    const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
-    const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
+  getMinerFee(transaction: ETHTransaction, block: ETHBlock, receiptsMap: ETHReceiptsMap): ETHTransfer | undefined {
+    const baseFeePerGas = (block.baseFeePerGas === undefined) ?
+      BigInt(0)
+      :
+      BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
+
+    const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - baseFeePerGas;
+    const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receiptsMap[transaction.transactionHash].gasUsed));
     if (tipMinerPerGas > 0) {
       return {
         from: transaction.from,
         to: block.miner,
         value: Number(gasExpense),
         valueExactBase36: gasExpense.toString(36),
-        blockNumber: this.web3Wrapper.parseHexToNumber(transaction.blockNumber),
-        timestamp: this.web3Wrapper.parseHexToNumber(block.timestamp),
-        transactionHash: transaction.hash,
+        blockNumber: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.blockNumber)),
+        timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+        transactionHash: transaction.transactionHash,
         type: 'fee'
       };
     }
@@ -67,10 +78,11 @@ export class FeesDecoder {
     }
   }
 
-  getPostLondonForkFees(transaction: Transaction, block: Block, receipts: any, burnAddress: string): ETHTransfer[] {
+  getPostLondonForkFees(transaction: ETHTransaction, block: ETHBlock, receiptsMap: ETHReceiptsMap,
+    burnAddress: string): ETHTransfer[] {
     const result: ETHTransfer[] = [];
-    result.push(this.getBurntFee(transaction, block, receipts, burnAddress));
-    const minerFee = this.getMinerFee(transaction, block, receipts);
+    result.push(this.getBurntFee(transaction, block, receiptsMap, burnAddress));
+    const minerFee = this.getMinerFee(transaction, block, receiptsMap);
     if (minerFee !== undefined) {
       result.push(minerFee)
     }
@@ -78,11 +90,11 @@ export class FeesDecoder {
     return result;
   }
 
-  getFeesFromTransactionsInBlock(block: Block, blockNumber: number, receipts: any, isETH: boolean,
+  getFeesFromTransactionsInBlock(block: ETHBlock, blockNumber: number, receipts: ETHReceiptsMap, isETH: boolean,
     burnAddress: string, londonForkBlock: number): ETHTransfer[] {
     const result: ETHTransfer[] = [];
-    block.transactions.forEach((transaction: Transaction) => {
-      const feeTransfers =
+    block.transactions.forEach((transaction: ETHTransaction) => {
+      const feeTransfers: ETHTransfer[] =
         isETH && blockNumber >= londonForkBlock ?
           this.getPostLondonForkFees(transaction, block, receipts, burnAddress) :
           this.getPreLondonForkFees(transaction, block, receipts);
@@ -92,7 +104,3 @@ export class FeesDecoder {
     return result;
   }
 }
-
-module.exports = {
-  FeesDecoder
-};

@@ -30,7 +30,7 @@ export class BaseWorker {
    * Upon returning from the method call the implementation should have updated all the member variables of the
    * base class.
    */
-  work() {
+  work(): Promise<Array<any>> {
     throw new Error('"work" method need to be overriden');
   }
   // To be implemented on inheritance.

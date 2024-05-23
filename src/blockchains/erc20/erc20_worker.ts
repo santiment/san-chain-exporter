@@ -1,17 +1,14 @@
 'use strict';
 import assert from 'assert'
-import { Web3 } from 'web3';
-import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
 import { logger } from '../../lib/logger';
 import { Exporter } from '../../lib/kafka_storage';
 import { constructRPCClient } from '../../lib/http_client';
-import { buildHttpOptions } from '../../lib/build_http_options';
 import { extendEventsWithPrimaryKey } from './lib/extend_events_key';
 import { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } from './lib/contract_overwrite';
 import { stableSort, readJsonFile } from './lib/util';
 import { BaseWorker } from '../../lib/worker_base';
 import { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
-import Web3Wrapper from '../eth/lib/web3_wrapper';
+import { Web3Interface, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
 import { TimestampsCache } from './lib/timestamps_cache';
 import { getPastEvents } from './lib/fetch_events';
 import { initBlocksList } from '../../lib/fetch_blocks_list';
@@ -24,7 +21,7 @@ import { ERC20Transfer } from './erc20_types';
  * @param {string} input A string input
  * @returns {number} A 32 bit positive integer
  */
-function simpleHash(input: string) {
+function simpleHash(input: string): number {
   var hash = 0, i, chr;
 
   if (input.length === 0) return hash;
@@ -39,9 +36,9 @@ function simpleHash(input: string) {
 
 export class ERC20Worker extends BaseWorker {
   // Those methods are left public to be easily mocked in test
-  public web3Wrapper: Web3Wrapper;
+  public web3Wrapper: Web3Interface;
   public ethClient: HTTPClientInterface;
-  public getPastEventsFun: (web3Wrapper: Web3Wrapper, from: number, to: number, allOldContracts: any,
+  public getPastEventsFun: (web3Wrapper: Web3Interface, from: number, to: number, allOldContracts: any,
     timestampsCache: any) => any = getPastEvents;
   public contractsOverwriteArray: any;
   public contractsUnmodified: any;
@@ -54,15 +51,9 @@ export class ERC20Worker extends BaseWorker {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    const authCredentials = settings.RPC_USERNAME + ':' + settings.RPC_PASSWORD;
-    const httpProviderOptions: HttpProviderOptions = buildHttpOptions(authCredentials);
-    this.web3Wrapper = new Web3Wrapper(new Web3(new Web3HttpProvider(settings.NODE_URL, httpProviderOptions)));
-    this.ethClient = constructRPCClient(settings.NODE_URL, {
-      method: 'POST',
-      auth: authCredentials,
-      timeout: settings.DEFAULT_TIMEOUT,
-      version: 2
-    });
+    this.web3Wrapper = constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD);
+    this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
+      settings.DEFAULT_TIMEOUT);
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
     this.allOldContracts = [];

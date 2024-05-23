@@ -7,21 +7,20 @@ import { logger } from './lib/logger';
 import { Exporter } from './lib/kafka_storage';
 const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
 import { BLOCKCHAIN, EXPORT_TIMEOUT_MLS } from './lib/constants';
-const worker = require(`./blockchains/${BLOCKCHAIN}/${BLOCKCHAIN}_worker`);
+import { constructWorker } from './blockchains/construct_worker'
 const constants = require(`./blockchains/${BLOCKCHAIN}/lib/constants`);
 import constantsBase from './lib/constants';
 import { ExporterPosition } from './types'
+import { BaseWorker } from './lib/worker_base';
 
 class Main {
-  // TODO to be migrated to proper TS type once all workers are migrated to TS
-  private worker: any;
+  private worker!: BaseWorker;
   private shouldWork: boolean;
   private exporter!: Exporter;
   private lastProcessedPosition!: ExporterPosition;
   private microServer?: Server;
 
   constructor() {
-    this.worker = null;
     this.shouldWork = true;
   }
 
@@ -44,11 +43,24 @@ class Main {
     if (this.worker) throw new Error('Worker is already set');
   }
 
+  // Hide passwords from settings, we do not want to log authentication data.
+  getSettingsWithHiddenPasswords(constants: any): any {
+    let copy = JSON.parse(JSON.stringify(constants));
+    if (copy.RPC_USERNAME !== undefined) {
+      copy.RPC_USERNAME = "*****"
+    }
+    if (copy.RPC_PASSWORD !== undefined) {
+      copy.RPC_PASSWORD = "*****"
+    }
+
+    return copy;
+  }
+
   async initWorker(mergedConstants: any) {
     this.#isWorkerSet();
-    logger.info(`Applying the following settings: ${JSON.stringify(mergedConstants)}`);
-    this.worker = new worker.worker(mergedConstants);
-    await this.worker.init(this.exporter, metrics);
+    logger.info(`Applying the following settings: ${JSON.stringify(this.getSettingsWithHiddenPasswords(mergedConstants))}`);
+    this.worker = constructWorker(BLOCKCHAIN, mergedConstants);
+    await this.worker.init(this.exporter);
     await this.handleInitPosition();
   }
 
@@ -81,7 +93,7 @@ class Main {
 
   async workLoop() {
     while (this.shouldWork) {
-      this.worker.lastRequestStartTime = new Date();
+      this.worker.lastRequestStartTime = Date.now();
       const events = await this.worker.work();
 
       this.worker.lastExportTime = Date.now();

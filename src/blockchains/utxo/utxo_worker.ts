@@ -30,12 +30,7 @@ class UtxoWorker extends BaseWorker {
     this.LOOP_INTERVAL_CURRENT_MODE_SEC = settings.LOOP_INTERVAL_CURRENT_MODE_SEC;
 
     logger.info(`Connecting to the node ${this.NODE_URL}`);
-    this.client = constructRPCClient(this.NODE_URL, {
-      method: 'POST',
-      auth: this.RPC_USERNAME + ':' + this.RPC_PASSWORD,
-      timeout: this.DEFAULT_TIMEOUT,
-      version: 1
-    });
+    this.client = constructRPCClient(this.NODE_URL, this.RPC_USERNAME, this.RPC_PASSWORD, this.DEFAULT_TIMEOUT);
   }
 
   async init(exporter: Exporter) {
@@ -108,6 +103,3 @@ class UtxoWorker extends BaseWorker {
   }
 }
 
-module.exports = {
-  worker: UtxoWorker
-};

@@ -34,14 +34,18 @@ class JaysonHTTPClient implements HTTPClientInterface {
   }
 }
 
-export function constructRPCClient(nodeURL: string, extraOptions: ExtraOptions = {}): HTTPClientInterface {
+export function constructRPCClient(nodeURL: string, username: string, password: string, timeout: number): HTTPClientInterface {
   const nodeUrl = new URL(nodeURL);
+  const authCredentials = username + ':' + password;
 
-  const mergedOptions: HttpsClientOptions = {
+  const options: HttpsClientOptions = {
     hostname: nodeUrl.hostname,
     port: nodeUrl.port,
     path: nodeUrl.pathname,
-    ...extraOptions
+    method: 'POST',
+    auth: authCredentials,
+    timeout: timeout,
+    version: 2
   };
 
   const agentOptions = {
@@ -51,12 +55,12 @@ export function constructRPCClient(nodeURL: string, extraOptions: ExtraOptions =
 
   if (nodeURL.substring(0, 5) === 'https') {
     const agent = new https.Agent(agentOptions);
-    mergedOptions.agent = agent;
-    return new JaysonHTTPClient(jayson.client.https(mergedOptions));
+    options.agent = agent;
+    return new JaysonHTTPClient(jayson.client.https(options));
   } else {
     const agent = new http.Agent(agentOptions);
-    mergedOptions.agent = agent;
-    return new JaysonHTTPClient(jayson.client.http(mergedOptions));
+    options.agent = agent;
+    return new JaysonHTTPClient(jayson.client.http(options));
   }
 }
 
