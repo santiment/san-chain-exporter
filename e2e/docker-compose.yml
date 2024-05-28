@@ -1,4 +1,4 @@
-version: "3.4"
+version: "3.7"
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper
@@ -10,7 +10,7 @@ services:
     logging:
       driver: none
   kafka:
-    image: wurstmeister/kafka
+    image: confluentinc/cp-kafka
     depends_on:
       - zookeeper
     links:
@@ -35,7 +35,7 @@ services:
     logging:
       driver: none
   kafka-init:
-    image: wurstmeister/kafka
+    image: confluentinc/cp-kafka
     depends_on:
       - kafka
     command: >
