@@ -1,16 +1,17 @@
 version: "3.7"
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper
+    image: bitnami/zookeeper:latest
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ALLOW_ANONYMOUS_LOGIN: yes
     logging:
       driver: none
   kafka:
-    image: confluentinc/cp-kafka
+    image: &kafka-image bitnami/kafka:latest
     depends_on:
       - zookeeper
     links:
@@ -35,7 +36,7 @@ services:
     logging:
       driver: none
   kafka-init:
-    image: confluentinc/cp-kafka
+    image: *kafka-image
     depends_on:
       - kafka
     command: >

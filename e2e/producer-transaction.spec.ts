@@ -1,6 +1,16 @@
 import { Exporter } from '../src/lib/kafka_storage';
 import Kafka from 'node-rdkafka';
-const KAFKA_URL = process.env.KAFKA_URL || 'localhost:9092';
+const KAFKA_URL: string = assertStringEnv(process.env.KAFKA_URL);
+const KAFKA_TOPIC: string = assertStringEnv(process.env.KAFKA_TOPIC);
+
+function assertStringEnv(stringEnv: string | undefined): string {
+  if (stringEnv !== undefined) {
+    return stringEnv
+  }
+  else {
+    throw Error(`${stringEnv} ENV variable should be set `)
+  }
+}
 
 class TestConsumer {
   private consumer: Kafka.KafkaConsumer;
@@ -78,10 +88,9 @@ describe('Producer transactions', function () {
   beforeEach(function (done) {
     this.timeout(20000);
 
-    const topic = 'erc20-producer-transactions-test';
-    exporter = new Exporter(topic, true);
+    exporter = new Exporter('test-exporter', true);
     exporter.connect().then(() => {
-      testConsumer = new TestConsumer(topic, num_messages_test);
+      testConsumer = new TestConsumer(KAFKA_TOPIC, num_messages_test);
       done();
     });
   });
