@@ -1,11 +1,25 @@
-const { Exporter } = require('../lib/kafka_storage');
-const Kafka = require('node-rdkafka');
-const KAFKA_URL = process.env.KAFKA_URL || 'localhost:9092';
+import { Exporter } from '../src/lib/kafka_storage';
+import Kafka from 'node-rdkafka';
+const KAFKA_URL: string = assertStringEnv(process.env.KAFKA_URL);
+const KAFKA_TOPIC: string = assertStringEnv(process.env.KAFKA_TOPIC);
+
+function assertStringEnv(stringEnv: string | undefined): string {
+  if (stringEnv !== undefined) {
+    return stringEnv
+  }
+  else {
+    throw Error(`${stringEnv} ENV variable should be set `)
+  }
+}
 
 class TestConsumer {
-  constructor(topic, num_expected) {
+  private consumer: Kafka.KafkaConsumer;
+  private num_received: number;
+  private dataReadPromise: Promise<void>;
+  private subscribedPromise: Promise<void>;
+
+  constructor(topic: string, num_expected: number) {
     this.num_received = 0;
-    this.result = [];
 
     this.consumer = new Kafka.KafkaConsumer({
       'metadata.broker.list': KAFKA_URL,
@@ -14,11 +28,13 @@ class TestConsumer {
       'topic.metadata.refresh.interval.ms': 500,
       'enable.auto.commit': true,
       'isolation.level': 'read_committed'
-    });
+    },
+      {
+        'auto.offset.reset': 'earliest', // Start reading from the earliest message
+      });
 
     // Copying the member variables so that they are seen in the closures
     const consumer = this.consumer;
-    const result = this.result;
     let num_received = this.num_received;
 
     this.consumer.setDefaultConsumeTimeout(1000);
@@ -26,14 +42,13 @@ class TestConsumer {
     this.dataReadPromise = new Promise((resolve) => {
       consumer.on('data', function (m) {
         num_received++;
-        result.push(m);
         if (num_received === num_expected) {
-          resolve(result);
+          resolve();
         }
       });
     });
 
-    this.subscribedPromise = new Promise((resolve, reject) => {
+    this.subscribedPromise = new Promise<void>((resolve, reject) => {
       consumer.on('event.error', function (err) {
         console.error('Error from consumer');
         console.error(err);
@@ -41,13 +56,10 @@ class TestConsumer {
       });
       consumer.on('ready', function () {
         consumer.subscribe([topic]);
-      }, 2000);
+      });
       consumer.on('subscribed', function () {
         consumer.consume();
         resolve();
-      });
-      consumer.on('warning', function (err) {
-        console.log('Warning: ', err);
       });
     });
 
@@ -62,23 +74,23 @@ class TestConsumer {
     await this.dataReadPromise;
   }
 
-  disconnect(done) {
+  disconnect(done: () => void) {
     this.consumer.disconnect(done);
   }
 }
 
 
 describe('Producer transactions', function () {
-  let exporter;
-  let testConsumer;
+  let exporter: Exporter;
+  let testConsumer: TestConsumer;
   let num_messages_test = 3;
 
   beforeEach(function (done) {
     this.timeout(20000);
 
-    exporter = new Exporter('erc20-producer-transactions-test', true);
+    exporter = new Exporter('test-exporter', true);
     exporter.connect().then(() => {
-      testConsumer = new TestConsumer(exporter.topicName, num_messages_test);
+      testConsumer = new TestConsumer(KAFKA_TOPIC, num_messages_test);
       done();
     });
   });
@@ -109,7 +121,7 @@ describe('Producer transactions', function () {
           timestamp: 10000000,
           iso_date: new Date().toISOString(),
           key: 1
-        }, 'key');
+        }, 'key', null);
       }
       await exporter.commitTransaction();
     }, 2000);
@@ -139,7 +151,7 @@ describe('Producer transactions', function () {
 
     setTimeout(async function () {
       for (let i = 0; i < num_messages_test; i++) {
-        await exporter.storeEvents([testEvent]);
+        await exporter.storeEvents([testEvent], false);
       }
     }, 1000);
 

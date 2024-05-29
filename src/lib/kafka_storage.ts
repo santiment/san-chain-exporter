@@ -181,7 +181,7 @@ export class Exporter {
       // dedicated method 'subscribeDeliveryReports'.
       this.producer.on('delivery-report', function (err) {
         if (err) {
-          throw err;
+          reject(err);
         }
       });
     });
