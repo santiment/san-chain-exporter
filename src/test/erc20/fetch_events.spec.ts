@@ -1,11 +1,11 @@
-const assert = require('assert');
+import assert from 'assert';
 const rewire = require('rewire');
-const { Web3 } = require('web3');
+import { NODE_URL } from '../../blockchains/erc20/lib/constants';
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
-const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
+import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
 
-const web3Wrapper = new Web3Wrapper(new Web3());
+const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 const rawEvents = [
   // bat mint
@@ -346,6 +346,8 @@ fetch_events.__set__('getRawEvents', async function () {
 });
 
 class TimestampsCacheMock {
+  private blockTimestamps: any;
+
   constructor() {
     this.blockTimestamps = {
       '3798720': 1496241767,
@@ -356,7 +358,7 @@ class TimestampsCacheMock {
     };
   }
 
-  getBlockTimestamp(blockNumber) {
+  getBlockTimestamp(blockNumber: number) {
     return this.blockTimestamps[blockNumber.toString()];
   }
 

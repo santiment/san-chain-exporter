@@ -1,9 +1,9 @@
 import assert from 'assert';
-import { Web3 } from 'web3';
 import { getGenesisTransfers } from '../../blockchains/eth/lib/genesis_transfers';
+import { NODE_URL } from '../../blockchains/eth/lib/constants';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
 
-const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials('localhost');
+const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 describe('genesis transfers', function () {
   it('adds all genesis transfers', function () {

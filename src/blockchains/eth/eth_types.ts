@@ -1,21 +1,20 @@
 export interface TraceAction {
-  author: string,
-  address: string,
-  rewardType: string,
-  callType: string,
-  from: string,
-  gas: string,
-  input: string,
-  to: string,
-  value: string,
-  balance: string,
-  refundAddress: string
+  author?: string,
+  address?: string,
+  rewardType?: string,
+  callType?: string,
+  from?: string,
+  //gas?: string,
+  //input?: string,
+  to?: string,
+  value?: string,
+  balance?: string,
+  refundAddress?: string
 }
 
 export interface TraceResult {
   gasUsed: string,
-  output: string,
-  address: string
+  address?: string
 }
 
 export interface Trace {
@@ -23,8 +22,8 @@ export interface Trace {
   blockHash: string,
   blockNumber: number,
   result: TraceResult,
-  subtraces: 3,
-  traceAddress: string[],
+  subtraces: number,
+  traceAddress: number[],
   transactionHash: string,
   transactionPosition: number,
   type: string
@@ -51,13 +50,13 @@ export interface BeaconChainWithdrawal {
   index: string,
   validatorIndex: string,
   address: string,
-  amount: number
+  amount: string
 };
 
 export interface ETHTransaction {
   from: string,
   to: string,
-  transactionHash: string,
+  hash: string,
   blockNumber: string,
   gasPrice: string
   blockHash: string,
@@ -88,10 +87,8 @@ export interface ETHReceipt {
   gasUsed: string,
   transactionHash: string,
   cumulativeGasUsed: string,
-  effectiveGasPrice: string,
   logs: any[],
-  transactionIndex: string,
-  type: string
+  transactionIndex: string
 }
 
 export interface ETHReceiptsMap {

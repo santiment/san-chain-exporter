@@ -9,8 +9,8 @@ export interface Web3Interface {
     parseHexToBase36String(field: string): string;
     getBlockNumber(): Promise<number>;
     getPastLogs(queryObject: any): Promise<any>;
-    etherToWei(amount: number): number;
-    gweiToWei(amount: number): number;
+    etherToWei(amount: string): number;
+    gweiToWei(amount: string): number;
 }
 
 class Web3Wrapper implements Web3Interface {
@@ -55,11 +55,11 @@ class Web3Wrapper implements Web3Interface {
         return await this.web3.eth.getBlock(blockNumber, false);
     }
 
-    etherToWei(amount: number): number {
+    etherToWei(amount: string): number {
         return Number(this.web3.utils.toWei(amount, 'ether'));
     }
 
-    gweiToWei(amount: number): number {
+    gweiToWei(amount: string): number {
         return Number(this.web3.utils.toWei(amount, 'gwei'));
     }
 }

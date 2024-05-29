@@ -1,7 +1,8 @@
-const assert = require('assert');
-const { Web3 } = require('web3');
-const { TimestampsCache } = require('../../blockchains/erc20/lib/timestamps_cache');
-const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
+import assert from 'assert';
+import { TimestampsCache } from '../../blockchains/erc20/lib/timestamps_cache';
+import { NODE_URL } from '../../blockchains/erc20/lib/constants';
+import { constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+
 
 const blockResponses = [
   {
@@ -37,14 +38,14 @@ class EthClientMock {
 
 class TimestampsCacheMock extends TimestampsCache {
   constructor() {
-    super(new EthClientMock(), new Web3Wrapper(new Web3()), 10000, 10001);
+    super(new EthClientMock(), constructWeb3WrapperNoCredentials(NODE_URL), 10000, 10001);
   }
 }
 
 
 describe('Test Timestamps cache', function () {
   it('test block response fills cache', async function () {
-    const timestampsCache = new TimestampsCacheMock(blockResponses);
+    const timestampsCache = new TimestampsCacheMock();
     await timestampsCache.waitResponse();
 
     assert.equal(timestampsCache.getBlockTimestamp(10000), 1438334627);
@@ -52,7 +53,7 @@ describe('Test Timestamps cache', function () {
   });
 
   it('test incorrectly filled cache would throw', async function () {
-    const timestampsCache = new TimestampsCacheMock(blockResponses);
+    const timestampsCache = new TimestampsCacheMock();
     timestampsCache.waitResponse();
 
     assert.throws(function () { timestampsCache.getBlockTimestamp(10002); }, Error);

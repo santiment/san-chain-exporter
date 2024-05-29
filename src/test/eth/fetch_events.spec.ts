@@ -1,14 +1,9 @@
-const { Web3 } = require('web3');
-const assert = require('assert');
-const eth_worker = require('../../blockchains/eth/eth_worker');
-const constants = require('../../blockchains/eth/lib/constants');
-const {
-  injectDAOHackTransfers,
-  DAO_HACK_ADDRESSES,
-  DAO_HACK_FORK_BLOCK
-} = require('../../blockchains/eth/lib/dao_hack');
-const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
-const web3Wrapper = new Web3Wrapper(new Web3());
+import assert from 'assert';
+import { ETHWorker } from '../../blockchains/eth/eth_worker';
+import constants from '../../blockchains/eth/lib/constants';
+import { injectDAOHackTransfers, DAO_HACK_ADDRESSES, DAO_HACK_FORK_BLOCK } from '../../blockchains/eth/lib/dao_hack';
+import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+import { ETHBlock, ETHReceiptsMap, ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('fetch past events', function () {
   const transaction = {
@@ -29,48 +24,33 @@ describe('fetch past events', function () {
     s: '0x7d798edb0c7ddc16868d433728b533047379eb0afd8c0f461215ffe16674fd52',
     standardV: '0x1',
     to: '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
+    transactionHash: '0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030',
     transactionIndex: '0x0',
     v: '0x1c',
-    value: '0x4712d3e1aa21b20'
+    value: '0x4712d3e1aa21b20',
+    type: "call"
   };
-  const blocks = new Map();
+  const blocks = new Map<number, ETHBlock>();
   blocks.set(5711193,
     {
-      author: '0x829bd824b016326a401d083b33d092293333a830',
       difficulty: '0xb8d1a2118a1d5',
-      extraData: '0xe4b883e5bda9e7a59ee4bb99e9b1bc',
       gasLimit: '0x7a2047',
       gasUsed: '0x7a0166',
       hash: '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
-      logsBloom: '0x0213080000401000000004018202222a412040800800000402100908800801ac0000e02a00000100029041423048040120002080012101800040121200e1092001000169200804118014408c000140081100014006b000000103910090085005002040022010840005c0004008010009004c022408056000443001150000045020808711446114600422001590c800000c04c1010000205400000002440269988200000440c810000400182494008122190004210001902200008040809000010440080200040a00100080004841000001032025000a4401209200440c0600000410202401200000004400c00840825400008113189100420018008201000094',
       miner: '0x829bd824b016326a401d083b33d092293333a830',
-      mixHash: '0x9c40fd29ce55422fdfdd7cfcc34379f2ba8b20e565dda7280923354164ea6e2e',
-      nonce: '0xca3f1c80070df1b6',
       number: '0x572559',
-      parentHash: '0xcab11d33dee569682f70c021e9032c37aaa41932af1604f4f240e29f5aecbf37',
-      receiptsRoot: '0xf1404089b2f6b6af7773bac2c58433f582687bd2758b3329a28c230d8f5f5113',
-      sealFields: [
-        '0xa09c40fd29ce55422fdfdd7cfcc34379f2ba8b20e565dda7280923354164ea6e2e',
-        '0x88ca3f1c80070df1b6'
-      ],
-      sha3Uncles: '0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
       size: '0x915a',
-      stateRoot: '0x76644d69cbc1f9246d4fe45c4373c509e0d9fe8ddbdd5fd97f5cc09e62861cef',
       timestamp: '0x5b109a83',
       totalDifficulty: '0xf4890fc4320c56c9a4',
       transactions: [transaction],
-      transactionsRoot: '0xa7df4bb8858bfc779dae9b59201561394b686cdc942a7b0728aa396f7e35f40f',
-      uncles: []
     });
 
-  const receipts = {
+  const receipts: ETHReceiptsMap = {
     '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d':
     {
       'blockHash': '0x22854625d4c18b3034461851a6fb181209e77a242adbd923989e7113a60fec56',
       'blockNumber': '0x572559',
-      'contractAddress': null,
       'cumulativeGasUsed': '0xdc18',
-      'from': '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
       'gasUsed': '0xdc18',
       'logs': [{
         'address': '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
@@ -97,9 +77,6 @@ describe('fetch past events', function () {
         'transactionLogIndex': '0x1',
         'type': 'mined'
       }],
-      'logsBloom': '0x00000000000000000000000000000000000000000000000000000000000000200000000000000000001000000000000000000000000000000000000000000000000000000000000100000008000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000011000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000100080000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000',
-      'status': '0x1',
-      'to': '0xb1690c08e213a35ed9bab7b318de14420fb57d8c',
       'transactionHash': '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
       'transactionIndex': '0x0'
     }
@@ -123,9 +100,9 @@ describe('fetch past events', function () {
     'type': 'call'
   };
 
-  const worker = new eth_worker.worker(constants);
-  let feeResult = null;
-  let callResult = null;
+  const worker = new ETHWorker(constants);
+  let feeResult!: ETHTransfer;
+  let callResult!: ETHTransfer;
 
   beforeEach(function () {
     feeResult = {
@@ -154,7 +131,7 @@ describe('fetch past events', function () {
 
 
   it('parse transaction events', function () {
-    const result = worker.transformPastTransactionEvents(blocks.values(), receipts);
+    const result = worker.transformPastTransactionEvents([...blocks.values()], receipts);
     const expectedResult = [feeResult];
 
     assert.deepStrictEqual(result, expectedResult);
@@ -170,10 +147,10 @@ describe('fetch past events', function () {
   it('add genesis events', function () {
     const result = worker.transformPastEvents(0, 1, [trace], blocks, receipts);
 
-    const firstGenesisEvent = {
+    const firstGenesisEvent: ETHTransfer = {
       from: 'GENESIS',
       to: '0x000d836201318ec6899a67540690382780743280',
-      value: '200000000000000000000',
+      value: 200000000000000000000,
       valueExactBase36: '167i830vk1gbnk',
       blockNumber: 0,
       timestamp: 1438269973,
@@ -182,10 +159,10 @@ describe('fetch past events', function () {
     };
 
 
-    assert.deepStrictEqual(firstGenesisEvent, result[0]);
+    assert.deepStrictEqual(result[0], firstGenesisEvent);
   });
 
-  it('genesis events ordering',function () {
+  it('genesis events ordering', function () {
     const result = worker.transformPastEvents(0, 1, [trace], blocks, receipts);
 
     const genesisEventsInserted = 8894;
@@ -207,6 +184,7 @@ describe('fetch past events', function () {
     callResult.blockNumber = DAO_HACK_FORK_BLOCK - 1;
 
     const eventsResult = [feeResult, callResult];
+    const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(constants.NODE_URL);
     injectDAOHackTransfers(eventsResult, web3Wrapper);
 
     assert.deepStrictEqual(feeResult, eventsResult[0]);

@@ -1,7 +1,7 @@
-const assert = require('assert');
+import assert from 'assert';
 
-const cardano_worker = require('../../blockchains/cardano/cardano_worker');
-const constants = require('../../blockchains/cardano/lib/constants');
+import { CardanoWorker } from '../../blockchains/cardano/cardano_worker';
+import constants from '../../blockchains/cardano/lib/constants';
 
 function getTransactions() {
   return [
@@ -151,13 +151,13 @@ function getGenesisTransactions() {
 }
 
 describe('workLoopTest', function () {
-  let cardanoWorker = null;
+  let cardanoWorker: CardanoWorker;
   const BLOCKCHAIN_HEAD_BLOCK = 100;
-  let transactions = null;
-  let genesisTransactions = null;
+  let transactions: any[];
+  let genesisTransactions: any[];
 
   beforeEach(async function () {
-    cardanoWorker = new cardano_worker.worker(constants);
+    cardanoWorker = new CardanoWorker(constants);
     transactions = getTransactions();
     cardanoWorker.getTransactions = async function () {
       // Return a deep copy of the transactions so not to pollute the original object

@@ -15,7 +15,7 @@ import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
 
 
 export class ETHWorker extends BaseWorker {
-  private web3Wrapper: Web3Interface;
+  public web3Wrapper: Web3Interface;
   private ethClient: HTTPClientInterface;
   private feesDecoder: FeesDecoder;
   private withdrawalsDecoder: WithdrawalsDecoder;
@@ -106,9 +106,7 @@ export class ETHWorker extends BaseWorker {
 
     if (events.length > 0) {
       stableSort(events, transactionOrder);
-      for (let i = 0; i < events.length; i++) {
-        events[i].primaryKey = this.lastPrimaryKey + i + 1;
-      }
+      extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
 
       this.lastPrimaryKey += events.length;
     }
@@ -120,6 +118,12 @@ export class ETHWorker extends BaseWorker {
 
   async init(): Promise<void> {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
+  }
+}
+
+export function extendEventsWithPrimaryKey(events: ETHTransfer[], lastPrimaryKey: number) {
+  for (let i = 0; i < events.length; i++) {
+    events[i].primaryKey = lastPrimaryKey + i + 1;
   }
 }
 

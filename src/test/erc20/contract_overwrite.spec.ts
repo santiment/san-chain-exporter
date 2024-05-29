@@ -2,6 +2,7 @@
 import assert from 'assert';
 
 import { decodeEvents } from '../../blockchains/erc20/lib/fetch_events';
+import { NODE_URL } from '../../blockchains/erc20/lib/constants';
 import { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount } from '../../blockchains/erc20/lib/contract_overwrite';
 import { readJsonFile } from '../../blockchains/erc20/lib/util';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
@@ -11,7 +12,7 @@ const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f';
 const SNXContractNew = '0xc011a73ee8576fb46f5e1c5751ca3b9fe0af2a6f';
 const SNXContractReplacer = 'snx_contract';
 
-const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials('localhsot');
+const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',

@@ -1,4 +1,4 @@
-const BLOCKCHAIN = requireString('BLOCKCHAIN');
+const BLOCKCHAIN = process.env.BLOCKCHAIN;
 const CONFIG_PATH = process.env.CONFIG_PATH;
 const RPC_USERNAME = process.env.RPC_USERNAME || 'rpcuser';
 const RPC_PASSWORD = process.env.RPC_PASSWORD || 'rpcpassword';
@@ -16,16 +16,6 @@ function parseBoolean(value) {
   return lowerCasedValue === 'true' || lowerCasedValue === '1';
 }
 
-function requireString(name) {
-  const value = process.env[name];
-  if (value === undefined) {
-    throw Error(`${name} env variable is required`);
-  }
-  else {
-    return value;
-  }
-}
-
 module.exports = {
   BLOCKCHAIN,
   CONFIG_PATH,
@@ -37,5 +27,6 @@ module.exports = {
   START_BLOCK,
   START_PRIMARY_KEY,
   WRITE_SIGNAL_RECORDS_KAFKA,
-  KAFKA_TOPIC
+  KAFKA_TOPIC,
+  parseBoolean
 };

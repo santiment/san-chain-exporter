@@ -1,10 +1,9 @@
-const { expect } = require('chai');
-const helper = require('../../blockchains/receipts/lib/helper');
+import assert from 'assert';
+import helper from '../../blockchains/receipts/lib/helper';
+import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+import { NODE_URL } from '../../blockchains/eth/lib/constants';
 
-const { Web3 } = require('web3');
-const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
-
-const web3Wrapper = new Web3Wrapper(new Web3());
+const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 describe('blocks parsing', () => {
   it('parses blocks', () => {
@@ -20,7 +19,7 @@ describe('blocks parsing', () => {
     ];
 
     const result = helper.parseBlocks(responses);
-    expect(result).to.deep.eq([
+    assert.deepStrictEqual(result, [
       { timestamp: '0x56c097f1', number: '0xf53d5' },
       { timestamp: '0x56c097f4', number: '0xf5408' }
     ]);
@@ -52,7 +51,7 @@ describe('receipt parsing', () => {
     ];
 
     const result = helper.parseReceipts(responses);
-    expect(result).to.deep.eq(
+    assert.deepStrictEqual(result,
       [
         {
           blockHash: '0x209bc40be9e6961d88435382b91754b7a6e180d6cbf9120a61246e1d2506f3a6',
@@ -93,31 +92,26 @@ context('receipt without logs', () => {
   describe('receipt decoding', () => {
     it('converts blockNumber from hex to number', () => {
       const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.blockNumber).to.eq(1003451);
-    });
 
-    it('converts transactionIndex from hex to number', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.transactionIndex).to.eq(0);
-    });
+      const expected = {
+        blockHash: '0x209bc40be9e6961d88435382b91754b7a6e180d6cbf9120a61246e1d2506f3a6',
+        blockNumber: 1003451,
+        contractAddress: null,
+        cumulativeGasUsed: '21000',
+        from: '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        gasUsed: '21000',
+        logsBloom: '0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
+        root: '0x1806fd9f2ef8bf8dce03665b4c80a1740efe4194f90864c662e7af6a80a02a08',
+        status: null,
+        to: '0xe33977e292ccef99ea8828733e97562f3690a8ad',
+        transactionHash: '0x88217032c83348c7aae522090d7a5b932609860a5f6760e98e9048f6ddc55ad8',
+        transactionIndex: 0
+      };
 
-    it('converts cumulativeGasUsed from hex to number string', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.cumulativeGasUsed).to.eq('21000');
-    });
-
-    it('converts gasUsed from hex to number string', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.gasUsed).to.eq('21000');
-    });
-
-    it('removes logs key/value', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.logs).to.eq(undefined);
+      assert.deepStrictEqual(result, expected);
     });
   });
 });
-
 
 context('receipt with logs', () => {
   const receipt = {
@@ -152,61 +146,34 @@ context('receipt with logs', () => {
   };
 
   describe('receipt decoding', () => {
-    it('converts blockNumber from hex to number', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.blockNumber).to.eq(1004250);
-    });
-
-    it('converts transactionIndex from hex to number', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.transactionIndex).to.eq(4);
-    });
-
-    it('converts cumulativeGasUsed from hex to number string', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.cumulativeGasUsed).to.eq('148216');
-    });
-
-    it('converts gasUsed from hex to number string', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.gasUsed).to.eq('64216');
-    });
-
-    it('removes logs key/value', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result.logs).to.eq(undefined);
-    });
-
     it('merges columnized logs', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result['logs.address']).to.deep.eq(['0x6e3ded77aa29924ba55a87c23ee7d985b07212c6']);
-      expect(result['logs.data']).to.deep.eq(['0x0']);
-      expect(result['logs.logIndex']).to.deep.eq([0]);
-      expect(result['logs.removed']).to.deep.eq([false]);
-      expect(result['logs.topics']).to.deep.
-        eq([['0x92ca3a80853e6663fa31fa10b99225f18d4902939b4c53a9caae9043f6efd004']]);
-      expect(result['logs.transactionLogIndex']).to.deep.eq([0]);
-      expect(result['logs.type']).to.deep.eq(['mined']);
-    });
+      const expected = {
+        timestamp: '2020-10-02T08:51:25.779Z',
+        level: 'info',
+        blockHash: '0xa6e57d9dc2447ba63bef1dfd03b7885cf71753a93260f66016463b2e3b32d82e',
+        blockNumber: 1004250,
+        contractAddress: null,
+        cumulativeGasUsed: '148216',
+        from: '0xae04420f8e66003b201ac5ec59cc529c2ec5b12f',
+        gasUsed: '64216',
+        "logs.address": ['0x6e3ded77aa29924ba55a87c23ee7d985b07212c6'],
+        "logs.data": ['0x0'],
+        "logs.logIndex": [0],
+        "logs.removed": [false],
+        "logs.topics": [['0x92ca3a80853e6663fa31fa10b99225f18d4902939b4c53a9caae9043f6efd004']],
+        "logs.transactionLogIndex": [0],
+        "logs.type": ['mined'],
+        logsBloom: '0x0',
+        root: '0x2b29b7a06c5bdd1d0287e0327bf2eb94a10bdd4ab9a11fce81787d6956d75f3b',
+        status: null,
+        to: '0x6e3ded77aa29924ba55a87c23ee7d985b07212c6',
+        transactionHash: '0xad637af875b539171853d144933b84680a93ccbefa22a68f127dc099fc26a43d',
+        transactionIndex: 4
+      };
 
-    it('removes blockNumber key/value from logs', () => {
       const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result['logs.blockNumber']).to.be.undefined;
-    });
 
-    it('removes blockHash key/value from logs', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result['logs.blockHash']).to.be.undefined;
-    });
-
-    it('removes transactionHash key/value from logs', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result['logs.transactionHash']).to.be.undefined;
-    });
-
-    it('removes transactionIndex key/value from logs', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
-      expect(result['logs.transactionIndex']).to.be.undefined;
+      assert.deepStrictEqual(result, expected);
     });
   });
 });
@@ -217,6 +184,6 @@ describe('setting reciept\'s timestamp', () => {
     const timestamps = { '1004250': 1455576747 };
     const result = await helper.setReceiptsTimestamp([receipt], timestamps);
 
-    expect(result).to.deep.eq([{ blockNumber: 1004250, timestamp: 1455576747 }]);
+    assert.deepStrictEqual(result, [{ blockNumber: 1004250, timestamp: 1455576747 }]);
   });
 });

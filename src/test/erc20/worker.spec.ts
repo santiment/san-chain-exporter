@@ -5,43 +5,9 @@ import constants from '../../blockchains/erc20/lib/constants';
 import { ContractOverwrite } from '../../blockchains/erc20/lib/contract_overwrite';
 import helpers from './helpers';
 import { ERC20Transfer } from '../../blockchains/erc20/erc20_types';
-import { Web3Interface } from '../../blockchains/eth/lib/web3_wrapper';
+import { MockWeb3Wrapper } from '../eth/mock_web3_wrapper';
 
 
-class MockWeb3Wrapper implements Web3Interface {
-
-    parseHexToNumberString(field: string): string {
-        throw Error("Should not be called")
-    }
-
-    parseHexToNumber(field: string): number | bigint {
-        throw Error("Should not be called")
-    }
-
-    parseNumberToHex(field: number): string {
-        throw Error("Should not be called")
-    }
-
-    parseHexToBase36String(field: string): string {
-        throw Error("Should not be called")
-    }
-
-    getBlockNumber(): Promise<number> {
-        return Promise.resolve(1)
-    }
-
-    getPastLogs(queryObject: any): Promise<any> {
-        throw Error("Should not be called")
-    }
-
-    etherToWei(amount: number): number {
-        throw Error("Should not be called")
-    }
-
-    gweiToWei(amount: number): number {
-        throw Error("Should not be called")
-    }
-}
 
 class MockEthClient {
     request(): Promise<any> {
@@ -107,7 +73,7 @@ describe('Test ERC20 worker', function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         constants.CONTRACT_MODE = 'vanilla';
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        worker.web3Wrapper = new MockWeb3Wrapper(1);
         worker.ethClient = new MockEthClient();
         worker.getPastEventsFun = async function () {
             return [originalEvent];
@@ -128,7 +94,7 @@ describe('Test ERC20 worker', function () {
         constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        worker.web3Wrapper = new MockWeb3Wrapper(1);
         worker.ethClient = new MockEthClient();
         worker.getPastEventsFun = async function () {
             return [originalEvent];
@@ -166,7 +132,7 @@ describe('Test ERC20 worker', function () {
         constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        worker.web3Wrapper = new MockWeb3Wrapper(1);
         worker.ethClient = new MockEthClient();
         worker.getPastEventsFun = async function () {
             return [originalEvent];
@@ -206,7 +172,7 @@ describe('Test ERC20 worker', function () {
         constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper();
+        worker.web3Wrapper = new MockWeb3Wrapper(1);
         worker.ethClient = new MockEthClient();
         worker.getPastEventsFun = async function () {
             return [originalEvent, originalEvent2];
@@ -299,5 +265,4 @@ describe('Test ERC20 worker', function () {
         assert.deepStrictEqual(result, { success: false });
         assert.deepStrictEqual(worker.blocksList, []);
     });
-
 });

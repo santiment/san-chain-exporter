@@ -1,10 +1,10 @@
-const { Web3 } = require('web3');
-const assert = require('assert');
+import assert from 'assert';
 
-const { WithdrawalsDecoder } = require('../../blockchains/eth/lib/withdrawals_decoder');
-const Web3Wrapper = require('../../blockchains/eth/lib/web3_wrapper');
-const constants = require('../../blockchains/eth/lib/constants');
-const web3Wrapper = new Web3Wrapper(new Web3());
+import { WithdrawalsDecoder } from '../../blockchains/eth/lib/withdrawals_decoder';
+import { NODE_URL, ETH_WITHDRAWAL } from '../../blockchains/eth/lib/constants';
+import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+
+const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 describe('withdrawals decoder test', function () {
   it('basic test', async function () {
@@ -20,7 +20,7 @@ describe('withdrawals decoder test', function () {
     const result = decoder.getBeaconChainWithdrawals([withdrawal], 18742200, 1702046471);
 
     const expected = [{
-      from: constants.ETH_WITHDRAWAL,
+      from: ETH_WITHDRAWAL,
       to: withdrawal.address,
       value: 17482528000000000,
       valueExactBase36: '4s51ehlpbls',

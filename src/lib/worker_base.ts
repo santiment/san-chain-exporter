@@ -34,7 +34,7 @@ export class BaseWorker {
     throw new Error('"work" method need to be overriden');
   }
   // To be implemented on inheritance.
-  init(_exporter: Exporter) {
+  async init(_exporter: Exporter) {
     throw new Error('"init" method need to be overriden');
   }
 

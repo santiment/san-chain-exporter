@@ -1,4 +1,4 @@
-import { Exporter } from '../src/lib/kafka_storage';
+import { Exporter } from '../lib/kafka_storage';
 import Kafka from 'node-rdkafka';
 const KAFKA_URL: string = assertStringEnv(process.env.KAFKA_URL);
 const KAFKA_TOPIC: string = assertStringEnv(process.env.KAFKA_TOPIC);
@@ -88,7 +88,7 @@ describe('Producer transactions', function () {
   beforeEach(function (done) {
     this.timeout(20000);
 
-    exporter = new Exporter('test-exporter', true);
+    exporter = new Exporter('test-exporter', true, KAFKA_TOPIC);
     exporter.connect().then(() => {
       testConsumer = new TestConsumer(KAFKA_TOPIC, num_messages_test);
       done();

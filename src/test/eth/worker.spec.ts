@@ -1,14 +1,13 @@
-const assert = require('assert');
-const v8 = require('v8');
-const eth_worker = require('../../blockchains/eth/eth_worker');
-const constants = require('../../blockchains/eth/lib/constants');
+import assert from 'assert';
+import v8 from 'v8';
+import { extendEventsWithPrimaryKey } from '../../blockchains/eth/eth_worker';
+import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('Test worker', function () {
-    const worker = new eth_worker.worker(constants);
-    let feeResult = null;
-    let callResult = null;
-    let feeResultWithPrimaryKey = null;
-    let callResultWithPrimaryKey = null;
+    let feeResult: ETHTransfer;
+    let callResult: ETHTransfer;
+    let feeResultWithPrimaryKey: ETHTransfer;
+    let callResultWithPrimaryKey: ETHTransfer;
 
     beforeEach(function () {
         feeResult = {
@@ -43,19 +42,10 @@ describe('Test worker', function () {
 
 
     it('test primary key assignment', async function () {
-        // Overwrite variables and methods that the 'work' method would use internally.
-        worker.lastConfirmedBlock = 1;
-        worker.lastExportedBlock = 0;
-        worker.fetchData = async function () {
-            return [];
-        };
-        worker.transformPastEvents = function () {
-            return [feeResult, callResult];
-        };
+        const events = [feeResult, callResult]
+        extendEventsWithPrimaryKey(events, 0)
 
-        const result = await worker.work();
-
-        assert.deepStrictEqual(result, [feeResultWithPrimaryKey, callResultWithPrimaryKey]);
+        assert.deepStrictEqual(events, [feeResultWithPrimaryKey, callResultWithPrimaryKey]);
     });
 
 });

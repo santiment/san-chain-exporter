@@ -27,7 +27,7 @@ const block_json_post_london_zero_priority: ETHBlock = {
     'gasPrice': '0xba37423df',
     'maxPriorityFeePerGas': '0x0',
     'maxFeePerGas': '0xba37423df',
-    'transactionHash': '0xc8bebc11bbe703cdfb2a1a9599221baf4f19a1e20808866346791799d2dac7a9',
+    'hash': '0xc8bebc11bbe703cdfb2a1a9599221baf4f19a1e20808866346791799d2dac7a9',
     'to': '0x48ee18b6dd7d10214be35ba540b606b3a2c44d7c',
     'transactionIndex': '0x0',
     'value': '0x4290f39ca406a4',
@@ -58,7 +58,7 @@ const block_json_post_london_fee_reduced_by_maxFeePerGas: ETHBlock = {
       'gasPrice': '0xbdf0eeddf',
       'maxPriorityFeePerGas': '0x3b9aca00',
       'maxFeePerGas': '0xBA43B7400',
-      'transactionHash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
       'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
       'transactionIndex': '0xa4',
       'value': '0x0',
@@ -87,7 +87,7 @@ const block_json_post_london_with_priority: ETHBlock = {
       'gasPrice': '0xbdf0eeddf',
       'maxPriorityFeePerGas': '0x3b9aca00',
       'maxFeePerGas': '0x19284a2404',
-      'transactionHash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
       'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
       'transactionIndex': '0xa4',
       'value': '0x0',
@@ -115,7 +115,7 @@ const block_json_post_london_old_tx_type: ETHBlock = {
     'gasPrice': '0xfe5d09e7f',
     'maxPriorityFeePerGas': '0x77359400',
     'maxFeePerGas': '0x1e80355e00',
-    'transactionHash': '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
+    'hash': '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
     'to': '0x9fae918aeb96e876e25ee6975bcc2976cf48f595',
     'transactionIndex': '0x61',
     'value': '0x765ae822ac7f2000',
@@ -123,41 +123,34 @@ const block_json_post_london_old_tx_type: ETHBlock = {
   }]
 };
 
-const receipts_json_post_london_old_tx_type: ETHTransaction[] = [{
+const receipts_json_post_london_old_tx_type: ETHReceipt[] = [{
   'blockHash': '0xc66d31320e1b56947efc0b3014950a1211063cd8cbf12399ebbc905d54bca00a',
   'blockNumber': '0xcb3928',
-  'from': '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
-  'gas': '0x5208',
-  'gasPrice': '0xfe5d09e7f',
-  'to': '0x9fae918aeb96e876e25ee6975bcc2976cf48f595',
+  'cumulativeGasUsed': '0x3880ad',
+  'gasUsed': '0x5208',
+  'logs': [],
   'transactionHash': '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
-  'transactionIndex': '0x61',
-  'value': '0x765ae822ac7f2000',
-  'type': '0x2'
+  'transactionIndex': '0x61'
 }];
 
 const receipts_json_post_london_no_priority: ETHReceipt[] = [{
   'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
   'blockNumber': '0xcd2f91',
-  'transactionHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
   'cumulativeGasUsed': '0x5208',
-  'effectiveGasPrice': '0xba37423df',
   'gasUsed': '0x5208',
   'logs': [],
-  'transactionIndex': '0x0',
-  'type': '0x2'
+  'transactionHash': '0xc8bebc11bbe703cdfb2a1a9599221baf4f19a1e20808866346791799d2dac7a9',
+  'transactionIndex': '0x0'
 }];
 
 const receipts_json_post_london_with_priority: ETHReceipt[] = [{
   'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
   'blockNumber': '0xcd2f91',
   'cumulativeGasUsed': '0x9041b5',
-  'effectiveGasPrice': '0xbdf0eeddf',
   'gasUsed': '0x11d7e',
   'logs': [],
   'transactionHash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-  'transactionIndex': '0xa4',
-  'type': '0x2'
+  'transactionIndex': '0xa4'
 }];
 
 const block_json_pre_london: ETHBlock = {
@@ -176,7 +169,7 @@ const block_json_pre_london: ETHBlock = {
     'from': '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',
     'gas': '0x1f8dc',
     'gasPrice': '0x12bfb19e60',
-    'transactionHash': '0xea1093d492a1dcb1bef708f771a99a96ff05dcab81ca76c31940300177fcf49f',
+    'hash': '0xea1093d492a1dcb1bef708f771a99a96ff05dcab81ca76c31940300177fcf49f',
     'to': '0xc083e9947cf02b8ffc7d3090ae9aea72df98fd47',
     'transactionIndex': '0x0',
     'value': '0x56bc75e2d63100000',
@@ -188,16 +181,14 @@ const receipts_json_pre_london: ETHReceipt[] = [{
   'blockHash': '0x8e38b4dbf6b11fcc3b9dee84fb7986e29ca0a02cecd8977c161ff7333329681e',
   'blockNumber': '0xf4240',
   'cumulativeGasUsed': '0x723c',
-  'effectiveGasPrice': '0x12bfb19e60',
   'gasUsed': '0x723c',
   'logs': [],
   'transactionHash': '0xea1093d492a1dcb1bef708f771a99a96ff05dcab81ca76c31940300177fcf49f',
-  'transactionIndex': '0x0',
-  'type': '0x2'
+  'transactionIndex': '0x0'
 }];
 
 
-function turnReceiptsToMap(receipts: any) {
+function turnReceiptsToMap(receipts: any[]) {
   const result: any = {};
   receipts.forEach((receipt: any) => {
     result[receipt.transactionHash] = receipt;

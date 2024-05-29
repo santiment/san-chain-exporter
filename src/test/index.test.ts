@@ -1,15 +1,21 @@
 const sinon = require('sinon');
 const rewire = require('rewire');
-const assert = require('assert');
-const { expect } = require('chai');
+import assert from 'assert';
+// For this test, presume we are creating the ETH worker
+process.env.BLOCKCHAIN = 'eth';
+process.env.TEST_ENV = 'true';
+import { Main } from '../main';
+const { Main: MainRewired } = rewire('../main');
+const { main } = rewire('../index');
+import { BaseWorker } from '../lib/worker_base';
+import { Exporter } from '../lib/kafka_storage';
+import { ETHWorker } from '../blockchains/eth/eth_worker';
+import ethConstants from '../blockchains/eth/lib/constants';
+import zkClientAsync from '../lib/zookeeper_client_async';
 
-const { main, Main } = rewire('../index');
-const BaseWorker = require('../lib/worker_base');
-const { Exporter } = require('../lib/kafka_storage');
-const { worker } = require('../blockchains/eth/eth_worker');
-const zkClientAsync = require('../lib/zookeeper_client_async');
 
-describe('Main', () => {
+const blockchain = 'eth';
+describe('Main tests', () => {
   const constants = {
     START_BLOCK: -1,
     START_PRIMARY_KEY: -1
@@ -26,9 +32,14 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     try {
-      await mainInstance.init();
+      await mainInstance.init(blockchain);
     } catch (err) {
-      assert.strictEqual(err.message, 'Error when initializing exporter: Exporter connection failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error when initializing exporter: Exporter connection failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -43,9 +54,14 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     try {
-      await mainInstance.init();
+      await mainInstance.init(blockchain);
     } catch (err) {
-      assert.strictEqual(err.message, 'Error when initializing exporter: Exporter initTransactions failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error when initializing exporter: Exporter initTransactions failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -53,7 +69,7 @@ describe('Main', () => {
     const exporterStub = sinon.createStubInstance(Exporter);
     exporterStub.getLastPosition.returns(JSON.parse('{"blockNumber":123456,"primaryKey":0}'));
 
-    const mainInstance = new Main();
+    const mainInstance = new MainRewired();
     mainInstance.exporter = exporterStub;
     mainInstance.worker = new BaseWorker(constants);
 
@@ -69,7 +85,7 @@ describe('Main', () => {
     const exporterStub = sinon.createStubInstance(Exporter);
     exporterStub.getLastPosition.returns(null);
 
-    const mainInstance = new Main();
+    const mainInstance = new MainRewired();
     mainInstance.exporter = exporterStub;
     mainInstance.worker = new BaseWorker(constants);
 
@@ -91,9 +107,14 @@ describe('Main', () => {
 
     try {
       await mainInstance.handleInitPosition();
-      expect.fail('handleInitPosition should have thrown an error');
+      assert.fail('handleInitPosition should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Exporter getLastPosition failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Exporter getLastPosition failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -108,9 +129,14 @@ describe('Main', () => {
 
     try {
       await mainInstance.handleInitPosition();
-      expect.fail('handleInitPosition should have thrown an error');
+      assert.fail('handleInitPosition should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Exporter savePosition failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Exporter savePosition failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -118,49 +144,64 @@ describe('Main', () => {
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
     try {
-      await mainInstance.initWorker();
-      expect.fail('initWorker should have thrown an error');
+      await mainInstance.initWorker('eth', {});
+      assert.fail('initWorker should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Worker is already set');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Worker is already set');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
   it('initWorker throws an error when worker.init() fails', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter('test-exporter');
+    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
 
-    sinon.stub(worker.prototype, 'init').rejects(new Error('Worker init failed'));
+    sinon.stub(ETHWorker.prototype, 'init').rejects(new Error('Worker init failed'));
 
     try {
-      await mainInstance.initWorker();
-      expect.fail('initWorker should have thrown an error');
+      await mainInstance.initWorker('eth', ethConstants);
+      assert.fail('initWorker should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Worker init failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Worker init failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
   it('initWorker throws an error when handleInitPosition() fails', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter('test-exporter');
-    sinon.stub(worker.prototype, 'init').resolves();
+    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
+    sinon.stub(ETHWorker.prototype, 'init').resolves();
 
     sinon.stub(mainInstance, 'handleInitPosition').throws(new Error('Error when initializing position'));
 
     try {
-      await mainInstance.initWorker();
-      expect.fail('initWorker should have thrown an error');
+      await mainInstance.initWorker('eth', ethConstants);
+      assert.fail('initWorker should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Error when initializing position');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error when initializing position');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
   it('initWorker success', async () => {
-    const mainInstance = new Main();
-    mainInstance.exporter = new Exporter('test-exporter');
-    sinon.stub(worker.prototype, 'init').resolves();
+    const mainInstance = new MainRewired();
+    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
+    sinon.stub(ETHWorker.prototype, 'init').resolves();
     sinon.stub(mainInstance, 'handleInitPosition').resolves();
 
-    await mainInstance.initWorker();
+    await mainInstance.initWorker('eth', ethConstants);
     assert(mainInstance.handleInitPosition.calledOnce);
   });
 
@@ -170,9 +211,14 @@ describe('Main', () => {
     mainInstance.worker = new BaseWorker(constants);
     try {
       await mainInstance.workLoop();
-      expect.fail('workLoop should have thrown an error');
+      assert.fail('workLoop should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Error in worker "work" method');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error in worker "work" method');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -183,12 +229,17 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
-    mainInstance.exporter = new Exporter('test-exporter');
+    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
     try {
       await mainInstance.workLoop();
-      expect.fail('workLoop should have thrown an error');
+      assert.fail('workLoop should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'storeEvents failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'storeEvents failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -200,15 +251,21 @@ describe('Main', () => {
 
     const mainInstance = new Main();
     mainInstance.worker = new BaseWorker(constants);
-    mainInstance.exporter = new Exporter('test-exporter');
+    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
     try {
       await mainInstance.workLoop();
-      expect.fail('workLoop should have thrown an error');
+      assert.fail('workLoop should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'savePosition failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'savePosition failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 });
+
 
 describe('main function', () => {
   afterEach(() => {
@@ -220,9 +277,14 @@ describe('main function', () => {
 
     try {
       await main();
-      expect.fail('main function should have thrown an error');
+      assert.fail('main function should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Error initializing exporter: Main init failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error initializing exporter: Main init failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -232,9 +294,14 @@ describe('main function', () => {
 
     try {
       await main();
-      expect.fail('main function should have thrown an error');
+      assert.fail('main function should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Error in exporter work loop: Main workLoop failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error in exporter work loop: Main workLoop failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
@@ -245,19 +312,28 @@ describe('main function', () => {
 
     try {
       await main();
-      expect.fail('main function should have thrown an error');
+      assert.fail('main function should have thrown an error');
     } catch (err) {
-      assert.strictEqual(err.message, 'Error in exporter work loop: Main disconnect failed');
+      if (err instanceof Error) {
+        assert.strictEqual(err.message, 'Error in exporter work loop: Main disconnect failed');
+      }
+      else {
+        assert.fail('Exception is not an instance of Error')
+      }
     }
   });
 
   it('main function works', async () => {
-    sinon.stub(Main.prototype, 'init').resolves();
-    sinon.stub(Main.prototype, 'workLoop').resolves();
-    sinon.stub(Main.prototype, 'disconnect').resolves();
+    const initStub = sinon.stub(Main.prototype, 'init').resolves();
+    const workLoopStub = sinon.stub(Main.prototype, 'workLoop').resolves();
+    const disconnectStub = sinon.stub(Main.prototype, 'disconnect').resolves();
 
     await main();
-    assert(Main.prototype.init.calledOnce);
-    assert(Main.prototype.workLoop.calledOnce);
+
+    sinon.assert.calledOnce(initStub);
+    sinon.assert.calledOnce(workLoopStub);
+    sinon.assert.calledOnce(disconnectStub);
   });
-});
+}
+
+);

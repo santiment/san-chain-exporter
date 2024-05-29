@@ -184,7 +184,6 @@ const decodeFunctionsMap = {
 
 export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number,
   contractAddress: string, timestampsCache: any) {
-  console.log("Real function got called")
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
   const startTime = Date.now();
   await timestampsCache.waitResponse();

@@ -7,7 +7,7 @@
     "test": "TEST_ENV=1 BLOCKCHAIN=eth CONTRACT_MAPPING_FILE_PATH=test/erc20/contract_mapping/contract_mapping.json LOG_LEVEL=error CONTRACT_MODE=extract_exact_overwrite mocha --require source-map-support/register --recursive --reporter spec ./built/test/**/*.js",
     "integration_test": "mocha --recursive --reporter spec integration_test",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "start": "npm run build && node ./built/index.js",
+    "start": "npm run build:production && node ./built/index.js",
     "build:dev": "rm -r -f ./built && tsc && ./copy_assets.sh",
     "build:production": "rm -r -f ./built && tsc -p tsconfig.production.json && ./copy_assets.sh",
     "tsc_only": "tsc"
@@ -44,7 +44,6 @@
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
-    "chai": "^4.1.2",
     "eslint": "^8.29.0",
     "mocha": "^10.1.0",
     "rewire": "^6.0.0",
