@@ -1,8 +1,10 @@
 'use strict';
-const { decodeEvents } = require('../../erc20/lib/fetch_events');
-const { TimestampsCache } = require('../../erc20/lib/timestamps_cache');
-const { decodeAddress } = require('../../erc20/lib/util');
-const { decodeEventBasicInfo } = require('../../erc20/lib/fetch_events');
+import { decodeEvents } from '../../erc20/lib/fetch_events';
+import { TimestampsCache } from '../../erc20/lib/timestamps_cache';
+import { decodeAddress } from '../../erc20/lib/util';
+import { decodeEventBasicInfo } from '../../erc20/lib/fetch_events';
+import { Web3Interface } from '../../eth/lib/web3_wrapper';
+import { HTTPClientInterface } from '../../../types'
 
 const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 
@@ -10,7 +12,7 @@ const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 /**Transfer(address,address,uint256)
  * Used by all Polygon ERC20 tokens
  **/
-function decodeTransferEvent(web3Wrapper, event, timestampsCache) {
+function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCache) {
   if (event['topics'].length !== 4) {
     return null;
   }
@@ -32,7 +34,7 @@ const decodeFunctions = {
 
 };
 
-async function getPastEvents(ethClient, web3Wrapper, fromBlock, toBlock) {
+export async function getPastEvents(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number, toBlock: number) {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock);
 
   const timestampsCache = new TimestampsCache(ethClient, web3Wrapper, fromBlock, toBlock);
@@ -42,7 +44,7 @@ async function getPastEvents(ethClient, web3Wrapper, fromBlock, toBlock) {
 }
 
 
-async function getRawEvents(web3Wrapper, fromBlock, toBlock) {
+async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number) {
   let queryObject = {
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
     toBlock: web3Wrapper.parseNumberToHex(toBlock),
@@ -52,7 +54,3 @@ async function getRawEvents(web3Wrapper, fromBlock, toBlock) {
   return await web3Wrapper.getPastLogs(queryObject);
 }
 
-
-module.exports = {
-  getPastEvents
-};

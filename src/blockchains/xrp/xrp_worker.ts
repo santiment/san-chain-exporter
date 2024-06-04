@@ -1,5 +1,5 @@
 'use strict';
-import xrpl, { LedgerRequest } from 'xrpl';
+import { Client, LedgerRequest } from 'xrpl';
 import assert from 'assert';
 import { logger } from '../../lib/logger';
 import { BaseWorker } from '../../lib/worker_base';
@@ -28,7 +28,7 @@ export class XRPWorker extends BaseWorker {
       const clientOptions = { timeout: this.settings.DEFAULT_WS_TIMEOUT };
       const nodeURL = this.nodeURLs[i % this.nodeURLs.length];
       logger.info(`Using ${nodeURL} as XRPL API endpoint.`);
-      const api = new xrpl.Client(nodeURL, clientOptions);
+      const api = new Client(nodeURL, clientOptions);
 
       api.on('error', (...error) => {
         logger.error('Error in XRPL API connection number: ' + i + error);
@@ -198,7 +198,3 @@ export class XRPWorker extends BaseWorker {
     return ledgers;
   }
 }
-
-module.exports = {
-  worker: XRPWorker
-};

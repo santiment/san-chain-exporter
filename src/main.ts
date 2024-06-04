@@ -2,7 +2,7 @@
 import url from 'url';
 import { Server, IncomingMessage, ServerResponse } from 'http'
 import serve, { send } from 'micro';
-import metrics from './lib/metrics';
+const metrics = require('./lib/metrics');
 import { logger } from './lib/logger';
 import { Exporter } from './lib/kafka_storage';
 const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';

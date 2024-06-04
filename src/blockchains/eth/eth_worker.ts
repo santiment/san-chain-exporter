@@ -83,7 +83,7 @@ export class ETHWorker extends BaseWorker {
     for (const block of blocks) {
       const blockNumber = safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.number));
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts,
-        this.settings.IS_ETH, this.settings.BURN_ADDRESS, this.settings.LONDON_FORK_BLOCK);
+        this.settings.IS_ETH);
       if (block.withdrawals !== undefined) {
         const blockTimestamp = safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp));
         decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));

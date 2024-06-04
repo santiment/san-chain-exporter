@@ -1,23 +1,28 @@
 'use strict';
+import { Web3Interface, safeCastToNumber } from '../../eth/lib/web3_wrapper';
+import { HTTPClientInterface } from '../../../types'
 
-class TimestampsCache {
-  constructor(ethClient, web3Wrapper, fromBlock, toBlock) {
+export class TimestampsCache {
+  private timestampStore: { [key: number]: number };
+  private rangeSize: number;
+  private web3Wrapper: Web3Interface;
+  private responsePromise: Promise<any>;
+
+  constructor(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number, toBlock: number) {
     this.timestampStore = {};
     this.rangeSize = toBlock - fromBlock + 1;
     this.web3Wrapper = web3Wrapper;
 
     const blockRequests = Array.from(
       { length: toBlock - fromBlock + 1 },
-      (_, index) => ethClient.request(
+      (_, index) => ethClient.generateRequest(
         'eth_getBlockByNumber',
         // Some Nodes would also accept decimal, but we convert to be on the safe side
-        [web3Wrapper.parseNumberToHex(fromBlock + index), false],
-        undefined,
-        false
+        [web3Wrapper.parseNumberToHex(fromBlock + index), false]
       )
     );
 
-    this.responsePromise = ethClient.request(blockRequests);
+    this.responsePromise = ethClient.requestBulk(blockRequests);
   }
 
   async waitResponse() {
@@ -30,13 +35,13 @@ class TimestampsCache {
     }
 
     for (const result of resultsArray) {
-      const blockNumber = this.web3Wrapper.parseHexToNumber(result.result.number);
-      const blockTimestamp = this.web3Wrapper.parseHexToNumber(result.result.timestamp);
+      const blockNumber = safeCastToNumber(this.web3Wrapper.parseHexToNumber(result.result.number));
+      const blockTimestamp = safeCastToNumber(this.web3Wrapper.parseHexToNumber(result.result.timestamp));
       this.timestampStore[blockNumber] = blockTimestamp;
     }
   }
 
-  getBlockTimestamp(blockNumber) {
+  getBlockTimestamp(blockNumber: number) {
     if (Object.prototype.hasOwnProperty.call(this.timestampStore, blockNumber)) {
       return this.timestampStore[blockNumber];
     }
@@ -47,6 +52,4 @@ class TimestampsCache {
 }
 
 
-module.exports = {
-  TimestampsCache
-};
+

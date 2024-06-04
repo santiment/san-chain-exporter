@@ -1,4 +1,5 @@
 import assert from 'assert';
+process.env.IS_ETH = 'true';
 import { decodeTransferTrace } from '../../blockchains/eth/lib/decode_transfers';
 import { NODE_URL } from '../../blockchains/eth/lib/constants';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';

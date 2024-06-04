@@ -1,6 +1,6 @@
 import { Web3Interface, safeCastToNumber } from './web3_wrapper';
 import { ETHBlock, ETHTransaction, ETHTransfer, ETHReceiptsMap } from '../eth_types';
-
+import { BURN_ADDRESS, LONDON_FORK_BLOCK } from './constants';
 export class FeesDecoder {
   private web3Wrapper: Web3Interface;
 
@@ -78,10 +78,9 @@ export class FeesDecoder {
     }
   }
 
-  getPostLondonForkFees(transaction: ETHTransaction, block: ETHBlock, receiptsMap: ETHReceiptsMap,
-    burnAddress: string): ETHTransfer[] {
+  getPostLondonForkFees(transaction: ETHTransaction, block: ETHBlock, receiptsMap: ETHReceiptsMap): ETHTransfer[] {
     const result: ETHTransfer[] = [];
-    result.push(this.getBurntFee(transaction, block, receiptsMap, burnAddress));
+    result.push(this.getBurntFee(transaction, block, receiptsMap, BURN_ADDRESS));
     const minerFee = this.getMinerFee(transaction, block, receiptsMap);
     if (minerFee !== undefined) {
       result.push(minerFee)
@@ -90,13 +89,12 @@ export class FeesDecoder {
     return result;
   }
 
-  getFeesFromTransactionsInBlock(block: ETHBlock, blockNumber: number, receipts: ETHReceiptsMap, isETH: boolean,
-    burnAddress: string, londonForkBlock: number): ETHTransfer[] {
+  getFeesFromTransactionsInBlock(block: ETHBlock, blockNumber: number, receipts: ETHReceiptsMap, isETH: boolean): ETHTransfer[] {
     const result: ETHTransfer[] = [];
     block.transactions.forEach((transaction: ETHTransaction) => {
       const feeTransfers: ETHTransfer[] =
-        isETH && blockNumber >= londonForkBlock ?
-          this.getPostLondonForkFees(transaction, block, receipts, burnAddress) :
+        isETH && blockNumber >= LONDON_FORK_BLOCK ?
+          this.getPostLondonForkFees(transaction, block, receipts) :
           this.getPreLondonForkFees(transaction, block, receipts);
 
       result.push(...feeTransfers);

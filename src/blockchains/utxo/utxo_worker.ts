@@ -6,7 +6,7 @@ import { Exporter } from '../../lib/kafka_storage';
 import { HTTPClientInterface } from '../../types';
 
 
-class UtxoWorker extends BaseWorker {
+export class UTXOWorker extends BaseWorker {
   private readonly NODE_URL: string;
   private readonly MAX_RETRIES: number;
   private readonly RPC_USERNAME: string;

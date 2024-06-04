@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { Web3Interface, constructWeb3WrapperNoCredentials, safeCastToNumber } from '../../blockchains/eth/lib/web3_wrapper';
 import { FeesDecoder } from '../../blockchains/eth/lib/fees_decoder';
-import { ETHBlock, ETHReceipt, ETHTransaction } from '../../blockchains/eth/eth_types';
+import { ETHBlock, ETHReceipt } from '../../blockchains/eth/eth_types';
 import constants from '../../blockchains/eth/lib/constants';
 
 /**
@@ -34,38 +34,6 @@ const block_json_post_london_zero_priority: ETHBlock = {
     'type': '0x2'
   }]
 };
-
-/**
- * A transaction for which the miner fee is reduced by the value of 'maxFeePerGas'.
- */
-const block_json_post_london_fee_reduced_by_maxFeePerGas: ETHBlock = {
-  'baseFeePerGas': '0xba37423df',
-  'gasLimit': '0x1caa85f',
-  'gasUsed': '0x9041b5',
-  'hash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
-  'miner': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-  'number': '0xcd2f91',
-  'timestamp': '0x616e7e04',
-  'totalDifficulty': '0x6ec3c4e96a280cc26b8',
-  'difficulty': '18092216360',
-  'size': '1076',
-  'transactions': [
-    {
-      'blockHash': '0x6b029d5ebe5ca9bc568cd8630bd0af3d6b2b7ebed39fb7a6127a9169017010bd',
-      'blockNumber': '0xcd2f91',
-      'from': '0x8ae57a027c63fca8070d1bf38622321de8004c67',
-      'gas': '0x2a6af',
-      'gasPrice': '0xbdf0eeddf',
-      'maxPriorityFeePerGas': '0x3b9aca00',
-      'maxFeePerGas': '0xBA43B7400',
-      'hash': '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
-      'to': '0x2f102e69cbce4938cf7fb27adb40fad097a13668',
-      'transactionIndex': '0xa4',
-      'value': '0x0',
-      'type': '0x2'
-    }]
-};
-
 
 const block_json_post_london_with_priority: ETHBlock = {
   'baseFeePerGas': '0xba37423df',
@@ -204,8 +172,7 @@ describe('Fees decoder test', function () {
   it('test fees post London zero priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_zero_priority.number)),
-      turnReceiptsToMap(receipts_json_post_london_no_priority), true, constants.BURN_ADDRESS,
-      constants.LONDON_FORK_BLOCK);
+      turnReceiptsToMap(receipts_json_post_london_no_priority), true);
 
     const expected = [{
       from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
@@ -225,8 +192,7 @@ describe('Fees decoder test', function () {
   it('test fees post London with priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_with_priority,
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_with_priority.number)),
-      turnReceiptsToMap(receipts_json_post_london_with_priority), true, constants.BURN_ADDRESS,
-      constants.LONDON_FORK_BLOCK);
+      turnReceiptsToMap(receipts_json_post_london_with_priority), true);
 
     const expected = [{
       blockNumber: 13447057,
@@ -256,8 +222,7 @@ describe('Fees decoder test', function () {
   it('test old type fees post London', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_old_tx_type,
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_old_tx_type.number)),
-      turnReceiptsToMap(receipts_json_post_london_old_tx_type), true, constants.BURN_ADDRESS,
-      constants.LONDON_FORK_BLOCK);
+      turnReceiptsToMap(receipts_json_post_london_old_tx_type), true);
 
     const expected = [{
       blockNumber: 13318440,
@@ -287,7 +252,7 @@ describe('Fees decoder test', function () {
   it('test fees pre London', async function () {
     const preLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_pre_london,
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_pre_london.number)),
-      turnReceiptsToMap(receipts_json_pre_london), true, constants.BURN_ADDRESS, constants.LONDON_FORK_BLOCK);
+      turnReceiptsToMap(receipts_json_pre_london), true);
 
     const expected = [{
       from: '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',

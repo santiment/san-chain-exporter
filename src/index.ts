@@ -1,13 +1,13 @@
 'use strict';
 import { logger } from './lib/logger';
-import { BLOCKCHAIN, parseBoolean } from './lib/constants';
+import { BLOCKCHAIN, getBoolEnvVariable } from './lib/constants';
 import { Main } from './main'
 
 
 let mainInstance: Main;
 
 export async function main() {
-  const mainInstance = new Main();
+  mainInstance = new Main();
 
   try {
     if (BLOCKCHAIN === undefined) {
@@ -28,7 +28,7 @@ export async function main() {
   }
 }
 
-if (!parseBoolean(process.env.TEST_ENV)) {
+if (!getBoolEnvVariable('TEST_ENV', false)) {
   process.on('SIGINT', () => {
     mainInstance.stop();
   });

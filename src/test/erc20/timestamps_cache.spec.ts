@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { HTTPClientInterface } from '../../types'
 import { TimestampsCache } from '../../blockchains/erc20/lib/timestamps_cache';
 import { NODE_URL } from '../../blockchains/erc20/lib/constants';
 import { constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
@@ -29,9 +30,17 @@ const blockResponses = [
   }
 ];
 
-class EthClientMock {
-  request() {
-    return blockResponses;
+class EthClientMock implements HTTPClientInterface {
+  request(): Promise<any> {
+    return Promise.resolve(blockResponses);
+  }
+
+  requestBulk(): Promise<any> {
+    return this.request();
+  }
+
+  generateRequest(): any {
+    return null;
   }
 }
 
