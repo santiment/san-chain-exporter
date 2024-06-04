@@ -1,8 +1,9 @@
 /*jshint esversion: 6 */
-const assert = require('assert');
-
-const xrp_worker = require('../../blockchains/xrp/xrp_worker');
-const constants = require('../../blockchains/xrp/lib/constants');
+import assert from 'assert';
+const sinon = require('sinon');
+import { XRPWorker } from '../../blockchains/xrp/xrp_worker';
+import { XRPConnection } from '../../blockchains/xrp/xrp_types';
+import constants from '../../blockchains/xrp/lib/constants';
 
 /** A stripped down XRP block */
 const xrpBlock = {
@@ -30,18 +31,16 @@ const xrpBlock = {
   ]
 };
 
-
-
-const mockFetchLedgerTransactions = (connection, ledger_index) => {
-  const localBlock = structuredClone(xrpBlock);
+const mockFetchLedgerTransactions = (_connection: any, ledger_index: number) => {
+  const localBlock: any = structuredClone(xrpBlock);
   localBlock.ledger.ledger_index = ledger_index;
   return localBlock;
 };
 
 describe('workLoopSimpleTest', function () {
   it('Checking that position is being updated', async function () {
-    const worker = new xrp_worker.worker(constants);
-    worker.fetchLedgerTransactions = mockFetchLedgerTransactions;
+    const worker = new XRPWorker(constants);
+    sinon.stub(worker, 'fetchLedgerTransactions').callsFake(mockFetchLedgerTransactions);
 
     // Set a huge last confirmed Node block, so that we do not ask the node and mock more easily.
     worker.lastExportedBlock = 10;
@@ -61,8 +60,8 @@ describe('workLoopSimpleTest', function () {
   });
 
   it('Checking that expected result is returned', async function () {
-    const worker = new xrp_worker.worker(constants);
-    worker.fetchLedgerTransactions = mockFetchLedgerTransactions;
+    const worker = new XRPWorker(constants);
+    sinon.stub(worker, 'fetchLedgerTransactions').callsFake(mockFetchLedgerTransactions);
 
     // Set a huge last confirmed Node block, so that we do not ask the node and mock more easily.
     worker.lastExportedBlock = 10;
@@ -72,7 +71,7 @@ describe('workLoopSimpleTest', function () {
     const expectedResult = [];
 
     for (let ledger_index = 11; ledger_index <= 20; ++ledger_index) {
-      const localBlock = structuredClone(xrpBlock);
+      const localBlock: any = structuredClone(xrpBlock);
       localBlock.ledger.ledger_index = ledger_index;
       localBlock.primaryKey = ledger_index;
       expectedResult.push(localBlock);
@@ -81,7 +80,7 @@ describe('workLoopSimpleTest', function () {
   });
 
   it('should loop several times due to lack of transactions', async () => {
-    const worker = new xrp_worker.worker(constants);
+    const worker = new XRPWorker(constants);
     // The invalid block would have no transactions but a non 0 transaction_hash
     const invalidBlock = {
       result: {
@@ -105,7 +104,8 @@ describe('workLoopSimpleTest', function () {
     // We mock the connection send call and count how many times it is called
     let sendCallsCount = 0;
     // Reduce the retry interval so that tests finishes fast
-    worker.retryIntervalMs = 100;
+    const retryIntervalMs = 100
+    sinon.stub(worker, 'retryIntervalMs').value(retryIntervalMs);
     worker.connectionSend = () => {
       sendCallsCount += 1;
       return Promise.resolve(invalidBlock);
@@ -119,10 +119,11 @@ describe('workLoopSimpleTest', function () {
         sendCallsCount += 1;
         return Promise.resolve(validEmptyBlock);
       };
-    }, 2 * worker.retryIntervalMs);
+    }, 2 * retryIntervalMs);
 
+    const connection = null as unknown as XRPConnection; // Bypass TypeScript type checking
     // This call should eventually return, once the callback returns the correct block
-    const fetchResult = await worker.fetchLedgerTransactions(null, 1)
+    const fetchResult = await worker.fetchLedgerTransactions(connection, 1)
 
     assert.ok(sendCallsCountWhileInvalid >= 2);
     assert.ok(sendCallsCount >= 3);
