@@ -19,7 +19,7 @@ COPY src ./src
 
 RUN if [ "$BUILD_ENV" = "production" ]; \
     then npm ci && npm run build:production && npm prune --omit=dev \
-    else npm ci; npm run build:dev \
+    else npm ci && npm run build:dev; \
     fi
 
 FROM node:21.4.0-slim
