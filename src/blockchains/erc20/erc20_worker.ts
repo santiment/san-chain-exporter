@@ -36,12 +36,14 @@ function simpleHash(input: string): number {
 
 export class ERC20Worker extends BaseWorker {
   // Those methods are left public to be easily mocked in test
-  public web3Wrapper: Web3Interface;
-  public ethClient: HTTPClientInterface;
-  public getPastEventsFun: (web3Wrapper: Web3Interface, from: number, to: number, allOldContracts: any,
+  private web3Wrapper: Web3Interface;
+  private ethClient: HTTPClientInterface;
+  private getPastEventsFun: (web3Wrapper: Web3Interface, from: number, to: number, allOldContracts: any,
     timestampsCache: any) => any = getPastEvents;
-  public contractsOverwriteArray: any;
-  public contractsUnmodified: any;
+  private contractsOverwriteArray: any;
+  private contractsUnmodified: any;
+  // This field is heavily tested in unit tests. Most probably we should change this and instead assert only the
+  // overall logic, not the state of member variables.
   public blocksList: any;
 
   private allOldContracts: any;

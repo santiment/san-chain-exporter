@@ -36,7 +36,7 @@
     "p-queue": "^7.2.0",
     "p-retry": "^6.1.0",
     "prom-client": "^13.1.0",
-    "web3": "^4.2.2",
+    "web3": "^4.9.0",
     "xrpl": "^2.6.0"
   },
   "devDependencies": {

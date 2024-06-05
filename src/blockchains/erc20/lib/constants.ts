@@ -1,6 +1,8 @@
-const BLOCK_INTERVAL = parseInt(process.env.BLOCK_INTERVAL || '100');
-const CONFIRMATIONS = parseInt(process.env.CONFIRMATIONS || '3');
-const EXPORT_BLOCKS_LIST = parseBoolean(process.env.EXPORT_BLOCKS_LIST);
+import { getBoolEnvVariable, getIntEnvVariable } from '../../../lib/constants.js';
+
+const BLOCK_INTERVAL = getIntEnvVariable('BLOCK_INTERVAL', 100);
+const CONFIRMATIONS = getIntEnvVariable('CONFIRMATIONS', 3);
+const EXPORT_BLOCKS_LIST = getBoolEnvVariable('EXPORT_BLOCKS_LIST');
 // This multiplier is used to expand the space of the output primary keys.
 //This allows for the event indexes to be added to the primary key.
 const PRIMARY_KEY_MULTIPLIER = 10000;
@@ -13,7 +15,7 @@ const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
 const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
 // Should events for a contract land in the same Kafka partition
 const EVENTS_IN_SAME_PARTITION = process.env.EVENTS_IN_SAME_PARTITION || false;
-const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT) || 10000;
+const DEFAULT_TIMEOUT = getIntEnvVariable('DEFAULT_TIMEOUT', 10000);
 
 
 const CONTRACT_MAPPING_FILE_PATH = (
@@ -30,15 +32,9 @@ function checkEnvVariables() {
     }
 }
 
-function parseBoolean(value) {
-    if (value === undefined) return false;
-    const lowerCasedValue = value.trim().toLowerCase();
-    return lowerCasedValue === 'true' || lowerCasedValue === '1';
-}
-
 checkEnvVariables();
 
-module.exports = {
+export {
     BLOCK_INTERVAL,
     CONFIRMATIONS,
     EXPORT_BLOCKS_LIST,
@@ -50,3 +46,18 @@ module.exports = {
     EVENTS_IN_SAME_PARTITION,
     DEFAULT_TIMEOUT
 };
+
+const constants = {
+    BLOCK_INTERVAL,
+    CONFIRMATIONS,
+    EXPORT_BLOCKS_LIST,
+    PRIMARY_KEY_MULTIPLIER,
+    CONTRACT_MODE,
+    NODE_URL,
+    CONTRACT_MAPPING_FILE_PATH,
+    LOOP_INTERVAL_CURRENT_MODE_SEC,
+    EVENTS_IN_SAME_PARTITION,
+    DEFAULT_TIMEOUT
+};
+
+export default constants;

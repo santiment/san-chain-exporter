@@ -9,8 +9,8 @@ import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WO
 
 
 export class MaticWorker extends BaseWorker {
-  public web3Wrapper: Web3Interface;
-  public ethClient: HTTPClientInterface;
+  private web3Wrapper: Web3Interface;
+  private ethClient: HTTPClientInterface;
 
   constructor(settings: any) {
     super(settings);

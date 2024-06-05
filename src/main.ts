@@ -13,10 +13,10 @@ import { ExporterPosition } from './types'
 import { BaseWorker } from './lib/worker_base';
 
 export class Main {
-  public worker!: BaseWorker;
+  private worker!: BaseWorker;
   private shouldWork: boolean;
-  public exporter!: Exporter;
-  public lastProcessedPosition!: ExporterPosition;
+  private exporter!: Exporter;
+  private lastProcessedPosition!: ExporterPosition;
   private microServer?: Server;
 
   constructor() {

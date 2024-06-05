@@ -15,7 +15,7 @@ import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
 
 
 export class ETHWorker extends BaseWorker {
-  public web3Wrapper: Web3Interface;
+  private web3Wrapper: Web3Interface;
   private ethClient: HTTPClientInterface;
   private feesDecoder: FeesDecoder;
   private withdrawalsDecoder: WithdrawalsDecoder;
