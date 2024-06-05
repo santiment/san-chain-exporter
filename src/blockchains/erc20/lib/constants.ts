@@ -2,7 +2,7 @@ import { getBoolEnvVariable, getIntEnvVariable } from '../../../lib/constants.js
 
 const BLOCK_INTERVAL = getIntEnvVariable('BLOCK_INTERVAL', 100);
 const CONFIRMATIONS = getIntEnvVariable('CONFIRMATIONS', 3);
-const EXPORT_BLOCKS_LIST = getBoolEnvVariable('EXPORT_BLOCKS_LIST');
+const EXPORT_BLOCKS_LIST = getBoolEnvVariable('EXPORT_BLOCKS_LIST', false);
 // This multiplier is used to expand the space of the output primary keys.
 //This allows for the event indexes to be added to the primary key.
 const PRIMARY_KEY_MULTIPLIER = 10000;

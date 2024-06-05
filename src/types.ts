@@ -8,7 +8,8 @@ export class ExporterPosition {
   }
 }
 
-// This interface is modeled agains the jayson Client that we actually use
+// This interface is modeled against the jayson Client that we use. This client has those three methods, we name them
+// clearer here.
 export interface HTTPClientInterface {
   request(method: string, params: any[], id?: string | number): Promise<any>;
   requestBulk(requests: any[]): Promise<any>;
