@@ -1,5 +1,6 @@
 import assert from 'assert';
 import path from 'path';
+const sinon = require('sinon');
 import { ERC20Worker } from '../../blockchains/erc20/erc20_worker';
 import constants from '../../blockchains/erc20/lib/constants';
 import { ContractOverwrite } from '../../blockchains/erc20/lib/contract_overwrite';
@@ -73,11 +74,9 @@ describe('Test ERC20 worker', function () {
         // Overwrite variables and methods that the 'work' method would use internally.
         constants.CONTRACT_MODE = 'vanilla';
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper(1);
-        worker.ethClient = new MockEthClient();
-        worker.getPastEventsFun = async function () {
-            return [originalEvent];
-        };
+        sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(1))
+        sinon.stub(worker, 'ethClient').value(new MockEthClient())
+        sinon.stub(worker, 'getPastEventsFun').resolves([originalEvent]);
 
         await worker.init(undefined);
         worker.lastConfirmedBlock = 1;
@@ -94,16 +93,12 @@ describe('Test ERC20 worker', function () {
         constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper(1);
-        worker.ethClient = new MockEthClient();
-        worker.getPastEventsFun = async function () {
-            return [originalEvent];
-        };
+        sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(1))
+        sinon.stub(worker, 'ethClient').value(new MockEthClient())
+        sinon.stub(worker, 'getPastEventsFun').resolves([originalEvent]);
         await worker.init(undefined);
 
-        worker.contractsOverwriteArray = [];
-        worker.contractsUnmodified = [];
-        worker.contractsOverwriteArray.push(new ContractOverwrite(
+        sinon.stub(worker, 'contractsOverwriteArray').value([new ContractOverwrite(
             {
                 'old_contracts': [
                     {
@@ -117,7 +112,9 @@ describe('Test ERC20 worker', function () {
                 ],
                 'new_address': 'snx_contract'
             }
-        ));
+        )]);
+        sinon.stub(worker, 'contractsUnmodified').value([]);
+        sinon.stub(worker, 'contractsUnmodified').value([]);
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
@@ -132,15 +129,12 @@ describe('Test ERC20 worker', function () {
         constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper(1);
-        worker.ethClient = new MockEthClient();
-        worker.getPastEventsFun = async function () {
-            return [originalEvent];
-        };
+        sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(1))
+        sinon.stub(worker, 'ethClient').value(new MockEthClient())
+        sinon.stub(worker, 'getPastEventsFun').resolves([originalEvent]);
         await worker.init(undefined);
 
-        worker.contractsOverwriteArray = [];
-        worker.contractsOverwriteArray.push(new ContractOverwrite(
+        sinon.stub(worker, 'contractsOverwriteArray').value([new ContractOverwrite(
             {
                 'old_contracts': [
                     {
@@ -154,7 +148,7 @@ describe('Test ERC20 worker', function () {
                 ],
                 'new_address': 'snx_contract'
             }
-        ));
+        )]);
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 
@@ -172,15 +166,13 @@ describe('Test ERC20 worker', function () {
         constants.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
 
         const worker = new ERC20Worker(constants);
-        worker.web3Wrapper = new MockWeb3Wrapper(1);
-        worker.ethClient = new MockEthClient();
-        worker.getPastEventsFun = async function () {
-            return [originalEvent, originalEvent2];
-        };
+        sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(1))
+        sinon.stub(worker, 'ethClient').value(new MockEthClient())
+        sinon.stub(worker, 'getPastEventsFun').resolves([originalEvent, originalEvent2]);
+
         await worker.init(undefined);
 
-        worker.contractsOverwriteArray = [];
-        worker.contractsOverwriteArray.push(new ContractOverwrite(
+        sinon.stub(worker, 'contractsOverwriteArray').value([new ContractOverwrite(
             {
                 'old_contracts': [
                     {
@@ -194,7 +186,7 @@ describe('Test ERC20 worker', function () {
                 ],
                 'new_address': 'snx_contract'
             }
-        ));
+        )]);
         worker.lastConfirmedBlock = 1;
         worker.lastExportedBlock = 0;
 

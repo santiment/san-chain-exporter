@@ -1,9 +1,9 @@
+const sinon = require('sinon');
 import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import constants from '../../blockchains/eth/lib/constants';
 import { MockWeb3Wrapper } from './mock_web3_wrapper';
 import { WORK_NO_SLEEP, WORK_SLEEP, NO_WORK_SLEEP, nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime } from '../../blockchains/eth/lib/next_interval_calculator';
 
-const sinon = require('sinon');
 import assert from 'assert';
 
 
@@ -25,7 +25,7 @@ describe('analyzeWorkerContext', () => {
     const worker = new ETHWorker(constants)
     worker.lastExportedBlock = 90;
     worker.lastConfirmedBlock = 90;
-    worker.web3Wrapper = new MockWeb3Wrapper(100);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(100));
 
     const scenario = await analyzeWorkerContext(worker);
     assert.deepStrictEqual(scenario, WORK_SLEEP);
@@ -35,7 +35,7 @@ describe('analyzeWorkerContext', () => {
     const worker = new ETHWorker(constants)
     worker.lastExportedBlock = 100;
     worker.lastConfirmedBlock = 100;
-    worker.web3Wrapper = new MockWeb3Wrapper(100);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(100));
 
     const scenario = await analyzeWorkerContext(worker);
     assert.deepStrictEqual(scenario, NO_WORK_SLEEP);
@@ -90,7 +90,7 @@ describe('nextIntervalCalculator', () => {
 describe('various scenarios', () => {
   it('fetched interval should not go backwards even if the blockchain node reports old block numbers', async () => {
     const worker = new ETHWorker(constants)
-    worker.web3Wrapper = new MockWeb3Wrapper(100);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(100));
     const context = await analyzeWorkerContext(worker);
     assert.deepStrictEqual(context, WORK_SLEEP);
     const result = nextIntervalCalculator(worker);
@@ -99,7 +99,7 @@ describe('various scenarios', () => {
     worker.lastExportedBlock = result.toBlock;
 
     // Mock the Node to report an old number
-    worker.web3Wrapper = new MockWeb3Wrapper(90);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(90));
 
     const contextSecond = await analyzeWorkerContext(worker);
     assert.deepStrictEqual(contextSecond, NO_WORK_SLEEP);
@@ -107,7 +107,7 @@ describe('various scenarios', () => {
 
   it('fetched interval should not go backwards even if saved state is invalid', async () => {
     const worker = new ETHWorker(constants)
-    worker.web3Wrapper = new MockWeb3Wrapper(4);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(4));
 
     // Setup a situation where the exported block has exceeded the Node block
     // Test is similar to the above but test that we already saved an old lastConfirmedBlock
@@ -120,11 +120,12 @@ describe('various scenarios', () => {
 
   it('blockchain node is not called when we are catching up', async () => {
     const worker = new ETHWorker(constants)
-    worker.web3Wrapper = new MockWeb3Wrapper(999);
+    const mockWeb3Wrapper = new MockWeb3Wrapper(999);
+    sinon.stub(worker, 'web3Wrapper').value(mockWeb3Wrapper);
     worker.lastExportedBlock = 1;
     worker.lastConfirmedBlock = 2;
 
-    const nodeCallSpy = sinon.spy(worker.web3Wrapper, 'getBlockNumber');
+    const nodeCallSpy = sinon.spy(mockWeb3Wrapper, 'getBlockNumber');
 
     await analyzeWorkerContext(worker);
     assert.ok(nodeCallSpy.notCalled);
@@ -132,11 +133,12 @@ describe('various scenarios', () => {
 
   it('blockchain node is called when exporter has caught up', async () => {
     const worker = new ETHWorker(constants)
-    worker.web3Wrapper = new MockWeb3Wrapper(10);
+    const mockWeb3Wrapper = new MockWeb3Wrapper(10);
+    sinon.stub(worker, 'web3Wrapper').value(mockWeb3Wrapper);
     worker.lastExportedBlock = 2;
     worker.lastConfirmedBlock = 2;
 
-    const nodeCallSpy = sinon.spy(worker.web3Wrapper, 'getBlockNumber');
+    const nodeCallSpy = sinon.spy(mockWeb3Wrapper, 'getBlockNumber');
 
     await analyzeWorkerContext(worker);
     assert.ok(nodeCallSpy.called);

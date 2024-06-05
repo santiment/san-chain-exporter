@@ -102,8 +102,8 @@ describe('Main tests', () => {
     exporterStub.getLastPosition.throws(new Error('Exporter getLastPosition failed'));
 
     const mainInstance = new Main();
-    mainInstance.exporter = exporterStub;
-    mainInstance.worker = new BaseWorker(constants);
+    sinon.stub(mainInstance, 'exporter').value(exporterStub);
+    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
 
     try {
       await mainInstance.handleInitPosition();
@@ -124,8 +124,8 @@ describe('Main tests', () => {
     exporterStub.savePosition.throws(new Error('Exporter savePosition failed'));
 
     const mainInstance = new Main();
-    mainInstance.exporter = exporterStub;
-    mainInstance.worker = new BaseWorker(constants);
+    sinon.stub(mainInstance, 'exporter').value(exporterStub);
+    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
 
     try {
       await mainInstance.handleInitPosition();
@@ -142,7 +142,7 @@ describe('Main tests', () => {
 
   it('initWorker throws error when worker is already present', async () => {
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker(constants);
+    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
     try {
       await mainInstance.initWorker('eth', {});
       assert.fail('initWorker should have thrown an error');
@@ -158,7 +158,7 @@ describe('Main tests', () => {
 
   it('initWorker throws an error when worker.init() fails', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
+    sinon.stub(mainInstance, 'exporter').value(new Exporter('test-exporter', true, 'topic-not-used'));
 
     sinon.stub(ETHWorker.prototype, 'init').rejects(new Error('Worker init failed'));
 
@@ -177,7 +177,7 @@ describe('Main tests', () => {
 
   it('initWorker throws an error when handleInitPosition() fails', async () => {
     const mainInstance = new Main();
-    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
+    sinon.stub(mainInstance, 'exporter').value(new Exporter('test-exporter', true, 'topic-not-used'));
     sinon.stub(ETHWorker.prototype, 'init').resolves();
 
     sinon.stub(mainInstance, 'handleInitPosition').throws(new Error('Error when initializing position'));
@@ -208,7 +208,7 @@ describe('Main tests', () => {
   it('workLoop throws error when worker can\'t be initialised', async () => {
     sinon.stub(BaseWorker.prototype, 'work').rejects(new Error('Error in worker "work" method'));
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker(constants);
+    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
     try {
       await mainInstance.workLoop();
       assert.fail('workLoop should have thrown an error');
@@ -228,8 +228,8 @@ describe('Main tests', () => {
     sinon.stub(Exporter.prototype, 'storeEvents').rejects(new Error('storeEvents failed'));
 
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker(constants);
-    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
+    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
+    sinon.stub(mainInstance, 'exporter').value(new Exporter('test-exporter', true, 'topic-not-used'));
     try {
       await mainInstance.workLoop();
       assert.fail('workLoop should have thrown an error');
@@ -250,8 +250,9 @@ describe('Main tests', () => {
     sinon.stub(Exporter.prototype, 'savePosition').rejects(new Error('savePosition failed'));
 
     const mainInstance = new Main();
-    mainInstance.worker = new BaseWorker(constants);
-    mainInstance.exporter = new Exporter('test-exporter', true, 'topic-not-used');
+    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
+    sinon.stub(mainInstance, 'exporter').value(new Exporter('test-exporter', true, 'topic-not-used'));
+
     try {
       await mainInstance.workLoop();
       assert.fail('workLoop should have thrown an error');
