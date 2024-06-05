@@ -8,7 +8,7 @@ const IS_ETH = getBoolEnvVariable('IS_ETH');
 const CONFIRMATIONS = getIntEnvVariable('CONFIRMATIONS', 3);
 const BLOCK_INTERVAL = getIntEnvVariable('BLOCK_INTERVAL', 100);
 const RECEIPTS_API_METHOD = process.env.RECEIPTS_API_METHOD || 'eth_getBlockReceipts';
-const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
+const NODE_URL = process.env.NODE_URL || 'http://localhost:8545/';
 const LOOP_INTERVAL_CURRENT_MODE_SEC = getIntEnvVariable('LOOP_INTERVAL_CURRENT_MODE_SEC', 30);
 
 export {
