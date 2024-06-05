@@ -1,5 +1,4 @@
 'use strict';
-import assert from 'assert'
 import { logger } from '../../lib/logger';
 import { Exporter } from '../../lib/kafka_storage';
 import { constructRPCClient } from '../../lib/http_client';
@@ -35,7 +34,6 @@ function simpleHash(input: string): number {
 }
 
 export class ERC20Worker extends BaseWorker {
-  // Those methods are left public to be easily mocked in test
   private web3Wrapper: Web3Interface;
   private ethClient: HTTPClientInterface;
   private getPastEventsFun: (web3Wrapper: Web3Interface, from: number, to: number, allOldContracts: any,
@@ -162,7 +160,6 @@ export class ERC20Worker extends BaseWorker {
     // If overwritten events have been generated, they need to be merged into the original events
     if (overwritten_events.length > 0) {
       stableSort(resultEvents, function primaryKeyOrder(a: ERC20Transfer, b: ERC20Transfer) {
-        assert
         if (typeof a.primaryKey !== 'number' || typeof b.primaryKey !== 'number') {
           throw Error('Primary keys should be set to number before event')
         }

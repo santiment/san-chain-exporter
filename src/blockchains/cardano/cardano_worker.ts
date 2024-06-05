@@ -1,6 +1,3 @@
-/* jslint es6 */
-'use strict';
-import got from 'got';
 import { v1 as uuidv1 } from 'uuid';
 import { BaseWorker } from '../../lib/worker_base';
 import { Transaction } from './cardano_types';
@@ -13,6 +10,7 @@ const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
 
 export class CardanoWorker extends BaseWorker {
   private pRetry: any;
+  private got: any;
 
   constructor(settings: any) {
     super(settings);
@@ -20,7 +18,7 @@ export class CardanoWorker extends BaseWorker {
 
   async sendRequest(query: string): Promise<any> {
     try {
-      return await got.post(CARDANO_GRAPHQL_URL, {
+      return await this.got.post(CARDANO_GRAPHQL_URL, {
         json: {
           jsonrpc: '2.0',
           id: uuidv1(),
@@ -171,6 +169,8 @@ export class CardanoWorker extends BaseWorker {
   }
 
   async init() {
+    const { default: got } = await import('got');
+    this.got = got;
     await this.setLastConfirmedBlock();
     this.pRetry = (await import('p-retry')).default;
   }

@@ -12,7 +12,7 @@ const PRIMARY_KEY_MULTIPLIER = 10000;
 // "extract_all_append" - extract all contracts, also append events with overwritten contract name
 const CONTRACT_MODES_SUPPORTED = ['vanilla', 'extract_exact_overwrite', 'extract_all_append'];
 const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
-const NODE_URL = process.env.NODE_URL || process.env.PARITY_URL || 'http://localhost:8545/';
+const NODE_URL = process.env.NODE_URL || 'http://localhost:8545/';
 // Should events for a contract land in the same Kafka partition
 const EVENTS_IN_SAME_PARTITION = process.env.EVENTS_IN_SAME_PARTITION || false;
 const DEFAULT_TIMEOUT = getIntEnvVariable('DEFAULT_TIMEOUT', 10000);

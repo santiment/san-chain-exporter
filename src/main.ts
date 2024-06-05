@@ -1,7 +1,7 @@
 'use strict';
 import url from 'url';
 import { Server, IncomingMessage, ServerResponse } from 'http'
-import serve, { send } from 'micro';
+const micro = require('micro');
 const metrics = require('./lib/metrics');
 import { logger } from './lib/logger';
 import { Exporter } from './lib/kafka_storage';
@@ -70,8 +70,8 @@ export class Main {
     await this.initWorker(blockchain, mergedConstants);
     metrics.startCollection();
 
-    this.microServer = new Server(serve(
-      (request, response) => microHandler(request, response, this.healthcheck))
+    this.microServer = new Server(micro(
+      (request: IncomingMessage, response: ServerResponse) => microHandler(request, response, this.healthcheck))
     );
     this.microServer.on('error', (err) => {
       logger.error('Monitoring Micro server failure:', err);
@@ -179,16 +179,16 @@ const microHandler = async (request: IncomingMessage, response: ServerResponse,
   switch (req.pathname) {
     case '/healthcheck':
       return healthcheckFun()
-        .then(() => send(response, 200, 'ok'))
+        .then(() => micro.send(response, 200, 'ok'))
         .catch((err: any) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
-          send(response, 500, err.toString());
+          micro.send(response, 500, err.toString());
         });
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
-      return send(response, 200, await metrics.register.metrics());
+      return micro.send(response, 200, await metrics.register.metrics());
     default:
-      return send(response, 404, 'Not found');
+      return micro.send(response, 404, 'Not found');
   }
 };
 
