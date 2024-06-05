@@ -18,8 +18,8 @@ COPY package.json package-lock.json* tsconfig*.json copy_assets.sh ./
 COPY src ./src
 
 RUN if [ "$BUILD_ENV" = "production" ]; \
-    then npm ci npm ci --omit=dev; npm run build:production; \
-    else npm ci; npm run build:dev; \
+    then npm ci && npm run build:production && npm prune --omit=dev \
+    else npm ci; npm run build:dev \
     fi
 
 FROM node:21.4.0-slim
