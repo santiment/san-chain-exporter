@@ -26,6 +26,10 @@ function getBoolEnvVariable(name: string, defaultValue?: boolean) {
   return lowerCasedValue === 'true' || lowerCasedValue === '1';
 }
 
+const getLazyBoolEnvVariable = (name: string) => {
+  return () => getBoolEnvVariable(name);
+};
+
 function getIntEnvVariable(name: string, defaultValue: number | undefined) {
   const value = process.env[name]
   if (value === undefined) {
@@ -54,6 +58,7 @@ export {
   KAFKA_TOPIC,
   TEST_ENV,
   getBoolEnvVariable,
+  getLazyBoolEnvVariable,
   getIntEnvVariable
 };
 
