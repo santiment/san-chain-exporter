@@ -22,7 +22,7 @@ export class Main {
   constructor() {
     this.shouldWork = true;
     this.microServer = new Server(serve(async (request: IncomingMessage, response: ServerResponse) => {
-      microHandler(request, response, this.healthcheck);
+      microHandler(request, response, this);
     }
     ))
   }
@@ -164,8 +164,7 @@ export class Main {
 }
 
 
-const microHandler = async (request: IncomingMessage, response: ServerResponse,
-  healthcheckFun: () => Promise<string | void>) => {
+const microHandler = async (request: IncomingMessage, response: ServerResponse, mainInstance: Main) => {
   let requestURL: string;
 
   if (request.url !== undefined) {
@@ -179,7 +178,7 @@ const microHandler = async (request: IncomingMessage, response: ServerResponse,
 
   switch (req.pathname) {
     case '/healthcheck':
-      return healthcheckFun()
+      return mainInstance.healthcheck()
         .then(() => send(response, 200, 'ok'))
         .catch((err: any) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
