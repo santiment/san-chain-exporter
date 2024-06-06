@@ -1,4 +1,4 @@
-export interface Transaction {
+export type Transaction = {
   block: TransactionBlock,
   hash: string,
 
@@ -13,6 +13,6 @@ export interface Transaction {
   refundAddress: string
 }
 
-export interface TransactionBlock {
+export type TransactionBlock = {
   number: number
 }

@@ -1,4 +1,4 @@
-export interface ERC20Transfer {
+export type ERC20Transfer = {
   from: string,
   to: string,
   value: number,

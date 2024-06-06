@@ -2,7 +2,7 @@ import assert from 'assert';
 import { Web3Interface, constructWeb3WrapperNoCredentials, safeCastToNumber } from '../../blockchains/eth/lib/web3_wrapper';
 import { FeesDecoder } from '../../blockchains/eth/lib/fees_decoder';
 import { ETHBlock, ETHReceipt } from '../../blockchains/eth/eth_types';
-import constants from '../../blockchains/eth/lib/constants';
+import * as constants from '../../blockchains/eth/lib/constants';
 
 /**
  * A transaction for which there is zero 'maxPriorityFeePerGas' and also 'maxFeePerGas' - 'baseFeePerGas' = 0.

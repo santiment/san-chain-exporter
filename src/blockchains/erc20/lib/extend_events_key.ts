@@ -1,7 +1,7 @@
 'use strict';
 
 import { stableSort } from './util';
-import constants from './constants';
+import * as constants from './constants';
 import { logger } from '../../../lib/logger';
 import { ERC20Transfer } from '../erc20_types';
 

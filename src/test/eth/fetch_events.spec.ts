@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { ETHWorker } from '../../blockchains/eth/eth_worker';
-import constants from '../../blockchains/eth/lib/constants';
+import * as constants from '../../blockchains/eth/lib/constants';
 import { injectDAOHackTransfers, DAO_HACK_ADDRESSES, DAO_HACK_FORK_BLOCK } from '../../blockchains/eth/lib/dao_hack';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
 import { ETHBlock, ETHReceiptsMap, ETHTransfer } from '../../blockchains/eth/eth_types';

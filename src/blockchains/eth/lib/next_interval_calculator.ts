@@ -37,7 +37,7 @@ export function setWorkerSleepTime(worker: any, context: any) {
   worker.sleepTimeMsec = (context !== WORK_NO_SLEEP) ? worker.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000 : 0;
 }
 
-export interface BlockInterval {
+export type BlockInterval = {
   fromBlock: number;
   toBlock: number;
 }

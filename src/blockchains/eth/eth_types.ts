@@ -1,4 +1,4 @@
-export interface TraceAction {
+export type TraceAction = {
   author?: string,
   address?: string,
   rewardType?: string,
@@ -12,12 +12,12 @@ export interface TraceAction {
   refundAddress?: string
 }
 
-export interface TraceResult {
+export type TraceResult = {
   gasUsed: string,
   address?: string
 }
 
-export interface Trace {
+export type Trace = {
   action: TraceAction,
   blockHash: string,
   blockNumber: number,
@@ -29,7 +29,7 @@ export interface Trace {
   type: string
 }
 
-export interface ETHBlock {
+export type ETHBlock = {
   baseFeePerGas?: string,
   gasLimit: string,
   gasUsed: string,
@@ -46,14 +46,14 @@ export interface ETHBlock {
   transactions: ETHTransaction[]
 }
 
-export interface BeaconChainWithdrawal {
+export type BeaconChainWithdrawal = {
   index: string,
   validatorIndex: string,
   address: string,
   amount: string
 };
 
-export interface ETHTransaction {
+export type ETHTransaction = {
   from: string,
   to: string,
   hash: string,
@@ -68,7 +68,7 @@ export interface ETHTransaction {
   maxFeePerGas?: string
 };
 
-export interface ETHTransfer {
+export type ETHTransfer = {
   from: string,
   to: string,
   value: number,
@@ -81,7 +81,7 @@ export interface ETHTransfer {
   primaryKey?: number,
 }
 
-export interface ETHReceipt {
+export type ETHReceipt = {
   blockNumber: string,
   blockHash: string,
   gasUsed: string,
@@ -91,7 +91,7 @@ export interface ETHReceipt {
   transactionIndex: string
 }
 
-export interface ETHReceiptsMap {
+export type ETHReceiptsMap = {
   [transactionHash: string]: ETHReceipt;
 }
 

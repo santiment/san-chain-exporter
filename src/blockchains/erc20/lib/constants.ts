@@ -1,4 +1,4 @@
-import { getBoolEnvVariable, getIntEnvVariable } from '../../../lib/constants.js';
+import { getBoolEnvVariable, getIntEnvVariable } from '../../../lib/utils.js';
 
 const BLOCK_INTERVAL = getIntEnvVariable('BLOCK_INTERVAL', 100);
 const CONFIRMATIONS = getIntEnvVariable('CONFIRMATIONS', 3);
@@ -47,17 +47,3 @@ export {
     DEFAULT_TIMEOUT
 };
 
-const constants = {
-    BLOCK_INTERVAL,
-    CONFIRMATIONS,
-    EXPORT_BLOCKS_LIST,
-    PRIMARY_KEY_MULTIPLIER,
-    CONTRACT_MODE,
-    NODE_URL,
-    CONTRACT_MAPPING_FILE_PATH,
-    LOOP_INTERVAL_CURRENT_MODE_SEC,
-    EVENTS_IN_SAME_PARTITION,
-    DEFAULT_TIMEOUT
-};
-
-export default constants;

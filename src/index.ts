@@ -1,6 +1,7 @@
 'use strict';
 import { logger } from './lib/logger';
-import { BLOCKCHAIN, getBoolEnvVariable } from './lib/constants';
+import { BLOCKCHAIN } from './lib/constants';
+import { getBoolEnvVariable } from './lib/utils';
 import { Main } from './main'
 
 

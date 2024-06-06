@@ -10,7 +10,7 @@ const { main } = rewire('../index');
 import { BaseWorker } from '../lib/worker_base';
 import { Exporter } from '../lib/kafka_storage';
 import { ETHWorker } from '../blockchains/eth/eth_worker';
-import ethConstants from '../blockchains/eth/lib/constants';
+import * as ethConstants from '../blockchains/eth/lib/constants';
 import zkClientAsync from '../lib/zookeeper_client_async';
 
 

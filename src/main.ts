@@ -8,7 +8,7 @@ import { Exporter } from './lib/kafka_storage';
 const EXPORTER_NAME = process.env.EXPORTER_NAME || 'san-chain-exporter';
 import { EXPORT_TIMEOUT_MLS } from './lib/constants';
 import { constructWorker } from './blockchains/construct_worker'
-import constantsBase from './lib/constants';
+import * as constantsBase from './lib/constants';
 import { ExporterPosition } from './types'
 import { BaseWorker } from './lib/worker_base';
 

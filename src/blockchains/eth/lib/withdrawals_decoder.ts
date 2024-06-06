@@ -1,4 +1,4 @@
-import constants from './constants';
+import * as constants from './constants';
 import { Web3Interface } from './web3_wrapper';
 import { ETHTransfer, BeaconChainWithdrawal } from '../eth_types';
 
@@ -26,6 +26,4 @@ export class WithdrawalsDecoder {
   }
 }
 
-module.exports = {
-  WithdrawalsDecoder
-};
+
