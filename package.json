@@ -41,6 +41,7 @@
     "xrpl": "^3.1.0"
   },
   "devDependencies": {
+    "@types/micro": "^10.0.0",
     "@types/mocha": "^10.0.6",
     "@types/uuid": "^9.0.8",
     "eslint": "^9.4.0",

@@ -1,7 +1,7 @@
 'use strict';
 import url from 'url';
 import { Server, IncomingMessage, ServerResponse } from 'http'
-const micro = require('micro');
+const { send, serve } = require('micro');
 const metrics = require('./lib/metrics');
 import { logger } from './lib/logger';
 import { Exporter } from './lib/kafka_storage';
@@ -17,10 +17,14 @@ export class Main {
   private shouldWork: boolean;
   private exporter!: Exporter;
   private lastProcessedPosition!: ExporterPosition;
-  private microServer?: Server;
+  private microServer: Server;
 
   constructor() {
     this.shouldWork = true;
+    this.microServer = new Server(serve(async (request: IncomingMessage, response: ServerResponse) => {
+      microHandler(request, response, this.healthcheck);
+    }
+    ))
   }
 
   async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string) {
@@ -70,9 +74,6 @@ export class Main {
     await this.initWorker(blockchain, mergedConstants);
     metrics.startCollection();
 
-    this.microServer = new Server(micro(
-      (request: IncomingMessage, response: ServerResponse) => microHandler(request, response, this.healthcheck))
-    );
     this.microServer.on('error', (err) => {
       logger.error('Monitoring Micro server failure:', err);
       process.exit(1);
@@ -179,16 +180,16 @@ const microHandler = async (request: IncomingMessage, response: ServerResponse,
   switch (req.pathname) {
     case '/healthcheck':
       return healthcheckFun()
-        .then(() => micro.send(response, 200, 'ok'))
+        .then(() => send(response, 200, 'ok'))
         .catch((err: any) => {
           logger.error(`Healthcheck failed: ${err.toString()}`);
-          micro.send(response, 500, err.toString());
+          send(response, 500, err.toString());
         });
     case '/metrics':
       response.setHeader('Content-Type', metrics.register.contentType);
-      return micro.send(response, 200, await metrics.register.metrics());
+      return send(response, 200, await metrics.register.metrics());
     default:
-      return micro.send(response, 404, 'Not found');
+      return send(response, 404, 'Not found');
   }
 };
 
