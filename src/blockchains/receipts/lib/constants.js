@@ -6,6 +6,7 @@ const GET_RECEIPTS_ENDPOINT = process.env.GET_RECEIPTS_ENDPOINT || 'eth_getBlock
 const NODE_URL = process.env.NODE_URL || 'http://localhost:8545/';
 const TRANSACTION = parseInt(process.env.TRANSACTION || '0');
 const GET_BLOCK_ENDPOINT = process.env.GET_BLOCK_ENDPOINT || 'eth_getBlockByNumber';
+const LOOP_INTERVAL_CURRENT_MODE_SEC = parseInt(process.env.LOOP_INTERVAL_CURRENT_MODE_SEC || '30');
 
 module.exports = {
   DRY_RUN,
@@ -15,5 +16,6 @@ module.exports = {
   GET_RECEIPTS_ENDPOINT,
   NODE_URL,
   TRANSACTION,
-  GET_BLOCK_ENDPOINT
+  GET_BLOCK_ENDPOINT,
+  LOOP_INTERVAL_CURRENT_MODE_SEC
 };
