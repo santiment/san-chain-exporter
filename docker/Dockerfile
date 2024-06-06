@@ -11,8 +11,9 @@ WORKDIR /opt
 COPY package.json package-lock.json* tsconfig*.json copy_assets.sh ./
 COPY src ./src
 
-RUN if [ "$BUILD_ENV" = "production" ]; \
-    then npm ci && npm run build:production && npm prune --omit=dev \
+RUN echo "BUILD_ENV is $BUILD_ENV" && \
+    if [ "$BUILD_ENV" = "production" ]; \
+    then npm ci && npm run build:production && npm prune --omit=dev; \
     else npm ci && npm run build:dev; \
     fi
 
