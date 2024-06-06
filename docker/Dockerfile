@@ -3,14 +3,8 @@ FROM node:21.4.0-slim AS builder
 ARG BUILD_ENV=production
 ENV BUILD_ENV=${BUILD_ENV}
 
-RUN apt-get update; \
-    apt-get install -y bash \
-    g++ \
-    ca-certificates \
-    musl-dev \
-    make \
-    git \
-    python3
+RUN apt-get update && \
+    apt-get install -y bash g++ ca-certificates musl-dev make git python3
 
 WORKDIR /opt
 
@@ -22,9 +16,12 @@ RUN if [ "$BUILD_ENV" = "production" ]; \
     else npm ci && npm run build:dev; \
     fi
 
+# Verify that directories are created
+RUN ls -la /opt && ls -la /opt/built
+
 FROM node:21.4.0-slim
 
-RUN apt-get update; \
+RUN apt-get update && \
     apt-get install -y openssl netcat-openbsd
 
 WORKDIR /opt/app
