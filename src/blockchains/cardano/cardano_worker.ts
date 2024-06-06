@@ -27,7 +27,9 @@ export class CardanoWorker extends BaseWorker {
         username: this.settings.RPC_USERNAME,
         password: this.settings.RPC_PASSWORD,
         responseType: 'json',
-        timeout: DEFAULT_TIMEOUT_MSEC
+        timeout: {
+          request: DEFAULT_TIMEOUT_MSEC
+        }
       }).json();
     }
     catch (error: any) {
