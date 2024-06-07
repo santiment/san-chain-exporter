@@ -1,4 +1,4 @@
-import { getLazyBoolEnvVariable, getIntEnvVariable } from '../../../lib/utils.js';
+import { getLazyBoolEnvVariable, getIntEnvVariable } from '../../../lib/utils';
 
 export const BURN_ADDRESS = 'burn';
 export const ETH_WITHDRAWAL = 'withdrawal';

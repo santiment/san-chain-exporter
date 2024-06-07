@@ -1,4 +1,4 @@
-import { getBoolEnvVariable, getIntEnvVariable } from '../../../lib/utils.js';
+import { getBoolEnvVariable, getIntEnvVariable } from '../../../lib/utils';
 
 export const BLOCK_INTERVAL = getIntEnvVariable('BLOCK_INTERVAL', 100);
 export const CONFIRMATIONS = getIntEnvVariable('CONFIRMATIONS', 3);

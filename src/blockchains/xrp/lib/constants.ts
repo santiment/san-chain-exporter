@@ -1,4 +1,4 @@
-import { getIntEnvVariable } from '../../../lib/utils.js';
+import { getIntEnvVariable } from '../../../lib/utils';
 
 // Although we request the last 'validated' block we are seeing blocks which are neither validated nor even closed.
 // We introduce this extra delay to prevent this.
