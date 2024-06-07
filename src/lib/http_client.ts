@@ -7,13 +7,6 @@ import { HTTPClientInterface } from '../types';
 // Extend this timeout to 30 to reduce the number of sessions constructed.
 const TCP_SESSION_KEEP_ALIVE_MSEC = 30000;
 
-interface ExtraOptions {
-  auth?: string,
-  method?: string,
-  timeout?: number,
-  version?: number
-}
-
 class JaysonHTTPClient implements HTTPClientInterface {
   private client: jayson.HttpClient;
   constructor(_client: jayson.HttpClient) {
@@ -28,9 +21,8 @@ class JaysonHTTPClient implements HTTPClientInterface {
     return this.client.request(requests);
   }
 
-  generateRequest(method: string, params: any[]): any {
-    const request: JSONRPCRequest = this.client.request(method, params, undefined, false);
-    return request;
+  generateRequest(method: string, params: any[]): JSONRPCRequest {
+    return this.client.request(method, params, undefined, false);
   }
 }
 
@@ -64,6 +56,3 @@ export function constructRPCClient(nodeURL: string, username: string, password: 
   }
 }
 
-module.exports = {
-  constructRPCClient
-};

@@ -6,8 +6,8 @@ import { assertIsDefined } from '../../../lib/utils';
 export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper: Web3Interface): ETHTransfer {
   // Block & uncle rewards
   if (trace['type'] === 'reward') {
-    assertIsDefined(trace['action']['author'], "'author' field is expected in trace action on 'reward' type")
-    assertIsDefined(trace['action']['value'], "'value' field is expected in trace action on 'reward' type")
+    assertIsDefined(trace['action']['author'], "'author' field is expected in trace action on 'reward' type");
+    assertIsDefined(trace['action']['value'], "'value' field is expected in trace action on 'reward' type");
 
     return {
       from: `mining_${trace['action']['rewardType']}`,
@@ -22,15 +22,10 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
 
   // Contract creation
   if (trace['type'] === 'create') {
-    if (trace['action']['from'] === undefined) {
-      throw Error("'from' field is expected in trace action on 'create' type")
-    }
-    if (trace['action']['value'] === undefined) {
-      throw Error("'value' field is expected in trace action on 'create' type")
-    }
-    if (trace['result']['address'] === undefined) {
-      throw Error("'address' field is expected in trace result on 'create' type")
-    }
+    assertIsDefined(trace['action']['from'], "'from' field is expected in trace action on 'create' type");
+    assertIsDefined(trace['action']['value'], "'value' field is expected in trace action on 'create' type");
+    assertIsDefined(trace['result']['address'], "'address' field is expected in trace result on 'create' type");
+
     return {
       from: trace['action']['from'],
       to: trace['result']['address'],
@@ -45,15 +40,10 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
   }
 
   if (trace['type'] === 'suicide') {
-    if (trace['action']['refundAddress'] === undefined) {
-      throw Error("'refundAddress' field is expected in trace action on 'suicide' type")
-    }
-    if (trace['action']['address'] === undefined) {
-      throw Error("'address' field is expected in trace action on 'suicide' type")
-    }
-    if (trace['action']['balance'] === undefined) {
-      throw Error("'balance' field is expected in trace action on 'suicide' type")
-    }
+    assertIsDefined(trace['action']['refundAddress'], "'refundAddress' field is expected in trace action on 'suicide' type");
+    assertIsDefined(trace['action']['address'], "'address' field is expected in trace action on 'suicide' type");
+    assertIsDefined(trace['action']['balance'], "'balance' field is expected in trace action on 'suicide' type")
+
     return {
       from: trace['action']['address'],
       to: trace['action']['refundAddress'],
@@ -71,15 +61,10 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
     logger.warn('Unknown trace type: ' + JSON.stringify(trace));
   }
 
-  if (trace['action']['from'] === undefined) {
-    throw Error(`'from' field is expected in trace action on ${trace['type']} type`)
-  }
-  if (trace['action']['value'] === undefined) {
-    throw Error(`'value' field is expected in trace action on ${trace['type']} type`)
-  }
-  if (trace['action']['to'] === undefined) {
-    throw Error(`'to' field is expected in trace action on ${trace['type']} type`)
-  }
+  assertIsDefined(trace['action']['from'], `'from' field is expected in trace action on ${trace['type']} type`);
+  assertIsDefined(trace['action']['value'], `'value' field is expected in trace action on ${trace['type']} type`);
+  assertIsDefined(trace['action']['to'], `'to' field is expected in trace action on ${trace['type']} type`);
+
   return {
     from: trace['action']['from'],
     to: trace['action']['to'],

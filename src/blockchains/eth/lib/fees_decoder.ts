@@ -55,9 +55,7 @@ export class FeesDecoder {
    **/
   getMinerFee(transaction: ETHTransaction, block: ETHBlock, receiptsMap: ETHReceiptsMap): ETHTransfer | undefined {
     const baseFeePerGas = (block.baseFeePerGas === undefined) ?
-      BigInt(0)
-      :
-      BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
+      BigInt(0) : BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
 
     const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - baseFeePerGas;
     const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receiptsMap[transaction.hash].gasUsed));

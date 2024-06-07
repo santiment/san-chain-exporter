@@ -1,3 +1,4 @@
+import assert from 'assert';
 import { Web3 } from 'web3';
 import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
 import { buildHttpOptions } from '../../../lib/build_http_options';
@@ -65,9 +66,8 @@ class Web3Wrapper implements Web3Interface {
 }
 
 export function safeCastToNumber(value: number | bigint): number {
-    if (value > Number.MAX_SAFE_INTEGER) {
-        throw Error(`Value ${value} is too big to be casted to number`)
-    }
+    assert(value > Number.MIN_SAFE_INTEGER && value < Number.MAX_SAFE_INTEGER,
+        (`Value ${value} is too big to be casted to number`));
 
     return Number(value)
 }
