@@ -3,7 +3,7 @@ import assert from 'assert';
 const sinon = require('sinon');
 import { XRPWorker } from '../../blockchains/xrp/xrp_worker';
 import { XRPConnection } from '../../blockchains/xrp/xrp_types';
-import constants from '../../blockchains/xrp/lib/constants';
+import * as constants from '../../blockchains/xrp/lib/constants';
 
 /** A stripped down XRP block */
 const xrpBlock = {

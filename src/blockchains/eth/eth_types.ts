@@ -4,8 +4,6 @@ export type TraceAction = {
   rewardType?: string,
   callType?: string,
   from?: string,
-  //gas?: string,
-  //input?: string,
   to?: string,
   value?: string,
   balance?: string,

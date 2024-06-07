@@ -1,16 +1,14 @@
 import { Web3Interface } from './web3_wrapper';
 import { Trace, ETHTransfer } from '../eth_types';
 import { logger } from '../../../lib/logger';
+import { assertIsDefined } from '../../../lib/utils';
 
 export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper: Web3Interface): ETHTransfer {
   // Block & uncle rewards
   if (trace['type'] === 'reward') {
-    if (trace['action']['author'] === undefined) {
-      throw Error("'author' field is expected in trace action on 'reward' type")
-    }
-    if (trace['action']['value'] === undefined) {
-      throw Error("'value' field is expected in trace action on 'reward' type")
-    }
+    assertIsDefined(trace['action']['author'], "'author' field is expected in trace action on 'reward' type")
+    assertIsDefined(trace['action']['value'], "'value' field is expected in trace action on 'reward' type")
+
     return {
       from: `mining_${trace['action']['rewardType']}`,
       to: trace['action']['author'],

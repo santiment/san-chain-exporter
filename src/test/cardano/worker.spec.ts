@@ -1,7 +1,7 @@
 import assert from 'assert';
 
 import { CardanoWorker } from '../../blockchains/cardano/cardano_worker';
-import constants from '../../blockchains/cardano/lib/constants';
+import * as constants from '../../blockchains/cardano/lib/constants';
 
 function getTransactions() {
   return [
