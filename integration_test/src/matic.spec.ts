@@ -1,12 +1,8 @@
-const assert = require('assert');
-const worker = require('../../blockchains/matic/matic_worker');
+import assert from 'assert';
+import { MaticWorker } from '../../src/blockchains/matic/matic_worker';
+import { RPC_USERNAME, RPC_PASSWORD } from '../../src/lib/constants';
 
 
-class MockExporter {
-  initPartitioner() {
-    // Dummy
-  }
-}
 describe('Matic worker test', function () {
   it('Matic worker should extract blocks from 50000000 to 50000200 including', async function () {
     this.timeout(30000);
@@ -19,10 +15,12 @@ describe('Matic worker test', function () {
       NODE_URL: 'https://polygon.santiment.net',
       CONFIRMATIONS: 3,
       EXPORT_BLOCKS_LIST: false,
-      BLOCK_INTERVAL: 50
+      BLOCK_INTERVAL: 50,
+      RPC_USERNAME: RPC_USERNAME,
+      RPC_PASSWORD: RPC_PASSWORD
     };
-    const maticWorker = new worker.worker(settings);
-    await maticWorker.init(new MockExporter());
+    const maticWorker = new MaticWorker(settings);
+    await maticWorker.init();
     maticWorker.lastExportedBlock = 49999999;
 
     let expectedDataPosition = 0;

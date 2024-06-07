@@ -1,5 +1,6 @@
-const assert = require('assert');
-const worker = require('../../blockchains/eth/eth_worker');
+import assert from 'assert';
+import { ETHWorker } from '../../src/blockchains/eth/eth_worker';
+import { RPC_USERNAME, RPC_PASSWORD } from '../../src/lib/constants';
 
 
 describe('BEP20 worker test', function () {
@@ -14,15 +15,17 @@ describe('BEP20 worker test', function () {
       NODE_URL: 'https://binance.santiment.net',
       CONFIRMATIONS: 3,
       EXPORT_BLOCKS_LIST: false,
-      BLOCK_INTERVAL: 200,
-      RECEIPTS_API_METHOD: 'eth_getBlockReceipts'
+      BLOCK_INTERVAL: 10,
+      RECEIPTS_API_METHOD: 'eth_getBlockReceipts',
+      RPC_USERNAME: RPC_USERNAME,
+      RPC_PASSWORD: RPC_PASSWORD
     };
-    const bep20Worker = new worker.worker(settings);
+    const bep20Worker = new ETHWorker(settings);
     await bep20Worker.init();
     bep20Worker.lastExportedBlock = 19999999;
 
     let expectedDataPosition = 0;
-    for (let i = 0; i < 5; ++i) {
+    for (let i = 0; i < 100; ++i) {
       const events = await bep20Worker.work();
       for (const event of events) {
         assert.deepEqual(event, expectedData[expectedDataPosition]);

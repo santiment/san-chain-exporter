@@ -59,7 +59,7 @@ export class ERC20Worker extends BaseWorker {
     this.allOldContracts = [];
   }
 
-  async init(exporter: Exporter | undefined) {
+  async init(exporter?: Exporter) {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
     if (this.settings.EXPORT_BLOCKS_LIST) {
