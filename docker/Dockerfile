@@ -8,7 +8,7 @@ RUN apt-get update && \
 
 WORKDIR /opt
 
-COPY package.json package-lock.json* tsconfig*.json copy_assets.sh ./
+COPY package.json package-lock.json* tsconfig*.json copy_assets.sh .mocharc.js ./
 COPY src ./src
 
 RUN echo "BUILD_ENV is $BUILD_ENV" && npm ci && npm run build && \
