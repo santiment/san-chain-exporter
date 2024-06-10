@@ -1,12 +1,12 @@
 'use strict';
-import jayson from 'jayson/promise';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
-import BaseWorker from '../../lib/worker_base';
+import { BaseWorker } from '../../lib/worker_base';
 import { Exporter } from '../../lib/kafka_storage';
+import { HTTPClientInterface } from '../../types';
 
 
-class UtxoWorker extends BaseWorker {
+export class UTXOWorker extends BaseWorker {
   private readonly NODE_URL: string;
   private readonly MAX_RETRIES: number;
   private readonly RPC_USERNAME: string;
@@ -15,7 +15,7 @@ class UtxoWorker extends BaseWorker {
   private readonly DEFAULT_TIMEOUT: number;
   private readonly MAX_CONCURRENT_REQUESTS: number;
   private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
-  private client: jayson.HttpClient | jayson.HttpsClient;
+  private client: HTTPClientInterface;
 
   constructor(settings: any) {
     super(settings);
@@ -30,12 +30,7 @@ class UtxoWorker extends BaseWorker {
     this.LOOP_INTERVAL_CURRENT_MODE_SEC = settings.LOOP_INTERVAL_CURRENT_MODE_SEC;
 
     logger.info(`Connecting to the node ${this.NODE_URL}`);
-    this.client = constructRPCClient(this.NODE_URL, {
-      method: 'POST',
-      auth: this.RPC_USERNAME + ':' + this.RPC_PASSWORD,
-      timeout: this.DEFAULT_TIMEOUT,
-      version: 1
-    });
+    this.client = constructRPCClient(this.NODE_URL, this.RPC_USERNAME, this.RPC_PASSWORD, this.DEFAULT_TIMEOUT);
   }
 
   async init(exporter: Exporter) {
@@ -44,7 +39,7 @@ class UtxoWorker extends BaseWorker {
     await exporter.initPartitioner((event: any) => event['height']);
   }
 
-  async sendRequest(method: string, params: object) {
+  async sendRequest(method: string, params: any) {
     return this.client.request(method, params).then(({ result, error }) => {
       if (error) {
         return Promise.reject(error);
@@ -108,6 +103,3 @@ class UtxoWorker extends BaseWorker {
   }
 }
 
-module.exports = {
-  worker: UtxoWorker
-};

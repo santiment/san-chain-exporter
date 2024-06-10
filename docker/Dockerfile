@@ -1,32 +1,35 @@
 FROM node:21.4.0-slim AS builder
 
-ARG NODE_ENV=production
-ENV NODE_ENV=${NODE_ENV}
+ARG BUILD_ENV=production
+ENV BUILD_ENV=${BUILD_ENV}
 
-RUN apt-get update; \
-    apt-get install -y bash \
-    g++ \
-    ca-certificates \
-    musl-dev \
-    make \
-    git \
-    python3
+RUN apt-get update && \
+    apt-get install -y bash g++ ca-certificates musl-dev make git python3
 
 WORKDIR /opt
 
-COPY package.json package-lock.json* tsconfig.json copy_assets.sh ./
+COPY package.json package-lock.json tsconfig.json copy_assets.sh .mocharc.js ./
 COPY src ./src
 
-RUN if [ "$BUILD_ENV" = "production" ]; \
-    then npm ci && npm prune --production; \
-    else npm ci; \
+RUN echo "BUILD_ENV is $BUILD_ENV" && npm ci && npm run build
+
+# Verify that directories are created. Then prepare 'app' directory
+RUN ls -la /opt && \
+    ls -la /opt/built && \
+    mkdir /opt/app && \
+    mv /opt/built /opt/app/built && \
+    if [ "$BUILD_ENV" = "production" ]; then \
+        npm prune --omit=dev; \
+    else \
+        mv /opt/src /opt/app/src; \
     fi && \
-    npm run build && \
-    npm cache clean --force
+    cp package.json package-lock.json tsconfig.json .mocharc.js /opt/app
+
+
 
 FROM node:21.4.0-slim
 
-RUN apt-get update; \
+RUN apt-get update && \
     apt-get install -y openssl netcat-openbsd
 
 WORKDIR /opt/app
@@ -34,11 +37,7 @@ WORKDIR /opt/app
 ENV PATH /opt/node_modules/.bin:$PATH
 
 COPY --from=builder /opt/node_modules /opt/node_modules
-COPY --from=builder /opt/built /opt/app/built
-
-RUN if [ "$BUILD_ENV" = "production" ]; \
-    then rm -r --force /opt/app/built/test; \
-    fi
+COPY --from=builder /opt/app /opt/app
 
 #
 # Reason for multipe COPY commands is Docker CP limitation, it copies <src> contents only not preserving the directory

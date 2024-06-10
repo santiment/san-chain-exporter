@@ -106,7 +106,7 @@ export class Exporter {
   private readonly zookeeperClient: ZookeeperClientAsync;
   private partitioner: Partitioner | null;
 
-  constructor(exporter_name: string, transactional: boolean = false) {
+  constructor(exporter_name: string, transactional: boolean, topicName: string) {
     this.exporter_name = exporter_name;
 
     const producer_settings: ProducerGlobalConfig = {
@@ -123,7 +123,7 @@ export class Exporter {
       producer_settings['debug'] = RDKAFKA_DEBUG;
     }
 
-    this.topicName = process.env.KAFKA_TOPIC || this.exporter_name.replace('-exporter', '').replace('-', '_');
+    this.topicName = topicName;
 
     if (transactional) {
       const uniqueIdentifier = crypto.randomBytes(16).toString('hex');
@@ -193,7 +193,7 @@ export class Exporter {
    * Disconnect from Zookeeper and Kafka.
    * This method is completed once the callback is invoked.
    */
-  disconnect(callback: () => void) {
+  disconnect(callback?: () => void) {
     logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
     this.zookeeperClient.closeAsync().then(() => {
       if (this.producer.isConnected()) {
@@ -439,6 +439,10 @@ export class Exporter {
     // We delay the finding of the partition count so that we are sure that we have a connected producer
     this.partitioner = new Partitioner();
     await this.partitioner.init(hashFunction, this.topicName, this.producer);
+  }
+
+  isConnected(): boolean {
+    return this.producer.isConnected();
   }
 }
 

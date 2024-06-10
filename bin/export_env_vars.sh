@@ -9,4 +9,6 @@ export BLOCKCHAIN="eth"
 export KAFKA_TOPIC="erc20_exporter_test_topic"
 export CARDANO_GRAPHQL_URL=https://cardano.santiment.net
 export ZOOKEEPER_SESSION_TIMEOUT=20000
-export CONTRACT_MAPPING_FILE_PATH="./test/erc20/contract_mapping/contract_mapping.json"
+export IS_ETH=false
+export CONTRACT_MAPPING_FILE_PATH="./src/test/erc20/contract_mapping/contract_mapping.json"
+export XRP_NODE_URLS="wss://s2.ripple.com,wss://xrpl.ws,wss://s1.ripple.com"

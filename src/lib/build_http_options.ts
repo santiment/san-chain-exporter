@@ -1,12 +1,6 @@
-interface HttpProviderOptions {
-  method: string,
-  headers: { 
-    'Content-Type': string,
-    'Authorization': string
-  }
-}
+import { HttpProviderOptions } from 'web3-providers-http';
 
-export function buildHttpOptions(authCredentials: string): { providerOptions: HttpProviderOptions } {
+export function buildHttpOptions(authCredentials: string): HttpProviderOptions {
   return {
     providerOptions: {
       method: 'POST',
@@ -14,6 +8,7 @@ export function buildHttpOptions(authCredentials: string): { providerOptions: Ht
         'Content-Type': 'application/json',
         'Authorization': 'Basic ' + Buffer.from(authCredentials).toString('base64')
       }
-    }
+    },
   };
-}
+};
+
