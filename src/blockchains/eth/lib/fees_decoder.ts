@@ -1,6 +1,13 @@
+import assert from 'assert'
 import { Web3Interface, safeCastToNumber } from './web3_wrapper';
 import { ETHBlock, ETHTransaction, ETHTransfer, ETHReceiptsMap } from '../eth_types';
 import { BURN_ADDRESS, LONDON_FORK_BLOCK } from './constants';
+
+
+function isETHTransaction(transaction: ETHTransaction | string): transaction is ETHTransaction {
+  return typeof transaction === 'object' && 'hash' in transaction && 'from' in transaction;
+}
+
 export class FeesDecoder {
   private web3Wrapper: Web3Interface;
 
@@ -89,7 +96,9 @@ export class FeesDecoder {
 
   getFeesFromTransactionsInBlock(block: ETHBlock, blockNumber: number, receipts: ETHReceiptsMap, isETH: boolean): ETHTransfer[] {
     const result: ETHTransfer[] = [];
-    block.transactions.forEach((transaction: ETHTransaction) => {
+    block.transactions.forEach((transaction: ETHTransaction | string) => {
+      assert(isETHTransaction(transaction), "To get fees, ETH transaction should be expanded and not just the hash.");
+
       const feeTransfers: ETHTransfer[] =
         isETH && blockNumber >= LONDON_FORK_BLOCK ?
           this.getPostLondonForkFees(transaction, block, receipts) :

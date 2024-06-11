@@ -24,13 +24,13 @@ export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
 }
 
 export async function fetchBlocks(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<Map<number, ETHBlock>> {
+  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, getTransactionDetails: boolean): Promise<Map<number, ETHBlock>> {
   const blockRequests: any[] = [];
   for (let i = fromBlock; i <= toBlock; i++) {
     blockRequests.push(
       ethClient.generateRequest(
         'eth_getBlockByNumber',
-        [web3Wrapper.parseNumberToHex(i), true]
+        [web3Wrapper.parseNumberToHex(i), getTransactionDetails]
       )
     );
   }
