@@ -1,6 +1,7 @@
 import assert from 'assert';
 const rewire = require('rewire');
 import { NODE_URL } from '../../blockchains/erc20/lib/constants';
+import { TimestampsCacheInterface } from '../../blockchains/erc20/lib/timestamps_cache';
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
@@ -345,7 +346,7 @@ fetch_events.__set__('getRawEvents', async function () {
   return rawEvents;
 });
 
-class TimestampsCacheMock {
+class TimestampsCacheMock implements TimestampsCacheInterface {
   private blockTimestamps: any;
 
   constructor() {
@@ -358,11 +359,12 @@ class TimestampsCacheMock {
     };
   }
 
-  getBlockTimestamp(blockNumber: number) {
+  getBlockTimestamp(blockNumber: number): number {
     return this.blockTimestamps[blockNumber.toString()];
   }
 
   async waitResponse() {
+    return Promise.resolve();
   }
 }
 

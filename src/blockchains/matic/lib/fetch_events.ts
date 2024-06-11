@@ -1,6 +1,6 @@
 'use strict';
 import { decodeEvents } from '../../erc20/lib/fetch_events';
-import { TimestampsCache } from '../../erc20/lib/timestamps_cache';
+import { TimestampsCache, TimestampsCacheInterface } from '../../erc20/lib/timestamps_cache';
 import { decodeAddress } from '../../erc20/lib/util';
 import { decodeEventBasicInfo } from '../../erc20/lib/fetch_events';
 import { Web3Interface } from '../../eth/lib/web3_wrapper';
@@ -12,7 +12,7 @@ const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 /**Transfer(address,address,uint256)
  * Used by all Polygon ERC20 tokens
  **/
-function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCache) {
+function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
   if (event['topics'].length !== 4) {
     return null;
   }

@@ -1,5 +1,6 @@
 const { groupBy } = require('lodash');
-const custom_trie = require('../../../blockchains/eth/lib/custom_trie');
+import { markChildrenWithFailedParents } from '../../../blockchains/eth/lib/custom_trie';
+import { Trace } from '../eth_types';
 
 /**
  * A function to mark children traces as erroneous if their parent is an error.
@@ -21,9 +22,9 @@ const custom_trie = require('../../../blockchains/eth/lib/custom_trie');
  * @param {A} traces
  * @returns
  */
-function setErrors(traces) {
+function setErrors(traces: Trace[]) {
   // The whole computation is done per transaction
-  let txs = groupBy(traces, tx => tx.transactionHash);
+  let txs = groupBy(traces, (trace: Trace) => trace.transactionHash);
   const hashes = Object.keys(txs);
 
   hashes.forEach(hash => {
@@ -31,8 +32,7 @@ function setErrors(traces) {
     const txTraces = txs[hash];
     if (txTraces.length === 0) return;
 
-    const txTrie = new custom_trie.CustomTrie(txTraces);
-    txTrie.markChildrenWithFailedParents();
+    markChildrenWithFailedParents(txTraces);
   });
 }
 
@@ -44,18 +44,16 @@ function setErrors(traces) {
      }
  }
 */
-function filterNonActions(traces) {
+function filterNonActions(traces: Trace[]) {
   // Leave only 'truthy' action values
   return traces.filter(trace => trace.action);
 }
 
-function filterErrors(traces) {
+export function filterErrors(traces: Trace[]) {
   traces = filterNonActions(traces);
   setErrors(traces);
   traces = traces.filter(trace => typeof trace.error === 'undefined');
   return traces;
 }
 
-module.exports = {
-  filterErrors
-};
+

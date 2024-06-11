@@ -2,7 +2,12 @@
 import { Web3Interface, safeCastToNumber } from '../../eth/lib/web3_wrapper';
 import { HTTPClientInterface } from '../../../types'
 
-export class TimestampsCache {
+export interface TimestampsCacheInterface {
+  getBlockTimestamp(blockNumber: number): number;
+  waitResponse(): Promise<void>;
+}
+
+export class TimestampsCache implements TimestampsCacheInterface {
   private timestampStore: { [key: number]: number };
   private rangeSize: number;
   private web3Wrapper: Web3Interface;
@@ -25,7 +30,7 @@ export class TimestampsCache {
     this.responsePromise = ethClient.requestBulk(blockRequests);
   }
 
-  async waitResponse() {
+  async waitResponse(): Promise<void> {
     const resultsArray = await this.responsePromise;
     if (!Array.isArray(resultsArray)) {
       throw new Error('Blocks response is not an array');
@@ -41,7 +46,7 @@ export class TimestampsCache {
     }
   }
 
-  getBlockTimestamp(blockNumber: number) {
+  getBlockTimestamp(blockNumber: number): number {
     if (Object.prototype.hasOwnProperty.call(this.timestampStore, blockNumber)) {
       return this.timestampStore[blockNumber];
     }
