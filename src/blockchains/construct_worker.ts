@@ -4,6 +4,7 @@ import { CardanoWorker } from './cardano/cardano_worker';
 import { ERC20Worker } from './erc20/erc20_worker';
 import { ETHWorker } from './eth/eth_worker';
 import { ETHBlocksWorker } from './eth_blocks/eth_blocks_worker';
+import { ETHContractsWorker } from './eth_contracts/eth_contracts_worker';
 import { MaticWorker } from './matic/matic_worker';
 import { ReceiptsWorker } from './receipts/receipts_worker';
 import { UTXOWorker } from './utxo/utxo_worker';
@@ -27,6 +28,8 @@ export function constructWorker(blockchain: string, settings: any): BaseWorker {
       return new UTXOWorker(settings);
     case 'xrp':
       return new XRPWorker(settings);
+    case 'eth_contracts':
+      return new ETHContractsWorker(settings);
     default:
       throw Error(`Blockchain type '${blockchain}' is not recognized`);
   }
