@@ -48,28 +48,89 @@ export class ETHContractsWorker extends BaseWorker {
   }
 
 
+
+// Assuming locate and _address_creator are defined elsewhere
+function locate(array, predicate) {
+  return array.flatMap((element, index) => predicate(element) ? [index] : []);
+}
+
+function addressCreator(traces) {
+  // Add your implementation for `_address_creator` here.
+  // This is just a placeholder for the equivalent function from the Python code.
+  return null;
+}
+
   async work() {
-    const workerContext = await analyzeWorkerContext(this);
-    setWorkerSleepTime(this, workerContext);
-    if (workerContext === NO_WORK_SLEEP) return [];
+  const workerContext = await analyzeWorkerContext(this);
+  setWorkerSleepTime(this, workerContext);
+  if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
-    logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
-    const blocks = await fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock);
-    const createFilter = { traceTypes: ['create'] }
-    const traces: Trace[] = await fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock, createFilter);
-    const grouped_traces = groupBy(traces, (tx: Trace) => tx.transactionHash);
-    grouped_traces = select_traces_with_create_trace(grouped_traces, blocks)
-    logging.info(f'Fetched {len(traces)} traces of which {len(traces_with_result)} have result')
-    const events = Array.from(blocks).map(([key, block]) => this.decodeBlock(block));
+  const { fromBlock, toBlock } = nextIntervalCalculator(this);
+  logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
+  const blocks = await fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock);
+  const createFilter = { traceTypes: ['create'] }
+  const traces: Trace[] = await fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock, createFilter);
+  const grouped_traces = groupBy(traces, (tx: Trace) => tx.transactionHash);
+  grouped_traces = selectTracesWithCreateTrace(grouped_traces, blocks)
+  logging.info(f'Fetched {len(traces)} traces of which {len(traces_with_result)} have result')
+  const events = Array.from(blocks).map(([key, block]) => this.decodeBlock(block));
 
-    this.lastExportedBlock = toBlock;
+  this.lastExportedBlock = toBlock;
 
-    return events;
-  }
+  return events;
+}
 
   async init() {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
+  this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
+}
+}
+
+type ContractCreation {
+  address: string,
+  address_fabric: string
+  address_creator: string,
+  bytecode
+}
+
+function selectTracesWithCreateTrace(groupedTraces: { [key: string]: Trace[] }, blockTimes: { [key: number]: number }) {
+  const txsWithCreateTrace: { [key: string], { [key: Trace[]], }
+} = { };
+
+for (const [tx, traces] of Object.entries(groupedTraces)) {
+  const traceTypes = traces.map(trace => trace.type);
+
+  const createTraceIndexes = traceTypes.flatMap((type, index) => type === 'create' ? [index] : []);
+
+  if (createTraceIndexes.length > 0) {
+    if (!txsWithCreateTrace.hasOwnProperty(tx)) {
+      txsWithCreateTrace[tx] = { traces: traces, records: [] };
+    }
+
+    for (const index of createTraceIndexes) {
+      const createTrace: Trace = traces[index];
+      let addressFabric;
+
+      if (createTrace.traceAddress.length > 0) {
+        addressFabric = traces[createTraceIndexes[createTraceIndexes.length - 1]].action.from;
+      } else {
+        addressFabric = null;
+      }
+
+      const record = {
+        address: createTrace.result.address,
+        address_fabric: addressFabric,
+        address_creator: addressCreator(traces),
+        bytecode: createTrace.result.code,
+        transaction_hash: createTrace.transactionHash,
+        block_number: createTrace.blockNumber,
+        block_created_at_timestamp: blockTimes[createTrace.blockNumber]
+      };
+
+      txsWithCreateTrace[tx].records.push(record);
+    }
   }
+}
+
+return txsWithCreateTrace;
 }
 
