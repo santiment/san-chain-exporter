@@ -41,7 +41,8 @@ export type ETHBlock = {
   minGasPrice?: string
   // Withdrawals should be set for ETH post-Shenghai upgrade
   withdrawals?: BeaconChainWithdrawal[],
-  transactions: ETHTransaction[]
+  // Transactions can be expanded or just hashes
+  transactions: ETHTransaction[] | string[]
 }
 
 export type BeaconChainWithdrawal = {

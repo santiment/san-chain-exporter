@@ -32,7 +32,8 @@ export class ETHBlocksWorker extends BaseWorker {
       size: this.web3Wrapper.parseHexToNumber(block.size),
       gasLimit: this.web3Wrapper.parseHexToNumberString(block.gasLimit),
       gasUsed: this.web3Wrapper.parseHexToNumberString(block.gasUsed),
-      number: this.web3Wrapper.parseHexToNumber(block.number)
+      number: this.web3Wrapper.parseHexToNumber(block.number),
+      transactionCount: block.transactions.length
     }
 
     if (block.minGasPrice !== undefined) {
@@ -53,7 +54,7 @@ export class ETHBlocksWorker extends BaseWorker {
 
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
-    const blocks = await fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock);
+    const blocks = await fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock, false);
     const events = Array.from(blocks).map(([key, block]) => this.decodeBlock(block));
 
     this.lastExportedBlock = toBlock;
