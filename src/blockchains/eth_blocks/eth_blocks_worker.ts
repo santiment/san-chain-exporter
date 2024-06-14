@@ -5,9 +5,8 @@ import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from '../eth/li
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 import { fetchBlocks } from '../eth/lib/fetch_data';
 import { ETHBlock } from '../eth/eth_types';
-import { ETHBlockStats } from './eth_blocks_types';
 import { HTTPClientInterface } from '../../types';
-import { validateETHBlocksStats } from './lib/output_validator';
+import { validateETHBlocksStats, ETHBlockStats } from './lib/output_validator';
 
 
 export class ETHBlocksWorker extends BaseWorker {

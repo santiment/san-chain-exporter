@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { ETHBlockStats } from "../eth_blocks_types";
 
-const ETHBlockSchema = z.object({
+const ETHBlockStats = z.object({
   hash: z.string(),
   miner: z.string(),
   difficulty: z.string(),
@@ -15,6 +14,8 @@ const ETHBlockSchema = z.object({
   minGasPrice: z.string().optional()
 });
 
+export type ETHBlockStats = z.infer<typeof ETHBlockStats>;
+
 export function validateETHBlocksStats(block: ETHBlockStats) {
-  ETHBlockSchema.parse(block);
+  ETHBlockStats.parse(block);
 }
