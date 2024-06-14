@@ -3,11 +3,11 @@ export type ETHBlockStats = {
   miner: string,
   difficulty: string,
   totalDifficulty: string,
-  timestamp: string,
-  size: number | BigInt,
-  gasLimit: string,
-  gasUsed: string,
-  number: number | BigInt,
+  timestamp: number,
+  size: number,
+  gasLimit: number,
+  gasUsed: number,
+  number: number,
   transactionCount: number,
   minGasPrice?: string
 }

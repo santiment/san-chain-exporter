@@ -29,11 +29,11 @@ export class ETHBlocksWorker extends BaseWorker {
       miner: block.miner,
       difficulty: this.web3Wrapper.parseHexToNumberString(block.difficulty),
       totalDifficulty: this.web3Wrapper.parseHexToNumberString(block.totalDifficulty),
-      timestamp: this.web3Wrapper.parseHexToNumberString(block.timestamp),
-      size: this.web3Wrapper.parseHexToNumber(block.size),
-      gasLimit: this.web3Wrapper.parseHexToNumberString(block.gasLimit),
-      gasUsed: this.web3Wrapper.parseHexToNumberString(block.gasUsed),
-      number: this.web3Wrapper.parseHexToNumber(block.number),
+      timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+      size: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.size)),
+      gasLimit: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.gasLimit)),
+      gasUsed: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.gasUsed)),
+      number: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.number)),
       transactionCount: block.transactions.length
     }
 
