@@ -5,7 +5,9 @@ import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from '../eth/li
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 import { fetchBlocks } from '../eth/lib/fetch_data';
 import { ETHBlock } from '../eth/eth_types';
+import { ETHBlockStats } from './eth_blocks_types';
 import { HTTPClientInterface } from '../../types';
+import { validateETHBlocksStats } from './lib/output_validator';
 
 
 export class ETHBlocksWorker extends BaseWorker {
@@ -19,11 +21,10 @@ export class ETHBlocksWorker extends BaseWorker {
     this.web3Wrapper = constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD);
     this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
       settings.DEFAULT_TIMEOUT);
-
   }
 
-  decodeBlock(block: ETHBlock): string {
-    const decodedBlock: any = {
+  decodeBlock(block: ETHBlock): ETHBlockStats {
+    const decodedBlock: ETHBlockStats = {
       hash: block.hash,
       miner: block.miner,
       difficulty: this.web3Wrapper.parseHexToNumberString(block.difficulty),
@@ -40,11 +41,7 @@ export class ETHBlocksWorker extends BaseWorker {
       decodedBlock.minGasPrice = this.web3Wrapper.parseHexToNumberString(block["minGasPrice"]);
     }
 
-    if (block.difficulty !== undefined) {
-
-    }
-
-    return JSON.stringify(decodedBlock);
+    return decodedBlock;
   }
 
   async work() {
@@ -55,7 +52,11 @@ export class ETHBlocksWorker extends BaseWorker {
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
     const blocks = await fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock, false);
-    const events = Array.from(blocks).map(([key, block]) => this.decodeBlock(block));
+    const events = Array.from(blocks).map(([key, block]) => {
+      const output = this.decodeBlock(block);
+      validateETHBlocksStats(output);
+      return JSON.stringify(output);
+    });
 
     this.lastExportedBlock = toBlock;
 
