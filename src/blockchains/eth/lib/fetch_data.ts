@@ -16,11 +16,10 @@ export function parseEthInternalTrx(result: Trace[]): Trace[] {
 }
 
 export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, extraFilterParams: any = {}): Promise<Trace[]> {
+  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<Trace[]> {
   const filterParams = {
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
-    toBlock: web3Wrapper.parseNumberToHex(toBlock),
-    ...extraFilterParams
+    toBlock: web3Wrapper.parseNumberToHex(toBlock)
   };
   return ethClient.request('trace_filter', [filterParams]).then((data: any) => parseEthInternalTrx(data['result']));
 }

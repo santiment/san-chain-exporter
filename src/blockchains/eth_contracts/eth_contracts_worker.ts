@@ -42,10 +42,6 @@ export class ETHContractsWorker extends BaseWorker {
       decodedBlock.minGasPrice = this.web3Wrapper.parseHexToNumberString(block["minGasPrice"]);
     }
 
-    if (block.difficulty !== undefined) {
-
-    }
-
     return JSON.stringify(decodedBlock);
   }
 
@@ -56,10 +52,10 @@ export class ETHContractsWorker extends BaseWorker {
 
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
-    const createFilter = { traceTypes: ['create'] }
-    const traces: Trace[] = await fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock, createFilter);
+    const traces: Trace[] = await fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock);
     const groupedTraces = groupBy(traces, (tx: Trace) => tx.transactionHash);
     const timestampsCache = new TimestampsCache(this.ethClient, this.web3Wrapper, fromBlock, toBlock);
+    await timestampsCache.waitResponse();
     const events = selectTracesWithCreateTrace(groupedTraces, timestampsCache)
 
     this.lastExportedBlock = toBlock;
@@ -76,7 +72,6 @@ type ContractCreationTrace = {
   address: string,
   address_fabric?: string
   address_creator: string,
-  bytecode: string,
   transaction_hash: string,
   block_number: number,
   block_created_at_timestamp: number
@@ -105,13 +100,10 @@ function selectTracesWithCreateTrace(groupedTraces: { [key: string]: Trace[] }, 
 
         assertIsDefined(createTrace.result.address, "'address' field is expected in trace result on 'create' type")
         assertIsDefined(traces[0]['action']['from'], "'from' field shoud be set for first trace per tx")
-        assertIsDefined((createTrace.result as any).code, "'code' field should be set on create trace")
-
 
         const record: ContractCreationTrace = {
           address: createTrace.result.address,
           address_creator: traces[0]['action']['from'],
-          bytecode: (createTrace.result as any).code,
           transaction_hash: createTrace.transactionHash,
           block_number: createTrace.blockNumber,
           block_created_at_timestamp: blockTimes.getBlockTimestamp(createTrace.blockNumber)
