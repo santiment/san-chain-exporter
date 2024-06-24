@@ -6,6 +6,7 @@ import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WO
 import { fetchBlocks } from '../eth/lib/fetch_data';
 import { ETHBlock } from '../eth/eth_types';
 import { HTTPClientInterface } from '../../types';
+import { validateETHBlocksStats, ETHBlockStats } from './lib/output_validator';
 
 
 export class ETHBlocksWorker extends BaseWorker {
@@ -19,20 +20,19 @@ export class ETHBlocksWorker extends BaseWorker {
     this.web3Wrapper = constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD);
     this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
       settings.DEFAULT_TIMEOUT);
-
   }
 
-  decodeBlock(block: ETHBlock): string {
-    const decodedBlock: any = {
+  decodeBlock(block: ETHBlock): ETHBlockStats {
+    const decodedBlock: ETHBlockStats = {
       hash: block.hash,
       miner: block.miner,
       difficulty: this.web3Wrapper.parseHexToNumberString(block.difficulty),
       totalDifficulty: this.web3Wrapper.parseHexToNumberString(block.totalDifficulty),
-      timestamp: this.web3Wrapper.parseHexToNumberString(block.timestamp),
-      size: this.web3Wrapper.parseHexToNumber(block.size),
-      gasLimit: this.web3Wrapper.parseHexToNumberString(block.gasLimit),
-      gasUsed: this.web3Wrapper.parseHexToNumberString(block.gasUsed),
-      number: this.web3Wrapper.parseHexToNumber(block.number),
+      timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+      size: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.size)),
+      gasLimit: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.gasLimit)),
+      gasUsed: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.gasUsed)),
+      number: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.number)),
       transactionCount: block.transactions.length
     }
 
@@ -40,11 +40,7 @@ export class ETHBlocksWorker extends BaseWorker {
       decodedBlock.minGasPrice = this.web3Wrapper.parseHexToNumberString(block["minGasPrice"]);
     }
 
-    if (block.difficulty !== undefined) {
-
-    }
-
-    return JSON.stringify(decodedBlock);
+    return decodedBlock;
   }
 
   async work() {
@@ -55,7 +51,11 @@ export class ETHBlocksWorker extends BaseWorker {
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
     const blocks = await fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock, false);
-    const events = Array.from(blocks).map(([key, block]) => this.decodeBlock(block));
+    const events = Array.from(blocks).map(([key, block]) => {
+      const output = this.decodeBlock(block);
+      validateETHBlocksStats(output);
+      return JSON.stringify(output);
+    });
 
     this.lastExportedBlock = toBlock;
 
