@@ -67,3 +67,5 @@ built
 # Editors
 .vscode
 .idea
+devbox*
+jest*

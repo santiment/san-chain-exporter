@@ -1,5 +1,5 @@
 function transactionOrder(a, b) {
-  return a.blockNumber - b.blockNumber;
+  return a.blockNumber - b.blockNumber || a.transactionPosition - b.transactionPosition;
 }
 
 function stableSort(array, sortFunc) {
