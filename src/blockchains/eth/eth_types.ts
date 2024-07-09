@@ -24,7 +24,8 @@ export type Trace = {
   traceAddress: number[],
   transactionHash: string,
   transactionPosition: number,
-  type: string
+  type: string,
+  error?: string
 }
 
 export type ETHBlock = {

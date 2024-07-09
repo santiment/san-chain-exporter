@@ -35,6 +35,7 @@
     "p-queue": "^8.0.1",
     "p-retry": "^6.2.0",
     "prom-client": "^15.1.2",
+    "source-map-support": "^0.5.21",
     "uuid": "^9.0.1",
     "web3": "^4.9.0",
     "xrpl": "^3.1.0",
@@ -49,7 +50,6 @@
     "mocha": "^10.4.0",
     "rewire": "^7.0.0",
     "sinon": "^18.0.0",
-    "source-map-support": "^0.5.21",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
   }

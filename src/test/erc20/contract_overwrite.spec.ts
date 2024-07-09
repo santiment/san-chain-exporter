@@ -6,6 +6,7 @@ import { NODE_URL } from '../../blockchains/erc20/lib/constants';
 import { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount } from '../../blockchains/erc20/lib/contract_overwrite';
 import { readJsonFile } from '../../blockchains/erc20/lib/util';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+import { TimestampsCacheInterface } from '../../blockchains/erc20/lib/timestamps_cache';
 import path from "path";
 
 const SNXContractLegacy = '0xc011a72400e58ecd99ee497cf89e3775d4bd732f';
@@ -113,9 +114,13 @@ const decodedEventSNXNew = {
 const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew));
 correctedEventSNXNew.contract = SNXContractReplacer;
 
-class TimestampsCacheMock {
-  getBlockTimestamp() {
+class TimestampsCacheMock implements TimestampsCacheInterface {
+  getBlockTimestamp(): number {
     return 0;
+  }
+
+  waitResponse(): Promise<void> {
+    return Promise.resolve();
   }
 }
 
