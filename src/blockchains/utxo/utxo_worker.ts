@@ -1,7 +1,7 @@
 'use strict';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
-import { BaseWorker } from '../../lib/worker_base';
+import { BaseWorker, WorkResult, WorkResultMultiMode } from '../../lib/worker_base';
 import { KafkaStorage } from '../../lib/kafka_storage';
 import { HTTPClientInterface } from '../../types';
 
@@ -33,13 +33,13 @@ export class UTXOWorker extends BaseWorker {
     this.client = constructRPCClient(this.NODE_URL, this.RPC_USERNAME, this.RPC_PASSWORD, this.DEFAULT_TIMEOUT);
   }
 
-  async init(storages: KafkaStorage[]) {
+  async init(storage: KafkaStorage | Map<string, KafkaStorage>) {
     const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
     this.lastConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
-    if (!storages || storages.length != 1) {
+    if (!(storage instanceof KafkaStorage)) {
       throw Error('Single Kafka storage needs to be provided for UTXO exporter')
     }
-    await storages[0].initPartitioner((event: any) => event['height']);
+    await storage.initPartitioner((event: any) => event['height']);
   }
 
   async sendRequest(method: string, params: any) {
@@ -83,7 +83,7 @@ export class UTXOWorker extends BaseWorker {
     return await this.sendRequestWithRetry('getblock', [blockHash, 2]);
   }
 
-  async work() {
+  async work(): Promise<WorkResult | WorkResultMultiMode> {
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
       this.sleepTimeMsec = this.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
 
