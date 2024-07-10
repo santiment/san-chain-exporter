@@ -33,10 +33,13 @@ export class UTXOWorker extends BaseWorker {
     this.client = constructRPCClient(this.NODE_URL, this.RPC_USERNAME, this.RPC_PASSWORD, this.DEFAULT_TIMEOUT);
   }
 
-  async init(exporter: KafkaStorage) {
+  async init(storages: KafkaStorage[]) {
     const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
     this.lastConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
-    await exporter.initPartitioner((event: any) => event['height']);
+    if (!storages || storages.length != 1) {
+      throw Error('Single Kafka storage needs to be provided for UTXO exporter')
+    }
+    await storages[0].initPartitioner((event: any) => event['height']);
   }
 
   async sendRequest(method: string, params: any) {

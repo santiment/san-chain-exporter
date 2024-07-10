@@ -59,7 +59,7 @@ export class ERC20Worker extends BaseWorker {
     this.allOldContracts = [];
   }
 
-  async init(exporter?: KafkaStorage) {
+  async init(storages: KafkaStorage[]) {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
     if (this.settings.EXPORT_BLOCKS_LIST) {
@@ -84,10 +84,10 @@ export class ERC20Worker extends BaseWorker {
     }
 
     if (this.settings.EVENTS_IN_SAME_PARTITION) {
-      if (exporter === undefined) {
-        throw Error('Exporter reference need to be provided for events in same partition')
+      if (!storages || storages.length != 1) {
+        throw Error('Single Kafka storage needs to be provided for events in same partition')
       }
-      await exporter.initPartitioner((event: any) => simpleHash(event.contract));
+      await storages[0].initPartitioner((event: any) => simpleHash(event.contract));
     }
   }
 

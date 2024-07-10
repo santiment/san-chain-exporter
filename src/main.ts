@@ -11,12 +11,12 @@ import { EXPORT_TIMEOUT_MLS } from './lib/constants';
 import { constructWorker } from './blockchains/construct_worker'
 import * as constantsBase from './lib/constants';
 import { ExporterPosition } from './types'
-import { BaseWorker } from './lib/worker_base';
+import { BaseWorker, WorkResult, WorkResultMultiMode } from './lib/worker_base';
 
 export class Main {
   private worker!: BaseWorker;
   private shouldWork: boolean;
-  private kafkaStorage!: KafkaStorage;
+  private kafkaStorage!: KafkaStorage | Map<string, KafkaStorage>;
   private zookeeperState!: ZookeeperState;
   private lastProcessedPosition!: ExporterPosition;
   private microServer: Server;
@@ -29,17 +29,29 @@ export class Main {
     ))
   }
 
-  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string) {
+  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string | Map<string, string>) {
     const INIT_EXPORTER_ERR_MSG = 'Error when initializing exporter: ';
-    this.kafkaStorage = new KafkaStorage(exporterName, isTransactions, kafkaTopic);
-    this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
-    await this.kafkaStorage
-      .connect()
-      .then(() => this.kafkaStorage.initTransactions())
-      .catch((err) => { throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`); });
-    await this.zookeeperState
-      .connect()
-      .catch((err) => { throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`); });
+    if (typeof kafkaTopic === 'string') {
+      this.kafkaStorage = new KafkaStorage(exporterName, isTransactions, kafkaTopic);
+      this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
+    }
+    else if (kafkaTopic instanceof Map) {
+      this.kafkaStorage = new Map(Array.from(kafkaTopic, ([mode, topic]) => [mode, new KafkaStorage(exporterName, isTransactions, topic)]))
+      const kafkaTopicConcat = Array.from(kafkaTopic.keys()).join('-')
+      this.zookeeperState = new ZookeeperState(exporterName, kafkaTopicConcat);
+    } else {
+      throw new Error(`kafkaTopic variable should be either string or Map. It is: ${kafkaTopic}`);
+    }
+
+
+    try {
+      const kafkaStoragesArray = (this.kafkaStorage instanceof Map) ? Array.from(this.kafkaStorage.values()) : [this.kafkaStorage]
+      await Promise.all(kafkaStoragesArray.map(storage => storage.connect().then(() => storage.initTransactions())))
+      await this.zookeeperState.connect();
+    }
+    catch (err: any) {
+      throw new Error(`${INIT_EXPORTER_ERR_MSG}${err.message}`);
+    }
   }
 
   async handleInitPosition() {
@@ -103,7 +115,7 @@ export class Main {
   async workLoop() {
     while (this.shouldWork) {
       this.worker.lastRequestStartTime = Date.now();
-      const events = await this.worker.work();
+      const workResult: WorkResult | WorkResultMultiMode = await this.worker.work();
 
       this.worker.lastExportTime = Date.now();
 
