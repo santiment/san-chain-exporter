@@ -1,5 +1,5 @@
 'use strict';
-import helper from './lib/helper';
+/*import helper from './lib/helper';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { BaseWorker } from '../../lib/worker_base';
@@ -105,3 +105,4 @@ export class ReceiptsWorker extends BaseWorker {
 }
 
 
+*/

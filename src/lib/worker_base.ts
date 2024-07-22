@@ -4,7 +4,7 @@ import { KafkaStorage } from './kafka_storage';
 import { ExporterPosition } from '../types'
 
 export type WorkResult = any[]
-export type WorkResultMultiMode = Map<string, WorkResult>
+export type WorkResultMultiMode = { [key: string]: WorkResult; }
 
 export class BaseWorker {
   public lastExportTime: number;
