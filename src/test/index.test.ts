@@ -34,9 +34,7 @@ describe('Main tests', () => {
   });
 
   it('initExporter returns error when Exporter connect() fails', async () => {
-    sinon
-      .stub(zkClientAsync.prototype, 'connectAsync')
-      .rejects(new Error('Exporter connection failed'));
+    sandbox.stub(zkClientAsync.prototype, 'connectAsync').rejects(new Error('Exporter connection failed'));
 
     const mainInstance = new Main();
 
@@ -61,6 +59,7 @@ describe('Main tests', () => {
 
   it('initExporter returns error when Exporter initTransactions() fails', async () => {
     sandbox.stub(KafkaStorage.prototype, 'connect').resolves();
+    sandbox.stub(ZookeeperState.prototype, 'connect').resolves();
     sandbox.stub(KafkaStorage.prototype, 'initTransactions').rejects(new Error('Exporter initTransactions failed'));
 
     const mainInstance = new Main();
@@ -88,7 +87,7 @@ describe('Main tests', () => {
     mainInstance.zookeeperState = zookeeperStub;
     mainInstance.worker = new BaseWorker(constants);
 
-    sinon.spy(mainInstance, 'handleInitPosition');
+    sandbox.spy(mainInstance, 'handleInitPosition');
     await mainInstance.handleInitPosition();
 
     assert(mainInstance.handleInitPosition.calledOnce);
@@ -104,7 +103,7 @@ describe('Main tests', () => {
     mainInstance.zookeeperState = zookeeperStub;
     mainInstance.worker = new BaseWorker(constants);
 
-    sinon.spy(mainInstance, 'handleInitPosition');
+    sandbox.spy(mainInstance, 'handleInitPosition');
     await mainInstance.handleInitPosition();
 
     assert(mainInstance.handleInitPosition.calledOnce);
@@ -117,8 +116,8 @@ describe('Main tests', () => {
     zookeeperStub.getLastPosition.throws(new Error('Exporter getLastPosition failed'));
 
     const mainInstance = new Main();
-    sinon.stub(mainInstance, 'zookeeperState').value(zookeeperStub);
-    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
+    sandbox.stub(mainInstance, 'zookeeperState').value(zookeeperStub);
+    sandbox.stub(mainInstance, 'worker').value(new BaseWorker(constants));
 
     try {
       await mainInstance.handleInitPosition();
@@ -139,8 +138,8 @@ describe('Main tests', () => {
     zookeeperStub.savePosition.throws(new Error('Exporter savePosition failed'));
 
     const mainInstance = new Main();
-    sinon.stub(mainInstance, 'zookeeperState').value(zookeeperStub);
-    sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
+    sandbox.stub(mainInstance, 'zookeeperState').value(zookeeperStub);
+    sandbox.stub(mainInstance, 'worker').value(new BaseWorker(constants));
 
     try {
       await mainInstance.handleInitPosition();
@@ -413,8 +412,8 @@ describe('main function', () => {
 
     await main();
 
-    sinon.assert.calledOnce(initStub);
-    sinon.assert.calledOnce(workLoopStub);
-    sinon.assert.calledOnce(disconnectStub);
+    sandbox.assert.calledOnce(initStub);
+    sandbox.assert.calledOnce(workLoopStub);
+    sandbox.assert.calledOnce(disconnectStub);
   });
 });

@@ -34,16 +34,22 @@ export class Main {
       this.kafkaStorage = new KafkaStorage(exporterName, isTransactions, kafkaTopic);
       this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
     }
-    else if (kafkaTopic instanceof Map) {
-      this.kafkaStorage = new Map(Array.from(kafkaTopic, ([mode, topic]) => [mode, new KafkaStorage(exporterName, isTransactions, topic)]))
-      const kafkaTopicConcat = Array.from(kafkaTopic.keys()).join('-')
+    else if (typeof kafkaTopic === 'object') {
+      this.kafkaStorage = Object.entries(kafkaTopic).reduce((acc, [key, value]) => {
+        acc.set(key, new KafkaStorage(exporterName, isTransactions, value));
+        return acc;
+      }, new Map());
+      const kafkaTopicConcat = Array.from(Object.keys(kafkaTopic)).join('-')
       this.zookeeperState = new ZookeeperState(exporterName, kafkaTopicConcat);
     } else {
-      throw new Error(`kafkaTopic variable should be either string or Map. It is: ${kafkaTopic}`);
+      throw new Error(`kafkaTopic variable should be either string or an object. It is: ${kafkaTopic}`);
     }
 
 
     const kafkaStoragesArray = (this.kafkaStorage instanceof Map) ? Array.from(this.kafkaStorage.values()) : [this.kafkaStorage]
+    if (kafkaStoragesArray.length === 0) {
+      throw new Error("At least one KafkaStorage needs to be constructed")
+    }
     await Promise.all(kafkaStoragesArray.map(storage => storage.connect().then(() => storage.initTransactions())))
     await this.zookeeperState.connect();
   }

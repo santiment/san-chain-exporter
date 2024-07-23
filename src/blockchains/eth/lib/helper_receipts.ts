@@ -1,7 +1,6 @@
 import { ETHReceipt } from "../eth_types";
 
 const lang = require('lodash/lang');
-const array = require('lodash/array');
 const object = require('lodash/object');
 const collection = require('lodash/collection');
 
