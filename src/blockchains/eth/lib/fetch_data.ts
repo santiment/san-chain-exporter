@@ -15,13 +15,14 @@ export function parseEthInternalTrx(result: Trace[]): Trace[] {
     );
 }
 
-export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
+export async function fetchEthInternalTrx(ethClient: HTTPClientInterface,
   web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<Trace[]> {
   const filterParams = {
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
     toBlock: web3Wrapper.parseNumberToHex(toBlock)
   };
-  return ethClient.request('trace_filter', [filterParams]).then((data: any) => parseEthInternalTrx(data['result']));
+  const data: any = await ethClient.request('trace_filter', [filterParams]);
+  return parseEthInternalTrx(data['result']);
 }
 
 export async function fetchBlocks(ethClient: HTTPClientInterface,
@@ -54,14 +55,19 @@ export async function fetchReceipts(ethClient: HTTPClientInterface,
     );
   }
   const finishedRequests = await ethClient.requestBulk(batch);
+  const result: ETHReceipt[] = [];
 
-  return finishedRequests.map((response: any) => {
+  finishedRequests.forEach((response: any) => {
     if (response.result) {
-      response.result;
+      response.result.forEach((receipt: ETHReceipt) => {
+        result.push(receipt);
+      });
     }
     else {
       throw new Error(JSON.stringify(response));
     }
   });
+
+  return result;
 }
 

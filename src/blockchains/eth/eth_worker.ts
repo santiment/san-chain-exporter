@@ -3,7 +3,7 @@ import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
 import { transactionOrder, stableSort } from './lib/util';
-import { BaseWorker, WorkResultMultiMode } from '../../lib/worker_base';
+import { BaseWorker, WorkResult, WorkResultMultiMode } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
 import { FeesDecoder } from './lib/fees_decoder';
@@ -44,8 +44,7 @@ export class ETHWorker extends BaseWorker {
     return await Promise.all([traces, blocks, receipts]);
   }
 
-  transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[],
-    blocks: any, receipts: ETHReceipt[]): ETHTransfer[] {
+  transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[], blocks: any, receipts: ETHReceipt[]): ETHTransfer[] {
     let events: ETHTransfer[] = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
@@ -105,8 +104,7 @@ export class ETHWorker extends BaseWorker {
     return this.modes.includes(this.settings.NATIVE_TOKEN_MODE)
   }
 
-
-  async work(): Promise<WorkResultMultiMode> {
+  async work(): Promise<WorkResult | WorkResultMultiMode> {
     const result: WorkResultMultiMode = {};
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
@@ -115,7 +113,6 @@ export class ETHWorker extends BaseWorker {
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
 
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
-
 
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
 
@@ -136,7 +133,14 @@ export class ETHWorker extends BaseWorker {
 
         this.lastPrimaryKey += events.length;
       }
-      result[this.settings.NATIVE_TOKEN_MODE] = events;
+
+      if (this.modes.length === 1) {
+        // We are operating in single mode
+        return events;
+      }
+      else {
+        return result[this.settings.NATIVE_TOKEN_MODE] = events;
+      }
     }
     if (this.modes.includes(this.settings.RECEIPTS_MODE)) {
       assertIsDefined(receipts, "Receipts are needed for receipts extraction");
@@ -156,10 +160,11 @@ export class ETHWorker extends BaseWorker {
   async init(): Promise<void> {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
-    if (typeof this.settings.KAFKA_TOPIC === 'string') {
+    if (!this.settings.KAFKA_TOPIC.includes(":")) {
       this.modes = [this.settings.NATIVE_TOKEN_MODE];
     }
     else if (typeof this.settings.KAFKA_TOPIC === 'object') {
+      // TODO convert to object in common function to also be used by KafkaStorage
       this.modes = Object.keys(this.settings.KAFKA_TOPIC);
     }
   }

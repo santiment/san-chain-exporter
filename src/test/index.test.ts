@@ -289,7 +289,6 @@ describe('Main tests', () => {
       }
 
       async storeEvents() {
-        console.log("Store events mock")
         throw new Error('storeEvents failed');
       }
     }

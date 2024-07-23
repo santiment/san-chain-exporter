@@ -29,22 +29,29 @@ export class Main {
     ))
   }
 
-  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string | Map<string, string>) {
-    if (typeof kafkaTopic === 'string') {
+  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string) {
+    if (!kafkaTopic.includes(':')) {
+      logger.info(`Constructing single Kafka producer`)
       this.kafkaStorage = new KafkaStorage(exporterName, isTransactions, kafkaTopic);
       this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
     }
-    else if (typeof kafkaTopic === 'object') {
-      this.kafkaStorage = Object.entries(kafkaTopic).reduce((acc, [key, value]) => {
-        acc.set(key, new KafkaStorage(exporterName, isTransactions, value));
+    else {
+      const keyValuePairs = kafkaTopic.split(',');
+
+      this.kafkaStorage = keyValuePairs.reduce((acc, pair) => {
+        const [key, value] = pair.split(':');
+        if (key && value) {
+          acc.set(key.trim(), new KafkaStorage(exporterName, isTransactions, value));
+        }
+        else {
+          throw new Error(`key-value pair format is unexpected in KAFKA_TOPIC`);
+        }
         return acc;
       }, new Map());
-      const kafkaTopicConcat = Array.from(Object.keys(kafkaTopic)).join('-')
-      this.zookeeperState = new ZookeeperState(exporterName, kafkaTopicConcat);
-    } else {
-      throw new Error(`kafkaTopic variable should be either string or an object. It is: ${kafkaTopic}`);
-    }
 
+      logger.info(`Constructed ${keyValuePairs.length} Kafka producers`)
+      this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
+    }
 
     const kafkaStoragesArray = (this.kafkaStorage instanceof Map) ? Array.from(this.kafkaStorage.values()) : [this.kafkaStorage]
     if (kafkaStoragesArray.length === 0) {
@@ -125,11 +132,11 @@ export class Main {
         await this.kafkaStorage.storeEvents(workResult, this.mergedConstants.WRITE_SIGNAL_RECORDS_KAFKA);
       }
     }
-    else if (workResult instanceof Map) {
+    else if (typeof workResult === 'object') {
       if (!(this.kafkaStorage instanceof Map)) {
         throw new Error('Worker returns data for multiple Kafka storages and single is defined')
       }
-      for (const [mode, data] of workResult.entries()) {
+      for (const [mode, data] of Object.entries(workResult)) {
         const kafkaStoragePerMode = this.kafkaStorage.get(mode)
         if (!kafkaStoragePerMode) {
           throw Error(`Workers returns data for mode ${mode} and no worker is defined for this mode`)
