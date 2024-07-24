@@ -104,6 +104,37 @@ export class ETHWorker extends BaseWorker {
     return this.modes.includes(this.settings.NATIVE_TOKEN_MODE)
   }
 
+  getTransfersOutput(fromBlock: number, toBlock: number, traces: Trace[],
+    blocks: Map<number, ETHBlock>, receipts: ETHReceipt[], endOfBlockEvents: EOB[]): WorkResult {
+    assertIsDefined(traces, "Traces are needed for native token transfers");
+    assertIsDefined(receipts, "Receipts are needed for native token transfers");
+
+    const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
+
+
+    events.push(...endOfBlockEvents)
+    if (events.length > 0) {
+      stableSort(events, transactionOrder);
+      extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
+
+      this.lastPrimaryKey += events.length;
+    }
+
+    return events;
+  }
+
+  getReceiptsOutput(blocks: Map<number, ETHBlock>, receipts: ETHReceipt[]): WorkResult {
+    assertIsDefined(receipts, "Receipts are needed for receipts extraction");
+    assertIsDefined(blocks, "Blocks are needed for extraction");
+    const decodedReceipts = receipts.map((receipt: any) => decodeReceipt(receipt, this.web3Wrapper));
+    decodedReceipts.forEach(receipt => {
+      const block = blocks.get(receipt.blockNumber)
+      assertIsDefined(block, `Block ${receipt.blockNumber} is missing`)
+      receipt.timestamp = block.timestamp;
+    });
+    return decodedReceipts;
+  }
+
   async work(): Promise<WorkResultMultiMode> {
     const result: WorkResultMultiMode = {};
     const workerContext = await analyzeWorkerContext(this);
@@ -120,32 +151,14 @@ export class ETHWorker extends BaseWorker {
     this.lastExportedBlock = toBlock;
 
     assertIsDefined(blocks, "Blocks are needed for extraction");
+    // TODO consider if EOB events should also be present in other output topics
+    const endOfBlockEvents = collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper)
     if (this.modes.includes(this.settings.NATIVE_TOKEN_MODE)) {
-      assertIsDefined(traces, "Traces are needed for native token transfers");
-      assertIsDefined(receipts, "Receipts are needed for native token transfers");
-
-      const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
-
-      events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-      if (events.length > 0) {
-        stableSort(events, transactionOrder);
-        extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
-
-        this.lastPrimaryKey += events.length;
-      }
-
-      result[this.settings.NATIVE_TOKEN_MODE] = events;
+      result[this.settings.NATIVE_TOKEN_MODE] = this.getTransfersOutput(fromBlock, toBlock, traces, blocks,
+        receipts, endOfBlockEvents);
     }
     if (this.modes.includes(this.settings.RECEIPTS_MODE)) {
-      assertIsDefined(receipts, "Receipts are needed for receipts extraction");
-      assertIsDefined(blocks, "Blocks are needed for extraction");
-      const decodedReceipts = receipts.map((receipt: any) => decodeReceipt(receipt, this.web3Wrapper));
-      decodedReceipts.forEach(receipt => {
-        const block = blocks.get(receipt.blockNumber)
-        assertIsDefined(block, `Block ${receipt.blockNumber} is missing`)
-        receipt['timestamp'] = block.timestamp;
-      });
-      result[this.settings.RECEIPTS_MODE] = decodedReceipts;
+      result[this.settings.RECEIPTS_MODE] = this.getReceiptsOutput(blocks, receipts);
     }
 
     return result;

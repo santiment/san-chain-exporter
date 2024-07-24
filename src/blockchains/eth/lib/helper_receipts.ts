@@ -1,4 +1,4 @@
-import { ETHReceipt } from "../eth_types";
+import { ETHReceipt, ETHReceiptDecoded } from "../eth_types";
 
 const lang = require('lodash/lang');
 const object = require('lodash/object');
@@ -6,20 +6,6 @@ const collection = require('lodash/collection');
 
 import { Web3Interface } from './web3_wrapper';
 
-/*const parseReceipts = (responses) => {
-  const receipts = responses.map((response) => response['result']);
-  return array.compact(array.flatten(receipts));
-};
-
-const parseBlocks = (responses) => {
-  return responses.map((response) => response['result']);
-};
-
-const parseTransactionReceipts = (responses) => {
-  const receipts = responses.map((response) => response['result']);
-  return receipts;
-};
-*/
 const decodeLog = (log: any, web3Wrapper: Web3Interface) => {
   collection.forEach(['blockNumber', 'blockHash', 'transactionHash', 'transactionIndex'],
     (key: string) => object.unset(log, key));
@@ -49,7 +35,7 @@ const columnizeLogs = (logs: any[], web3Wrapper: Web3Interface) => {
   return result;
 };
 
-export function decodeReceipt(receipt: ETHReceipt, web3Wrapper: Web3Interface) {
+export function decodeReceipt(receipt: ETHReceipt, web3Wrapper: Web3Interface): ETHReceiptDecoded {
   const clonedReceipt = lang.cloneDeep(receipt);
 
   collection.forEach(['blockNumber', 'status', 'transactionIndex'],
@@ -72,21 +58,6 @@ export function decodeReceipt(receipt: ETHReceipt, web3Wrapper: Web3Interface) {
 
   return clonedReceipt;
 };
-
-/*const decodeBlock = (block, web3Wrapper) => {
-  return {
-    timestamp: web3Wrapper.parseHexToNumber(block.timestamp),
-    number: web3Wrapper.parseHexToNumber(block.number)
-  };
-};
-
-const prepareBlockTimestampsObject = (blocks) => {
-  let obj = {};
-  for (const block of blocks) { obj[block.number] = block.timestamp; }
-
-  return obj;
-};*/
-
 
 
 
