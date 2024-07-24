@@ -11,6 +11,7 @@ import { EXPORT_TIMEOUT_MLS } from './lib/constants';
 import { constructWorker } from './blockchains/construct_worker'
 import { ExporterPosition } from './types'
 import { BaseWorker, WorkResult, WorkResultMultiMode } from './lib/worker_base';
+import { parseKafkaTopicToObject } from './lib/utils';
 
 export class Main {
   private worker!: BaseWorker;
@@ -36,20 +37,14 @@ export class Main {
       this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
     }
     else {
-      const keyValuePairs = kafkaTopic.split(',');
+      const mapping = parseKafkaTopicToObject(kafkaTopic)
 
-      this.kafkaStorage = keyValuePairs.reduce((acc, pair) => {
-        const [key, value] = pair.split(':');
-        if (key && value) {
-          acc.set(key.trim(), new KafkaStorage(exporterName, isTransactions, value));
-        }
-        else {
-          throw new Error(`key-value pair format is unexpected in KAFKA_TOPIC`);
-        }
+      this.kafkaStorage = Object.entries(mapping).reduce((acc, [mode, topicName]) => {
+        acc.set(mode, new KafkaStorage(exporterName, isTransactions, topicName));
         return acc;
       }, new Map());
 
-      logger.info(`Constructed ${keyValuePairs.length} Kafka producers`)
+      logger.info(`Constructed ${this.kafkaStorage.size} Kafka producers`)
       this.zookeeperState = new ZookeeperState(exporterName, kafkaTopic);
     }
 

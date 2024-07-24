@@ -20,7 +20,8 @@ describe('Main tests', () => {
   const constants = {
     START_BLOCK: -1,
     START_PRIMARY_KEY: -1,
-    BLOCKCHAIN: 'eth'
+    BLOCKCHAIN: 'eth',
+    KAFKA_TOPIC: 'NOT_USED'
   };
 
   let sandbox: any = null;
@@ -42,11 +43,7 @@ describe('Main tests', () => {
     sandbox.stub(KafkaStorage.prototype, 'initTransactions').resolves();
 
     try {
-      const mergedConstants = {
-        KAFKA_TOPIC: 'NOT_USED',
-        ...constants
-      }
-      await mainInstance.init(mergedConstants);
+      await mainInstance.init(constants);
     } catch (err) {
       if (err instanceof Error) {
         assert.strictEqual(err.message, 'Exporter connection failed');
@@ -63,12 +60,8 @@ describe('Main tests', () => {
     sandbox.stub(KafkaStorage.prototype, 'initTransactions').rejects(new Error('Exporter initTransactions failed'));
 
     const mainInstance = new Main();
-    const mergedConstants = {
-      KAFKA_TOPIC: 'NOT_USED',
-      ...constants
-    }
     try {
-      await mainInstance.init(mergedConstants);
+      await mainInstance.init(constants);
     } catch (err) {
       if (err instanceof Error) {
         assert.strictEqual(err.message, 'Exporter initTransactions failed');
@@ -161,12 +154,8 @@ describe('Main tests', () => {
 
     const mainInstance = new Main();
     sandbox.stub(mainInstance, 'worker').value(new BaseWorker(constants));
-    const mergedConstants = {
-      KAFKA_TOPIC: 'NOT_USED',
-      ...constants
-    }
     try {
-      await mainInstance.init(mergedConstants);
+      await mainInstance.init(constants);
       assert.fail('initWorker should have thrown an error');
     } catch (err) {
       if (err instanceof Error) {
@@ -184,15 +173,11 @@ describe('Main tests', () => {
     sandbox.stub(ZookeeperState.prototype, 'connect').resolves();
 
     const mainInstance = new Main();
-    const mergedConstants = {
-      KAFKA_TOPIC: 'NOT_USED',
-      ...constants
-    }
 
     sandbox.stub(ETHWorker.prototype, 'init').rejects(new Error('Worker init failed'));
 
     try {
-      await mainInstance.init(mergedConstants);
+      await mainInstance.init(constants);
       assert.fail('initWorker should have thrown an error');
     } catch (err) {
       if (err instanceof Error) {
@@ -213,12 +198,8 @@ describe('Main tests', () => {
 
     sandbox.stub(mainInstance, 'handleInitPosition').throws(new Error('Error when initializing position'));
 
-    const mergedConstants = {
-      KAFKA_TOPIC: 'NOT_USED',
-      ...constants
-    }
     try {
-      await mainInstance.init(mergedConstants);
+      await mainInstance.init(constants);
       assert.fail('initWorker should have thrown an error');
     } catch (err) {
       if (err instanceof Error) {
@@ -244,11 +225,7 @@ describe('Main tests', () => {
 
     handleInitPositionStub.resolves();
 
-    const mergedConstants = {
-      KAFKA_TOPIC: 'NOT_USED',
-      ...constants
-    }
-    await mainInstance.init(mergedConstants);
+    await mainInstance.init(constants);
     assert(handleInitPositionStub.calledOnce);
   });
 

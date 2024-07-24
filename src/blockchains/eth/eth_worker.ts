@@ -13,7 +13,7 @@ import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_dat
 import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceipt } from './eth_types';
 import { EOB, collectEndOfBlocks } from './lib/end_of_block';
-import { assertIsDefined } from '../../lib/utils';
+import { assertIsDefined, parseKafkaTopicToObject } from '../../lib/utils';
 import { decodeReceipt } from './lib/helper_receipts'
 
 export class ETHWorker extends BaseWorker {
@@ -104,7 +104,7 @@ export class ETHWorker extends BaseWorker {
     return this.modes.includes(this.settings.NATIVE_TOKEN_MODE)
   }
 
-  async work(): Promise<WorkResult | WorkResultMultiMode> {
+  async work(): Promise<WorkResultMultiMode> {
     const result: WorkResultMultiMode = {};
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
@@ -112,7 +112,7 @@ export class ETHWorker extends BaseWorker {
 
     const { fromBlock, toBlock } = nextIntervalCalculator(this);
 
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
+    logger.info(`Fetching events for interval ${fromBlock}:${toBlock}`);
 
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
 
@@ -134,13 +134,7 @@ export class ETHWorker extends BaseWorker {
         this.lastPrimaryKey += events.length;
       }
 
-      if (this.modes.length === 1) {
-        // We are operating in single mode
-        return events;
-      }
-      else {
-        return result[this.settings.NATIVE_TOKEN_MODE] = events;
-      }
+      result[this.settings.NATIVE_TOKEN_MODE] = events;
     }
     if (this.modes.includes(this.settings.RECEIPTS_MODE)) {
       assertIsDefined(receipts, "Receipts are needed for receipts extraction");
@@ -161,11 +155,11 @@ export class ETHWorker extends BaseWorker {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
 
     if (!this.settings.KAFKA_TOPIC.includes(":")) {
-      this.modes = [this.settings.NATIVE_TOKEN_MODE];
+      throw new Error("ETH worker, expects KAFKA_TOPIC in mode:name format")
     }
-    else if (typeof this.settings.KAFKA_TOPIC === 'object') {
-      // TODO convert to object in common function to also be used by KafkaStorage
-      this.modes = Object.keys(this.settings.KAFKA_TOPIC);
+    else {
+      const mapping = parseKafkaTopicToObject(this.settings.KAFKA_TOPIC)
+      this.modes = Object.keys(mapping);
     }
   }
 }

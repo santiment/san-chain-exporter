@@ -1,11 +1,9 @@
-import assert from 'assert';
 const sinon = require('sinon');
 import v8 from 'v8';
 import { extendEventsWithPrimaryKey, ETHWorker } from '../../blockchains/eth/eth_worker';
 import { EOB } from '../../blockchains/eth/lib/end_of_block';
 import * as constants from '../../blockchains/eth/lib/constants';
-import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from '../../blockchains/eth/eth_types';
-import { WorkResultMultiMode } from '../../lib/worker_base';
+import { ETHBlock, ETHTransfer } from '../../blockchains/eth/eth_types';
 import { expect } from 'earl'
 import { MockWeb3Wrapper } from '../eth/mock_web3_wrapper';
 
@@ -16,8 +14,11 @@ describe('Test worker', function () {
     let endOfBlock: EOB;
     let eobWithPrimaryKey: EOB & { primaryKey: number };
     // This will construct the worker in the 'native token' mode
-    (constants as any).KAFKA_TOPIC = { [constants.NATIVE_TOKEN_MODE]: 'topic_name_not_used' }
-    let worker = new ETHWorker(constants);
+    const mergedConstants = {
+        KAFKA_TOPIC: `${constants.NATIVE_TOKEN_MODE}:topic_name_not_used`,
+        ...constants
+    };
+    let worker = new ETHWorker(mergedConstants);
     let blockInfos = new Map<number, ETHBlock>()
     let feeResultWithPrimaryKey: ETHTransfer;
     let callResultWithPrimaryKey: ETHTransfer;
