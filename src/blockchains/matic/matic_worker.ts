@@ -6,6 +6,8 @@ import { HTTPClientInterface } from '../../types';
 import { extendEventsWithPrimaryKey } from '../erc20/lib/extend_events_key';
 import { getPastEvents } from './lib/fetch_events';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
+import { ERC20Transfer } from '../erc20/erc20_types';
+import { assertIsDefined } from '../../lib/utils';
 
 
 export class MaticWorker extends BaseWorker {
@@ -30,12 +32,14 @@ export class MaticWorker extends BaseWorker {
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 
-    const events = await getPastEvents(this.ethClient, this.web3Wrapper, result.fromBlock, result.toBlock);
+    const events: ERC20Transfer[] = await getPastEvents(this.ethClient, this.web3Wrapper, result.fromBlock, result.toBlock);
 
     if (events.length > 0) {
-      extendEventsWithPrimaryKey(events);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${result.fromBlock}:${result.toBlock}`);
-      this.lastPrimaryKey = events[events.length - 1].primaryKey;
+      extendEventsWithPrimaryKey(events);
+      const lastPrimaryKey = events[events.length - 1].primaryKey
+      assertIsDefined(lastPrimaryKey, 'Primary keys should be set');
+      this.lastPrimaryKey = lastPrimaryKey;
     }
 
     this.lastExportedBlock = result.toBlock;
