@@ -10,7 +10,7 @@ export type ERC20Transfer = {
   logIndex: number
   type?: string,
   primaryKey?: number
-  fromBalance?: number,
-  toBalance?: number
+  fromBalance?: string,
+  toBalance?: string
 }
 

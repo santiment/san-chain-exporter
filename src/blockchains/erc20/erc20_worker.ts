@@ -7,12 +7,13 @@ import { ContractOverwrite, changeContractAddresses, extractChangedContractAddre
 import { stableSort, readJsonFile } from './lib/util';
 import { BaseWorker } from '../../lib/worker_base';
 import { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
-import { Web3Interface, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
+import { Web3Interface, Web3Wrapper, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
 import { TimestampsCache } from './lib/timestamps_cache';
 import { getPastEvents } from './lib/fetch_events';
 import { initBlocksList } from '../../lib/fetch_blocks_list';
 import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
+import { extendTransfersWithBalances } from './lib/add_balances'
 
 
 /**
@@ -143,6 +144,7 @@ export class ERC20Worker extends BaseWorker {
     }
     else {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
+      extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
