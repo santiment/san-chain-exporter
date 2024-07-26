@@ -191,12 +191,11 @@ export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: numbe
   await timestampsCache.waitResponse();
   logger.debug(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
   const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
-  //const result = filterEvents(decodedEvents);
+  const result = filterEvents(decodedEvents);
 
-  // TODO restore
-  //addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress);
+  addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress);
 
-  return decodedEvents;
+  return result;
 }
 
 

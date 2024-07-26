@@ -144,7 +144,9 @@ export class ERC20Worker extends BaseWorker {
     }
     else {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
-      await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
+      if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES) {
+        await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
+      }
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
