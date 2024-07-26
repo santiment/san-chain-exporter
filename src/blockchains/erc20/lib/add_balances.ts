@@ -1,8 +1,8 @@
-import { assertIsDefined } from '../../../lib/utils';
+import { assertIsDefinedLazy } from '../../../lib/utils';
 import { ERC20Transfer } from '../erc20_types';
 import { Web3 } from 'web3';
 
-type AddressContractToBalance = Map<[string, string], string>;
+type AddressContractToBalance = Map<string, string>;
 type BlockNumberToBalances = Map<number, AddressContractToBalance>;
 type AddressContract = [string, string]
 type AddressContractBalance = [string, string, string]
@@ -69,15 +69,6 @@ const ERC20_ABI = [
 ];
 
 async function getBalancesPerBlock(web3: Web3, addressContract: AddressContract[], blockNumber: number): Promise<AddressContractBalance[]> {
-  if (blockNumber === 19000171) {
-    let count = 0
-    addressContract.forEach(address => {
-      if (address[0] === '0x6b75d8af000000e20b7a7ddf000ba900b4009a80' && address[1] === '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2') {
-        ++count
-      }
-    })
-    console.log("count is: ", count)
-  }
   const multicall = new web3.eth.Contract(multicallAbi, multicallAddress);
 
   const calls = addressContract.map(([address, contractAddress]) => {
@@ -91,19 +82,17 @@ async function getBalancesPerBlock(web3: Web3, addressContract: AddressContract[
 
   const result: any = await multicall.methods.aggregate(calls).call({}, blockNumber);
 
-  let index = 0;
-  const results: AddressContractBalance[] = addressContract.map(([address, contractAddress]) => {
-    const balanceData = result.returnData[index];
-    const decoded: string = web3.eth.abi.decodeParameter('uint256', balanceData) as string;
-    index++;
-    if (blockNumber === 19000171 && address == '0x6b75d8af000000e20b7a7ddf000ba900b4009a80'
-      && contractAddress == '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2') {
-      console.log("Balance resolved as ", decoded)
-    }
-    return [address, contractAddress, decoded]
-  });
+  if (result.returnData.length !== addressContract.length) {
+    throw new Error("Response size does not match");
+  }
 
-  return results;
+  let index = 0;
+  return addressContract.map(([address, contractAddress]) => {
+    const balanceData = result.returnData[index];
+    const decoded: bigint = web3.eth.abi.decodeParameter('uint256', balanceData) as bigint
+    index++;
+    return [address, contractAddress, decoded.toString()]
+  });
 }
 
 function addToSet(set: ValueSet, event: ERC20Transfer, web3: Web3) {
@@ -116,9 +105,13 @@ function addToSet(set: ValueSet, event: ERC20Transfer, web3: Web3) {
   }
 }
 
+function concatAddressAndContract(address: string, contract: string): string {
+  return address + "-" + contract
+}
+
 function addToMap(map: AddressContractToBalance, balances: AddressContractBalance[]) {
   for (const addressBalance of balances) {
-    map.set([addressBalance[0], addressBalance[1]], addressBalance[2])
+    map.set(concatAddressAndContract(addressBalance[0], addressBalance[1]), addressBalance[2])
   }
 }
 
@@ -138,7 +131,6 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
   }, new Map() as BlockNumberToAffectedAddresses)
 
   const promises: Promise<AddressContractBalance[]>[] = Array.from(neededBalances.entries()).map(([blockNumber, addressSet]) => {
-    console.log("Needed balances blockNumber: ", blockNumber)
     return getBalancesPerBlock(web3, addressSet.values(), blockNumber)
   })
 
@@ -162,11 +154,21 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
     return acc;
   }, new Map() as BlockNumberToBalances)
 
+  // Array.from(balanceMap.get(19000171)!.entries()).forEach(pair => {
+  //   console.log(`${pair[0]} --> ${pair[1]}`)
+  // })
+
+
   for (const event of events) {
-    event.fromBalance = balanceMap.get(event.blockNumber)?.get([event.from, event.contract])
-    event.toBalance = balanceMap.get(event.blockNumber)?.get([event.to, event.contract])
-    assertIsDefined(event.fromBalance, `'from' balance should have been resovled for event ${JSON.stringify(event)}`)
-    assertIsDefined(event.toBalance, `'to' balance should have been resovled for event ${event}`)
+    if (web3.utils.isAddress(event.from)) {
+      event.fromBalance = balanceMap.get(event.blockNumber)?.get(concatAddressAndContract(event.from, event.contract))
+      assertIsDefinedLazy(event.fromBalance, () => `'from' balance should have been resovled for event ${JSON.stringify(event)}`)
+    }
+
+    if (web3.utils.isAddress(event.to)) {
+      event.toBalance = balanceMap.get(event.blockNumber)?.get(concatAddressAndContract(event.to, event.contract))
+      assertIsDefinedLazy(event.toBalance, () => `'to' balance should have been resovled for event ${JSON.stringify(event)}`)
+    }
   }
 }
 

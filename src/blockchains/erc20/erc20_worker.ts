@@ -113,7 +113,7 @@ export class ERC20Worker extends BaseWorker {
     };
   }
 
-  async work() {
+  async work(): Promise<ERC20Transfer[]> {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
@@ -144,7 +144,7 @@ export class ERC20Worker extends BaseWorker {
     }
     else {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
-      extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
+      await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
