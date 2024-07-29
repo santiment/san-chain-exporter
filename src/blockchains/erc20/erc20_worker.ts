@@ -144,7 +144,7 @@ export class ERC20Worker extends BaseWorker {
     }
     else {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
-      if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.toBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
+      if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
         await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
       }
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {

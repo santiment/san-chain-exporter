@@ -1,7 +1,8 @@
 export KAFKA_URL=kafka-hz.stage.san:30911
 export ZOOKEEPER_URL=zookeeper-hz.stage.san:30921
 export NODE_URL=https://ethereum.santiment.net
-export START_BLOCK="15676731"
+export START_BLOCK="14353601"
+export EXTEND_TRANSFERS_WITH_BALANCES="true"
 export BLOCK_INTERVAL="5"
 export EXPORT_TIMEOUT_MLS=300000
 export CONTRACT_MODE="extract_exact_overwrite"

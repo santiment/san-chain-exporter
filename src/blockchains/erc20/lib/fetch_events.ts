@@ -8,7 +8,7 @@ import { TimestampsCacheInterface } from './timestamps_cache';
 import { ERC20Transfer } from '../erc20_types';
 
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const MINT_ADDRESS = 'mint';
 const BURN_ADDRESS = 'burn';
 const FREEZE_ADDRESS = 'freeze';
