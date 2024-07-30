@@ -38,6 +38,7 @@
     "source-map-support": "^0.5.21",
     "uuid": "^9.0.1",
     "web3": "^4.9.0",
+    "web3-validator": "^2.0.6",
     "xrpl": "^3.1.0",
     "zod": "^3.23.8"
   },
