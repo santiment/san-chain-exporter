@@ -8,7 +8,6 @@ export type AddressContract = [string, string]
 export type BlockNumberAddressContractBalance = [number, string, string, string]
 
 const MAX_BALANCES_PER_QUERY = 50;
-const MULTICALL_FAILURE = "multicall_failure"
 
 
 export function decodeRevertReason(web3: Web3, errorData: string) {

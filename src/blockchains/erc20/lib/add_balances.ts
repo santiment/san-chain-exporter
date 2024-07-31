@@ -48,12 +48,20 @@ async function getBalancesPerBlock(web3: Web3, addressContract: Utils.AddressCon
   addressContract.forEach(([address, contractAddress]) => {
     const resultMulticall = resultsMulticall[index];
 
+    let decodeSuccess = false;
     if (resultMulticall[0]) {
-      const decoded: bigint = web3.eth.abi.decodeParameter('uint256', resultMulticall[1]) as bigint
-      result.push([blockNumber, address, contractAddress, decoded.toString(36)])
+      try {
+        const decoded: bigint = web3.eth.abi.decodeParameter('uint256', resultMulticall[1]) as bigint
+        result.push([blockNumber, address, contractAddress, decoded.toString(36)]);
+        decodeSuccess = true;
+      }
+      catch (error: any) {
+        console.error(`Error decoding address-contract: ${address}-${contractAddress}: ${error}`)
+      }
     }
-    else {
-      console.error("Multicall partial failure")
+
+    if (!decodeSuccess) {
+      console.error(`Multicall partial failure for address-contract ${address}-${contractAddress}`)
       result.push([blockNumber, address, contractAddress, MULTICALL_FAILURE])
     }
     index++;
@@ -94,7 +102,7 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
       result = await getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0])
     }
     catch (error: any) {
-      console.error(`No balance for ${result}`)
+      console.error(`No balance: ${error}`)
     }
     //console.log("Got balance: ", result)
     results.push(...result)
