@@ -10,14 +10,12 @@ type BlockNumberToAffectedAddresses = Map<number, Utils.ValueSet>;
 
 const MULTICALL_FAILURE = "multicall_failure"
 
-async function getBalancesPerBlock(web3: Web3, addressContract: Utils.AddressContract[], blockNumber: number)
-  : Promise<Utils.BlockNumberAddressContractBalance[]> {
+async function doMulticall(web3: Web3, blockNumber: number, addressContract: Utils.AddressContract[]): Promise<any[]> {
   const multicall = new web3.eth.Contract(MULTICALL_ABI, MULTICALL_ADDRESS);
 
   const calls = addressContract.map(([address, contractAddress]) => {
     const contract = new web3.eth.Contract(ERC20_ABI, contractAddress);
     const data = contract.methods.balanceOf(address).encodeABI();
-    //console.log(`Asking balance ${blockNumber}-${address}-${contractAddress}`)
     return {
       target: contractAddress,
       callData: data
@@ -42,16 +40,22 @@ async function getBalancesPerBlock(web3: Web3, addressContract: Utils.AddressCon
     throw new Error("Response size does not match");
   }
 
-  let index = 0;
+  return resultsMulticall
+}
 
+
+function decodeMulticallResult(multicallResult: any[], web3: Web3, blockNumber: number,
+  addressContract: Utils.AddressContract[]): Utils.BlockNumberAddressContractBalance[] {
   const result: Utils.BlockNumberAddressContractBalance[] = [];
+
+  let index = 0;
   addressContract.forEach(([address, contractAddress]) => {
-    const resultMulticall = resultsMulticall[index];
+    const result = multicallResult[index];
 
     let decodeSuccess = false;
-    if (resultMulticall[0]) {
+    if (result[0]) {
       try {
-        const decoded: bigint = web3.eth.abi.decodeParameter('uint256', resultMulticall[1]) as bigint
+        const decoded: bigint = web3.eth.abi.decodeParameter('uint256', result[1]) as bigint
         result.push([blockNumber, address, contractAddress, decoded.toString(36)]);
         decodeSuccess = true;
       }
@@ -69,10 +73,16 @@ async function getBalancesPerBlock(web3: Web3, addressContract: Utils.AddressCon
   return result;
 }
 
+async function getBalancesPerBlock(web3: Web3, addressContract: Utils.AddressContract[], blockNumber: number)
+  : Promise<Utils.BlockNumberAddressContractBalance[]> {
 
-export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[]) {
-  // Identify for which addresses we need to fetch balances
-  const neededBalances: BlockNumberToAffectedAddresses = events.reduce((acc, event) => {
+  const multicallResult = await doMulticall(web3, blockNumber, addressContract)
+  return decodeMulticallResult(multicallResult, web3, blockNumber, addressContract)
+}
+
+// Identify for which addresses we need to fetch balances
+function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddresses {
+  return events.reduce((acc, event) => {
     const blockNumberSet = acc.get(event.blockNumber)
     if (blockNumberSet) {
       Utils.addToSet(blockNumberSet, event);
@@ -85,36 +95,18 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
     return acc;
   }, new Map() as BlockNumberToAffectedAddresses)
 
+}
 
-  const addresses: [number, Utils.AddressContract[]][] = [];
-
-  for (const [blockNumber, addressSet] of Array.from(neededBalances.entries())) {
-    const brokenPerBatchAddresses: Utils.AddressContract[][] = Utils.breakNeededBalancesPerBatch(addressSet.values())
-    brokenPerBatchAddresses.map((addressContract: Utils.AddressContract[]) => {
-      addresses.push([blockNumber, addressContract])
-    })
-  }
-
+// Identify for which addresses we need to ask for balance. Build a map of those balances.
+async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][]): Promise<BlockNumberToBalances> {
   const results: Utils.BlockNumberAddressContractBalance[] = []
-  for (const blockNumberAddress of addresses) {
+  for (const blockNumberAddress of batchedAddresses) {
     let result: Utils.BlockNumberAddressContractBalance[] = [];
-    try {
-      result = await getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0])
-    }
-    catch (error: any) {
-      console.error(`No balance: ${error}`)
-    }
-    //console.log("Got balance: ", result)
+    result = await getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0])
     results.push(...result)
   }
 
-
-  //const results: AddressContractBalance[][] = await Promise.all(promises);
-
-  // Store the discovered balances in a Map structure for easy access
-  let index = 0;
-
-  const balanceMap = results.reduce((acc, result) => {
+  return results.reduce((acc, result) => {
     const blockNumber = result[0];
     const balances = acc.get(blockNumber)
     if (balances) {
@@ -125,15 +117,25 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
       Utils.addToMap(newMap, result);
       acc.set(blockNumber, newMap)
     }
-    ++index;
     return acc;
   }, new Map() as BlockNumberToBalances)
+}
 
-  // Array.from(balanceMap.get(19000171)!.entries()).forEach(pair => {
-  //   console.log(`${pair[0]} --> ${pair[1]}`)
-  // })
+export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[]) {
+  const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
+  const batchedAddresses: [number, Utils.AddressContract[]][] = [];
 
+  // Break the needed balances into batches. Not sure what the Multicall limit is but we most probably do not want
+  // to ask for all at once.
+  for (const [blockNumber, addressSet] of Array.from(addressesInvolved.entries())) {
+    const brokenPerBatchAddresses: Utils.AddressContract[][] = Utils.breakNeededBalancesPerBatch(addressSet.values())
+    brokenPerBatchAddresses.map((addressContract: Utils.AddressContract[]) => {
+      batchedAddresses.push([blockNumber, addressContract])
+    })
+  }
+
+  const balanceMap = await buildBalancesMap(web3, batchedAddresses);
   for (const event of events) {
     if (Utils.isAddressEligableForBalance(event.from, event.contract)) {
       event.fromBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.from, event.contract))
