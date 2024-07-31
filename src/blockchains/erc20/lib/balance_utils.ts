@@ -34,7 +34,6 @@ export function concatAddressAndContract(address: string, contract: string): str
 }
 
 export function addToMap(map: AddressContractToBalance, balance: BlockNumberAddressContractBalance) {
-  //console.log(`Adding balance ${balance[0]}-${balance[1]}-${balance[2]}-${balance[3]}`)
   const concatenation = concatAddressAndContract(balance[1], balance[2])
   map.set(concatenation, balance[3])
 }
