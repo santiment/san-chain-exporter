@@ -44,18 +44,18 @@ async function doMulticall(web3: Web3, blockNumber: number, addressContract: Uti
 }
 
 
-function decodeMulticallResult(multicallResult: any[], web3: Web3, blockNumber: number,
+function decodeMulticallResult(multicallResults: any[], web3: Web3, blockNumber: number,
   addressContract: Utils.AddressContract[]): Utils.BlockNumberAddressContractBalance[] {
   const result: Utils.BlockNumberAddressContractBalance[] = [];
 
   let index = 0;
   addressContract.forEach(([address, contractAddress]) => {
-    const result = multicallResult[index];
+    const multicallResult = multicallResults[index];
 
     let decodeSuccess = false;
-    if (result[0]) {
+    if (multicallResult[0]) {
       try {
-        const decoded: bigint = web3.eth.abi.decodeParameter('uint256', result[1]) as bigint
+        const decoded: bigint = web3.eth.abi.decodeParameter('uint256', multicallResult[1]) as bigint
         result.push([blockNumber, address, contractAddress, decoded.toString(36)]);
         decodeSuccess = true;
       }
