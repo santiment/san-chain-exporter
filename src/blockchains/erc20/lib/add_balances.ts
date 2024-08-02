@@ -8,7 +8,7 @@ import * as Utils from './balance_utils';
 type BlockNumberToBalances = Map<number, Utils.AddressContractToBalance>;
 type BlockNumberToAffectedAddresses = Map<number, Utils.ValueSet>;
 
-const MULTICALL_FAILURE = "multicall_failure"
+export const MULTICALL_FAILURE = "multicall_failure"
 
 async function doMulticall(web3: Web3, blockNumber: number, addressContract: Utils.AddressContract[]): Promise<any[]> {
   const multicall = new web3.eth.Contract(MULTICALL_ABI, MULTICALL_ADDRESS);
@@ -97,7 +97,7 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
 
 }
 
-// Identify for which addresses we need to ask for balance. Build a map of those balances.
+// Build a balance map for all addresses involved in transactions
 async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][]): Promise<BlockNumberToBalances> {
   const results: Utils.BlockNumberAddressContractBalance[] = []
   for (const blockNumberAddress of batchedAddresses) {
@@ -121,7 +121,7 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
   }, new Map() as BlockNumberToBalances)
 }
 
-export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[]) {
+export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number) {
   const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
   const batchedAddresses: [number, Utils.AddressContract[]][] = [];
@@ -129,7 +129,8 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
   // Break the needed balances into batches. Not sure what the Multicall limit is but we most probably do not want
   // to ask for all at once.
   for (const [blockNumber, addressSet] of Array.from(addressesInvolved.entries())) {
-    const brokenPerBatchAddresses: Utils.AddressContract[][] = Utils.breakNeededBalancesPerBatch(addressSet.values())
+    const brokenPerBatchAddresses: Utils.AddressContract[][] = Utils.breakNeededBalancesPerBatch(addressSet.values(),
+      multicallBatchSize)
     brokenPerBatchAddresses.map((addressContract: Utils.AddressContract[]) => {
       batchedAddresses.push([blockNumber, addressContract])
     })

@@ -131,7 +131,7 @@ export class ERC20Worker extends BaseWorker {
       if (this.allOldContracts.length > 0) {
         events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
         if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
-          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
+          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events, this.settings.MULTICALL_BATCH_SIZE);
         }
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
@@ -141,7 +141,7 @@ export class ERC20Worker extends BaseWorker {
           timestampsCache);
 
         if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
-          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
+          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events, this.settings.MULTICALL_BATCH_SIZE);
         }
         for (const event of rawEvents) {
           events.push(event);
@@ -151,7 +151,7 @@ export class ERC20Worker extends BaseWorker {
     else {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
       if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
-        await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events);
+        await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events, this.settings.MULTICALL_BATCH_SIZE);
       }
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);

@@ -7,8 +7,6 @@ export type AddressContractToBalance = Map<string, string>;
 export type AddressContract = [string, string]
 export type BlockNumberAddressContractBalance = [number, string, string, string]
 
-const MAX_BALANCES_PER_QUERY = 50;
-
 
 export function decodeRevertReason(web3: Web3, errorData: string) {
   try {
@@ -38,10 +36,10 @@ export function addToMap(map: AddressContractToBalance, balance: BlockNumberAddr
   map.set(concatenation, balance[3])
 }
 
-export function breakNeededBalancesPerBatch(input: AddressContract[]): AddressContract[][] {
+export function breakNeededBalancesPerBatch(input: AddressContract[], batchSize: number): AddressContract[][] {
   const result = [];
-  for (let i = 0; i < input.length; i += MAX_BALANCES_PER_QUERY) {
-    result.push(input.slice(i, i + MAX_BALANCES_PER_QUERY));
+  for (let i = 0; i < input.length; i += batchSize) {
+    result.push(input.slice(i, i + batchSize));
   }
   return result;
 }
