@@ -36,3 +36,9 @@ export function assertIsDefined<T>(value: any, errorMsg: string): asserts value 
     throw Error(errorMsg);
   }
 }
+
+export function assertIsDefinedLazy<T>(value: any, errorMsgFun: () => string): asserts value is NonNullable<T> {
+  if (value === undefined || value === null) {
+    throw Error(errorMsgFun());
+  }
+}

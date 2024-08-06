@@ -5,9 +5,10 @@ import { addCustomTokenDistribution } from './custom_token_distribution';
 import { logger } from '../../../lib/logger';
 import { Web3Interface } from '../../eth/lib/web3_wrapper';
 import { TimestampsCacheInterface } from './timestamps_cache';
+import { ERC20Transfer } from '../erc20_types';
 
 
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const MINT_ADDRESS = 'mint';
 const BURN_ADDRESS = 'burn';
 const FREEZE_ADDRESS = 'freeze';
@@ -16,7 +17,7 @@ const QNT_contract = '0x4a220e6096b25eadb88358cb44068a3248254675';
 const WETH_contract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
 
-export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCacheInterface, addContract = true): any {
+export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCacheInterface, addContract = true): ERC20Transfer {
   const timestamp = timestampsCache.getBlockTimestamp(event['blockNumber']);
 
   const decodedEvent: any = {
@@ -36,7 +37,7 @@ export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCach
 /**Transfer(address,address,uint256)
  * Used by all ERC20 tokens
  **/
-function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['topics'].length !== 3) {
     return null;
   }
@@ -61,7 +62,7 @@ function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsC
 /**Burn(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['topics'].length !== 2) {
     return null;
   }
@@ -79,7 +80,7 @@ function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache
 /**Mint(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['topics'].length !== 2) {
     return null;
   }
@@ -97,7 +98,7 @@ function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache
 /**Freeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
@@ -116,7 +117,7 @@ function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestamps
 /**Unfreeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
@@ -135,7 +136,7 @@ function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestam
 /**Deposit(address indexed dst, uint wad)
  * Only for WETH
  **/
-function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
@@ -154,7 +155,7 @@ function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestam
 /**Withdrawal(address,uint256)
  * Only for WETH
  **/
-function decodeWETHWithdrawalEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface) {
+function decodeWETHWithdrawalEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
@@ -215,12 +216,12 @@ async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlo
 }
 
 export function decodeEvents(web3Wrapper: Web3Interface, events: any, timestampsCache: TimestampsCacheInterface, decodeFunctions: any = decodeFunctionsMap) {
-  const result = [];
+  const result: ERC20Transfer[] = [];
   for (const event of events) {
     if (event.topics && event.topics[0]) {
       const decodeFunction = decodeFunctions[event.topics[0]];
       if (decodeFunction) {
-        const decodedEvent = decodeFunction(web3Wrapper, event, timestampsCache);
+        const decodedEvent: ERC20Transfer | null = decodeFunction(web3Wrapper, event, timestampsCache);
         if (decodedEvent) result.push(decodedEvent);
       }
     }

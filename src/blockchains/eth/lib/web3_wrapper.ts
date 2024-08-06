@@ -14,7 +14,7 @@ export interface Web3Interface {
     gweiToWei(amount: string): number;
 }
 
-class Web3Wrapper implements Web3Interface {
+export class Web3Wrapper implements Web3Interface {
     private web3: Web3;
     private lastBlockNumber: number;
 
@@ -62,6 +62,10 @@ class Web3Wrapper implements Web3Interface {
 
     gweiToWei(amount: string): number {
         return Number(this.web3.utils.toWei(amount, 'gwei'));
+    }
+
+    getWeb3(): Web3 {
+        return this.web3;
     }
 }
 
