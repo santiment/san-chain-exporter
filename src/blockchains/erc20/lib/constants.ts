@@ -17,7 +17,7 @@ export const NODE_URL = process.env.NODE_URL || 'http://localhost:8545/';
 export const EVENTS_IN_SAME_PARTITION = process.env.EVENTS_IN_SAME_PARTITION || false;
 export const DEFAULT_TIMEOUT = getIntEnvVariable('DEFAULT_TIMEOUT', 10000);
 export const EXTEND_TRANSFERS_WITH_BALANCES = process.env.EXTEND_TRANSFERS_WITH_BALANCES || false;
-export const MULTICALL_DEPLOY_BLOCK = getIntEnvVariable('MULTICALL_DEPLOY_BLOCK', 14353601);
+export const MULTICALL_DEPLOY_BLOCK = getIntEnvVariable('MULTICALL_DEPLOY_BLOCK', 12336033);
 export const MULTICALL_BATCH_SIZE = getIntEnvVariable('MULTICALL_BATCH_SIZE', 50);
 
 export const CONTRACT_MAPPING_FILE_PATH = (

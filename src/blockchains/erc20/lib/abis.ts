@@ -1,6 +1,5 @@
 export const MULTICALL_ABI = [
   {
-    "constant": true,
     "inputs": [
       {
         "internalType": "bool",
@@ -20,7 +19,7 @@ export const MULTICALL_ABI = [
             "type": "bytes"
           }
         ],
-        "internalType": "struct Multicall3.Call[]",
+        "internalType": "struct Multicall2.Call[]",
         "name": "calls",
         "type": "tuple[]"
       }
@@ -40,17 +39,17 @@ export const MULTICALL_ABI = [
             "type": "bytes"
           }
         ],
-        "internalType": "struct Multicall3.Result[]",
+        "internalType": "struct Multicall2.Result[]",
         "name": "returnData",
         "type": "tuple[]"
       }
     ],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ];
 
-export const MULTICALL_ADDRESS = '0xcA11bde05977b3631167028862bE2a173976CA11';
+export const MULTICALL_ADDRESS = '0x5ba1e12693dc8f9c48aad8770482f4739beed696';
 
 export const ERC20_ABI = [
   {
