@@ -48,6 +48,7 @@ export function isAddressEligableForBalance(address: string, contract: string): 
   return isAddress(address) && address !== ZERO_ADDRESS && address !== contract
 }
 
+// A custom Set data structure which would compare elements by value
 export class ValueSet {
   private elements: AddressContract[];
 
@@ -55,17 +56,11 @@ export class ValueSet {
     this.elements = [];
   }
 
-  has(item: AddressContract) {
+  private has(item: AddressContract) {
     return this.elements.some(element => this.isEqual(element, item));
   }
 
-  add(item: AddressContract) {
-    if (!this.has(item)) {
-      this.elements.push(item);
-    }
-  }
-
-  isEqual(array1: AddressContract, array2: AddressContract) {
+  private isEqual(array1: AddressContract, array2: AddressContract) {
     if (array1.length !== array2.length) {
       return false;
     }
@@ -75,6 +70,12 @@ export class ValueSet {
       }
     }
     return true;
+  }
+
+  add(item: AddressContract) {
+    if (!this.has(item)) {
+      this.elements.push(item);
+    }
   }
 
   values() {

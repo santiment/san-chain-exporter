@@ -90,7 +90,7 @@ async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressCo
   return decodeMulticallResult(multicallResult, web3, blockNumber, addressContracts)
 }
 
-// Identify for which addresses we need to fetch balances
+//Get all addresses invovled in transfers. Map them to the block where the transfer happened.
 function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddresses {
   return events.reduce((acc, event) => {
     const blockNumberSet = acc.get(event.blockNumber)
