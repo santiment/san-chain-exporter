@@ -5,6 +5,7 @@ import { decodeAddress } from '../../erc20/lib/util';
 import { decodeEventBasicInfo } from '../../erc20/lib/fetch_events';
 import { Web3Interface } from '../../eth/lib/web3_wrapper';
 import { HTTPClientInterface } from '../../../types'
+import { ERC20Transfer } from '../../erc20/erc20_types';
 
 const MATIC_ADDRESS = '0x0000000000000000000000000000000000001010';
 
@@ -34,13 +35,12 @@ const decodeFunctions = {
 
 };
 
-export async function getPastEvents(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number, toBlock: number) {
+export async function getPastEvents(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<ERC20Transfer[]> {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock);
 
   const timestampsCache = new TimestampsCache(ethClient, web3Wrapper, fromBlock, toBlock);
   await timestampsCache.waitResponse();
-  const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions);
-  return decodedEvents;
+  return decodeEvents(web3Wrapper, events, timestampsCache, decodeFunctions);
 }
 
 

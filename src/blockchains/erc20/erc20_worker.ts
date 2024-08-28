@@ -7,12 +7,13 @@ import { ContractOverwrite, changeContractAddresses, extractChangedContractAddre
 import { stableSort, readJsonFile } from './lib/util';
 import { BaseWorker } from '../../lib/worker_base';
 import { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
-import { Web3Interface, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
+import { Web3Interface, Web3Wrapper, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
 import { TimestampsCache } from './lib/timestamps_cache';
 import { getPastEvents } from './lib/fetch_events';
 import { initBlocksList } from '../../lib/fetch_blocks_list';
 import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
+import { extendTransfersWithBalances } from './lib/add_balances'
 
 
 /**
@@ -112,7 +113,7 @@ export class ERC20Worker extends BaseWorker {
     };
   }
 
-  async work() {
+  async work(): Promise<ERC20Transfer[]> {
     const workerContext = await analyzeWorkerContext(this);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
@@ -129,6 +130,9 @@ export class ERC20Worker extends BaseWorker {
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
         events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
+        if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
+          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events, this.settings.MULTICALL_BATCH_SIZE);
+        }
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
 
@@ -136,6 +140,9 @@ export class ERC20Worker extends BaseWorker {
         const rawEvents = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.contractsUnmodified,
           timestampsCache);
 
+        if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
+          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events, this.settings.MULTICALL_BATCH_SIZE);
+        }
         for (const event of rawEvents) {
           events.push(event);
         }
@@ -143,6 +150,9 @@ export class ERC20Worker extends BaseWorker {
     }
     else {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
+      if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
+        await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events, this.settings.MULTICALL_BATCH_SIZE);
+      }
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
       }
