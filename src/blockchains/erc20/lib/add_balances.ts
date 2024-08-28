@@ -7,7 +7,7 @@ import { logger } from '../../../lib/logger';
 
 
 type BlockNumberToBalances = Map<number, Utils.AddressContractToBalance>;
-type BlockNumberToAffectedAddresses = Map<number, Utils.ValueSet>;
+type BlockNumberToAffectedAddresses = Map<number, Utils.AddressContractStore>;
 
 export const MULTICALL_FAILURE = "multicall_failure"
 
@@ -98,7 +98,7 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
       Utils.addToSet(blockNumberSet, event);
     }
     else {
-      const newSet = new Utils.ValueSet();
+      const newSet = new Utils.AddressContractStore();
       Utils.addToSet(newSet, event);
       acc.set(event.blockNumber, newSet)
     }

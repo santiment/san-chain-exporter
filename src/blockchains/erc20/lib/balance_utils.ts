@@ -18,7 +18,7 @@ export function decodeRevertReason(web3: Web3, errorData: string) {
 
 
 
-export function addToSet(set: ValueSet, event: ERC20Transfer) {
+export function addToSet(set: AddressContractStore, event: ERC20Transfer) {
   if (isAddressEligableForBalance(event.from, event.contract)) {
     set.add([event.from, event.contract]);
   }
@@ -49,7 +49,7 @@ export function isAddressEligableForBalance(address: string, contract: string): 
 }
 
 // A custom Set data structure which would compare elements by value
-export class ValueSet {
+export class AddressContractStore {
   private elements: AddressContract[];
 
   constructor() {

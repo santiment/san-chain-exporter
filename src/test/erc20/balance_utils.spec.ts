@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { AddressContract, breakNeededBalancesPerBatch, ValueSet } from '../../blockchains/erc20/lib/balance_utils';
+import { AddressContract, breakNeededBalancesPerBatch, AddressContractStore } from '../../blockchains/erc20/lib/balance_utils';
 
 describe('test breakNeededBalancesPerBatch', function () {
   it('break correctly per batch size', async function () {
@@ -29,7 +29,7 @@ describe('test breakNeededBalancesPerBatch', function () {
 describe('test ValueSet', function () {
   it('test different are added', async function () {
 
-    const testedSet = new ValueSet
+    const testedSet = new AddressContractStore
 
     const addressContract1: AddressContract = ['0x000001', 'AAA']
     const addressContract2: AddressContract = ['0x000002', 'BBB']
@@ -42,7 +42,7 @@ describe('test ValueSet', function () {
 
   it('test same is added only once', async function () {
 
-    const testedSet = new ValueSet
+    const testedSet = new AddressContractStore
 
     const addressContract1: AddressContract = ['0x000001', 'AAA']
     const addressContract2: AddressContract = ['0x000001', 'AAA']
