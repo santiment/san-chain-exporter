@@ -205,4 +205,60 @@ describe('test extendTransfersWithBalances', function () {
       await extendBalances(null, [transfer], 50);
     }, Error)
   });
+
+});
+
+describe('test execute Multicall', function () {
+  let doMulticallOriginal: any = null;
+
+  beforeEach(function () {
+    doMulticallOriginal = add_balances_rewired.__get__('doMulticall');
+  })
+
+  afterEach(function () {
+    add_balances_rewired.__set__('doMulticall', doMulticallOriginal);
+  })
+
+  it('test executeNonBatchMulticall', async function () {
+
+    const mockedResult = { "0": true, "1": "0x000000000000000000000000000000000000000000000000000001f935735eb8", "__length__": 2, "success": true, "returnData": "0x000000000000000000000000000000000000000000000000000001f935735eb8" };
+    //{ "0": true, "1": "0x00000000000000000000000000000000000000000000000000000000008aff7a", "__length__": 2, "success": true, "returnData": "0x00000000000000000000000000000000000000000000000000000000008aff7a" },
+    //{ "0": true, "1": "0x0000000000000000000000000000000000000000000000000000000000000000", "__length__": 2, "success": true, "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000" },
+    //{ "0": true, "1": "0x000000000000000000000000000000000000000000000167e12893baf0a00881", "__length__": 2, "success": true, "returnData": "0x000000000000000000000000000000000000000000000167e12893baf0a00881" },
+
+
+    // const mockedResult = [
+    //   { "0": true, "1": "0x000000000000000000000000000000000000000000000000000001f935735eb8", "__length__": 2, "success": true, "returnData": "0x000000000000000000000000000000000000000000000000000001f935735eb8" },
+    //   { "0": true, "1": "0x00000000000000000000000000000000000000000000000000000000008aff7a", "__length__": 2, "success": true, "returnData": "0x00000000000000000000000000000000000000000000000000000000008aff7a" },
+    //   { "0": true, "1": "0x0000000000000000000000000000000000000000000000000000000000000000", "__length__": 2, "success": true, "returnData": "0x0000000000000000000000000000000000000000000000000000000000000000" },
+    //   { "0": true, "1": "0x000000000000000000000000000000000000000000000167e12893baf0a00881", "__length__": 2, "success": true, "returnData": "0x000000000000000000000000000000000000000000000167e12893baf0a00881" },
+    // ];
+
+
+    // One address resolves the other fails
+    const doMulticallMock = sinon.stub().callsFake((web3: any, blockNumber: number, addressContract: Utils.AddressContract[]) => {
+      assert.equal(addressContract.length, 1)
+
+      if (addressContract[0][0] === "address1") {
+        return Promise.reject(new Error('Mocked rejection'));
+      } else {
+        return Promise.resolve([mockedResult]);
+      }
+    });
+
+
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const executeNonBatchMulticall = add_balances_rewired.__get__('executeNonBatchMulticall');
+    const addressContract1 = ["address1", "contract1"]
+    const addressContract2 = ["address2", "contract2"]
+
+    const addressContracts = [addressContract1, addressContract2]
+    const result: Utils.AddressContractToMulticallResult[] = await executeNonBatchMulticall(null, addressContracts, 1);
+
+    console.log(`Result is: ${JSON.stringify(result)}`)
+    const expected = [[addressContract1, MULTICALL_FAILURE], [addressContract2, mockedResult]]
+
+    assert.deepStrictEqual(result, expected)
+  });
 });

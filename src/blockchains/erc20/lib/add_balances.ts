@@ -114,34 +114,34 @@ async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressCo
   : Promise<Utils.BlockNumberAddressContractBalance[]> {
 
   let rawMulticallResult: Utils.AddressContractToMulticallResult[] = []
-  // try {
-  //   rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber)
-  //   logger.info("Batch multicall success")
-  // }
-  // catch (error: any) {
-  //   logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
-  // }
+  try {
+    rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber)
+    logger.info("Batch multicall success")
+  }
+  catch (error: any) {
+    logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
+  }
 
-  //if (rawMulticallResult.length === 0) {
-  rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber)
-  return rawMulticallResult.map((rawResult: Utils.AddressContractToMulticallResult) => {
-    if (rawResult[1] === MULTICALL_FAILURE) {
-      // The balance call for this address-contract pair has failed. We would mark it as failure without decoding
-      return [blockNumber, rawResult[0][0], rawResult[0][1], MULTICALL_FAILURE]
-    }
-    else {
-      return decodeMulticallResult(rawResult, web3, blockNumber)
-    }
-  })
-  // if (error.cause.data) {
-  //   const decodedReason = Utils.decodeRevertReason(web3, error.cause.data);
-  //   logger.error('Revert reason:', decodedReason);
-  // }
+  if (rawMulticallResult.length === 0) {
+    rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber)
+    return rawMulticallResult.map((rawResult: Utils.AddressContractToMulticallResult) => {
+      if (rawResult[1] === MULTICALL_FAILURE) {
+        // The balance call for this address-contract pair has failed. We would mark it as failure without decoding
+        return [blockNumber, rawResult[0][0], rawResult[0][1], MULTICALL_FAILURE]
+      }
+      else {
+        return decodeMulticallResult(rawResult, web3, blockNumber)
+      }
+    })
+    // if (error.cause.data) {
+    //   const decodedReason = Utils.decodeRevertReason(web3, error.cause.data);
+    //   logger.error('Revert reason:', decodedReason);
+    // }
 
-  //}
-  //else {*/
-  //return rawMulticallResult.map(rawResult => decodeMulticallResult(rawResult, web3, blockNumber))
-  //}
+  }
+  else {
+    return rawMulticallResult.map(rawResult => decodeMulticallResult(rawResult, web3, blockNumber))
+  }
 }
 
 //Get all addresses invovled in transfers. Map them to the block where the transfer happened.
