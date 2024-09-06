@@ -28,66 +28,104 @@ async function doMulticall(web3: Web3, blockNumber: number, addressContract: Uti
 
 
 
-function decodeMulticallResult(multicallResults: any[], web3: Web3, blockNumber: number,
-  addressContract: Utils.AddressContract[]): Utils.BlockNumberAddressContractBalance[] {
-  const result: Utils.BlockNumberAddressContractBalance[] = [];
+function decodeMulticallResult(addressContractToMulticallResult: Utils.AddressContractToMulticallResult, web3: Web3,
+  blockNumber: number): Utils.BlockNumberAddressContractBalance {
 
-  let index = 0;
-  addressContract.forEach(([address, contractAddress]) => {
-    const multicallResult = multicallResults[index];
+  const addressContract = addressContractToMulticallResult[0]
+  const multicallResult = addressContractToMulticallResult[1]
+  logger.warn(JSON.stringify(addressContractToMulticallResult))
+  if (multicallResult[0]) {
+    logger.info("Multicall result[0] is")
+    logger.info(multicallResult[1])
+    try {
+      const decoded: bigint = web3.eth.abi.decodeParameter('uint256', multicallResult[1]) as bigint
+      return [blockNumber, addressContract[0], addressContract[1], decoded.toString(36)];
+    }
+    catch (error: any) {
+      logger.error(`Error decoding address-contract: ${addressContract[0]}-${addressContract[1]}: ${error}`)
 
-    let decodeSuccess = false;
-    if (multicallResult[0]) {
-      try {
-        const decoded: bigint = web3.eth.abi.decodeParameter('uint256', multicallResult[1]) as bigint
-        result.push([blockNumber, address, contractAddress, decoded.toString(36)]);
-        decodeSuccess = true;
+    }
+  }
+
+  logger.error(`Multicall partial failure for address-contract ${addressContract[0]}-${addressContract[1]}`)
+  return [blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]
+}
+
+async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number)
+  : Promise<Utils.AddressContractToMulticallResult[]> {
+  const allSettled = await Promise.allSettled(addressContracts.flatMap(addressContract =>
+    doMulticall(web3, blockNumber, [addressContract])
+  ))
+
+  if (allSettled.length !== addressContracts.length) {
+    throw new Error(`Multicall response size does not match at block ${blockNumber}`);
+  }
+
+  const errors = allSettled.filter(result => result.status === 'rejected').map(result => result.reason);
+
+  if (errors.length > 0) {
+    logger.error(`${errors.length} errors out of ${addressContracts.length} in multicall at block ${blockNumber}. First errors is: ${errors[0]}`);
+  }
+
+  return addressContracts.map((addressContract, index) => {
+    const multicallResult = allSettled[index]
+
+    if (multicallResult.status === 'fulfilled') {
+      if (Array.isArray(multicallResult.value) && multicallResult.value.length === 1) {
+        return [addressContract, multicallResult.value[0]]
       }
-      catch (error: any) {
-        logger.error(`Error decoding address-contract: ${address}-${contractAddress}: ${error}`)
+      else {
+        throw Error(`Non batch Multicall does not expected response structure: ${JSON.stringify(multicallResult.value)}`)
       }
     }
-
-    if (!decodeSuccess) {
-      logger.error(`Multicall partial failure for address-contract ${address}-${contractAddress}`)
-      result.push([blockNumber, address, contractAddress, MULTICALL_FAILURE])
+    else {
+      return [addressContract, MULTICALL_FAILURE]
     }
-    index++;
-  });
-  return result;
+  })
+}
+
+async function executeBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number)
+  : Promise<Utils.AddressContractToMulticallResult[]> {
+  const multicallResult = await doMulticall(web3, blockNumber, addressContracts)
+  if (multicallResult.length !== addressContracts.length) {
+    throw new Error(`Multicall response size does not match at block ${blockNumber}`);
+  }
+
+  return addressContracts.map((addressContract, index) => [addressContract, multicallResult[index]]);
 }
 
 async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number)
   : Promise<Utils.BlockNumberAddressContractBalance[]> {
 
-  let multicallResult: any[] = []
-  try {
-    multicallResult = await doMulticall(web3, blockNumber, addressContracts)
-  }
-  catch (error: any) {
-    logger.warn('Error calling multicall, would try not batching')
-  }
+  let rawMulticallResult: Utils.AddressContractToMulticallResult[] = []
+  // try {
+  //   rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber)
+  //   logger.info("Batch multicall success")
+  // }
+  // catch (error: any) {
+  //   logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
+  // }
 
-  if (multicallResult.length === 0) {
-    try {
-      multicallResult = await Promise.all(addressContracts.flatMap(addressContract =>
-        doMulticall(web3, blockNumber, [addressContract])
-      ))
+  //if (rawMulticallResult.length === 0) {
+  rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber)
+  return rawMulticallResult.map((rawResult: Utils.AddressContractToMulticallResult) => {
+    if (rawResult[1] === MULTICALL_FAILURE) {
+      // The balance call for this address-contract pair has failed. We would mark it as failure without decoding
+      return [blockNumber, rawResult[0][0], rawResult[0][1], MULTICALL_FAILURE]
     }
-    catch (error: any) {
-      if (error.cause.data) {
-        const decodedReason = Utils.decodeRevertReason(web3, error.cause.data);
-        logger.error('Revert reason:', decodedReason);
-      }
-      throw error;
+    else {
+      return decodeMulticallResult(rawResult, web3, blockNumber)
     }
-  }
+  })
+  // if (error.cause.data) {
+  //   const decodedReason = Utils.decodeRevertReason(web3, error.cause.data);
+  //   logger.error('Revert reason:', decodedReason);
+  // }
 
-  if (multicallResult.length !== addressContracts.length) {
-    throw new Error("Response size does not match");
-  }
-
-  return decodeMulticallResult(multicallResult, web3, blockNumber, addressContracts)
+  //}
+  //else {*/
+  //return rawMulticallResult.map(rawResult => decodeMulticallResult(rawResult, web3, blockNumber))
+  //}
 }
 
 //Get all addresses invovled in transfers. Map them to the block where the transfer happened.
@@ -113,6 +151,7 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
   for (const blockNumberAddress of batchedAddresses) {
     let result: Utils.BlockNumberAddressContractBalance[] = [];
     result = await getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0])
+    logger.info("Get balances per block done")
     results.push(...result)
   }
 

@@ -6,6 +6,7 @@ import { ZERO_ADDRESS } from './fetch_events';
 export type AddressContractToBalance = Map<string, string>;
 export type AddressContract = [string, string]
 export type BlockNumberAddressContractBalance = [number, string, string, string]
+export type AddressContractToMulticallResult = [AddressContract, any]
 
 
 export function decodeRevertReason(web3: Web3, errorData: string) {
