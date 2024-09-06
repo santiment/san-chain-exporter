@@ -63,6 +63,22 @@ async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.Addr
 
   const errors = allSettled.filter(result => result.status === 'rejected').map(result => result.reason);
 
+  /**
+   * We allow for failed requests at this point. Some responses are just too long and seem like errors. Ex:
+   *
+   * curl -X POST https://ethereum.santiment.net -H "Content-Type: application/json" -d '{
+   * "jsonrpc": "2.0", "id": "1", "method": "eth_call", "params": [
+   *   {
+   *     "to": "0x5BA1e12693Dc8F9c48aAD8770482f4739bEeD696",
+   *     "data": "0xbce38bd70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000e2975f6a95735bdcad5e39296d37cab6470dacc80000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000002470a082310000000000000000000000007ac9368773c8d985c785ddda1964fa7c082cf89b00000000000000000000000000000000000000000000000000000000"
+   *   },
+   *     "0xd70c5d"
+   *   ]
+   *   }'
+   *
+   * This fails on our endpoint but succeeds on Ankr due to different limits. However the response is a long sequence
+   * of 0s.
+   */
   if (errors.length > 0) {
     logger.error(`${errors.length} errors out of ${addressContracts.length} in multicall at block ${blockNumber}. First errors is: ${errors[0]}`);
   }
