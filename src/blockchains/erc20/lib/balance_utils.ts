@@ -6,16 +6,7 @@ import { ZERO_ADDRESS } from './fetch_events';
 export type AddressContractToBalance = Map<string, string>;
 export type AddressContract = [string, string]
 export type BlockNumberAddressContractBalance = [number, string, string, string]
-
-
-export function decodeRevertReason(web3: Web3, errorData: string) {
-  try {
-    return web3.eth.abi.decodeParameter('string', '0x' + errorData.slice(10));
-  } catch (e) {
-    return 'Unable to decode error data';
-  }
-}
-
+export type AddressContractToMulticallResult = [AddressContract, any]
 
 
 export function addToSet(set: AddressContractStore, event: ERC20Transfer) {

@@ -205,4 +205,74 @@ describe('test extendTransfersWithBalances', function () {
       await extendBalances(null, [transfer], 50);
     }, Error)
   });
+
+});
+
+describe('test execute Multicall', function () {
+  let doMulticallOriginal: any = null;
+
+  beforeEach(function () {
+    doMulticallOriginal = add_balances_rewired.__get__('doMulticall');
+  })
+
+  afterEach(function () {
+    add_balances_rewired.__set__('doMulticall', doMulticallOriginal);
+  })
+
+  it('test executeNonBatchMulticall', async function () {
+
+    const mockedResult = { "0": true, "1": "0x000000000000000000000000000000000000000000000000000001f935735eb8", "__length__": 2, "success": true, "returnData": "0x000000000000000000000000000000000000000000000000000001f935735eb8" };
+
+    // One address resolves the other fails
+    const doMulticallMock = sinon.stub().callsFake((web3: any, blockNumber: number, addressContract: Utils.AddressContract[]) => {
+      assert.equal(addressContract.length, 1)
+
+      if (addressContract[0][0] === "address1") {
+        return Promise.reject(new Error('Mocked rejection'));
+      } else {
+        return Promise.resolve([mockedResult]);
+      }
+    });
+
+
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const executeNonBatchMulticall = add_balances_rewired.__get__('executeNonBatchMulticall');
+    const addressContract1 = ["address1", "contract1"]
+    const addressContract2 = ["address2", "contract2"]
+
+    const addressContracts = [addressContract1, addressContract2]
+    const result: Utils.AddressContractToMulticallResult[] = await executeNonBatchMulticall(null, addressContracts, 1);
+
+    const expected = [[addressContract1, MULTICALL_FAILURE], [addressContract2, mockedResult]]
+
+    assert.deepStrictEqual(result, expected)
+  });
+
+  it('test executeBatchMulticall', async function () {
+
+    const multicallResultAddress1 = { "0": true, "1": "0x000000000000000000000000000000000000000000000000000001f935735eb8", "__length__": 2, "success": true, "returnData": "0x000000000000000000000000000000000000000000000000000001f935735eb8" };
+    const multicallResultAddress2 = { "0": true, "1": "0x00000000000000000000000000000000000000000000000000000000008aff7a", "__length__": 2, "success": true, "returnData": "0x00000000000000000000000000000000000000000000000000000000008aff7a" };
+
+
+    const doMulticallMock = sinon.stub().callsFake((web3: any, blockNumber: number, addressContract: Utils.AddressContract[]) => {
+      assert.equal(addressContract.length, 2)
+
+      return Promise.resolve([multicallResultAddress1, multicallResultAddress2]);
+    });
+
+
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const executeBatchMulticall = add_balances_rewired.__get__('executeBatchMulticall');
+    const addressContract1 = ["address1", "contract1"]
+    const addressContract2 = ["address2", "contract2"]
+
+    const addressContracts = [addressContract1, addressContract2]
+    const result: Utils.AddressContractToMulticallResult[] = await executeBatchMulticall(null, addressContracts, 1);
+
+    const expected = [[addressContract1, multicallResultAddress1], [addressContract2, multicallResultAddress2]]
+
+    assert.deepStrictEqual(result, expected)
+  });
 });
