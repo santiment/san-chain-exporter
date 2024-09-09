@@ -130,11 +130,6 @@ async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressCo
         return decodeMulticallResult(rawResult, web3, blockNumber)
       }
     })
-    // if (error.cause.data) {
-    //   const decodedReason = Utils.decodeRevertReason(web3, error.cause.data);
-    //   logger.error('Revert reason:', decodedReason);
-    // }
-
   }
   else {
     return rawMulticallResult.map(rawResult => decodeMulticallResult(rawResult, web3, blockNumber))

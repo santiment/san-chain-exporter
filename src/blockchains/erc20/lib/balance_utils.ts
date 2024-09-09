@@ -9,16 +9,6 @@ export type BlockNumberAddressContractBalance = [number, string, string, string]
 export type AddressContractToMulticallResult = [AddressContract, any]
 
 
-export function decodeRevertReason(web3: Web3, errorData: string) {
-  try {
-    return web3.eth.abi.decodeParameter('string', '0x' + errorData.slice(10));
-  } catch (e) {
-    return 'Unable to decode error data';
-  }
-}
-
-
-
 export function addToSet(set: AddressContractStore, event: ERC20Transfer) {
   if (isAddressEligableForBalance(event.from, event.contract)) {
     set.add([event.from, event.contract]);
