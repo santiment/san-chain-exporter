@@ -33,21 +33,19 @@ function decodeMulticallResult(addressContractToMulticallResult: Utils.AddressCo
 
   const addressContract = addressContractToMulticallResult[0]
   const multicallResult = addressContractToMulticallResult[1]
-  logger.warn(JSON.stringify(addressContractToMulticallResult))
+
   if (multicallResult[0]) {
-    logger.info("Multicall result[0] is")
-    logger.info(multicallResult[1])
     try {
       const decoded: bigint = web3.eth.abi.decodeParameter('uint256', multicallResult[1]) as bigint
       return [blockNumber, addressContract[0], addressContract[1], decoded.toString(36)];
     }
     catch (error: any) {
-      logger.error(`Error decoding address-contract: ${addressContract[0]}-${addressContract[1]}: ${error}`)
+      logger.warn(`Error decoding address-contract: ${addressContract[0]}-${addressContract[1]}: ${error}`)
 
     }
   }
 
-  logger.error(`Multicall partial failure for address-contract ${addressContract[0]}-${addressContract[1]}`)
+  logger.warn(`Multicall partial failure for address-contract ${addressContract[0]}-${addressContract[1]}`)
   return [blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]
 }
 
@@ -80,7 +78,7 @@ async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.Addr
    * of 0s.
    */
   if (errors.length > 0) {
-    logger.error(`${errors.length} errors out of ${addressContracts.length} in multicall at block ${blockNumber}. First errors is: ${errors[0]}`);
+    logger.warn(`${errors.length} errors out of ${addressContracts.length} in multicall at block ${blockNumber}. First errors is: ${errors[0]}`);
   }
 
   return addressContracts.map((addressContract, index) => {
@@ -116,7 +114,6 @@ async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressCo
   let rawMulticallResult: Utils.AddressContractToMulticallResult[] = []
   try {
     rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber)
-    logger.info("Batch multicall success")
   }
   catch (error: any) {
     logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
@@ -167,7 +164,6 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
   for (const blockNumberAddress of batchedAddresses) {
     let result: Utils.BlockNumberAddressContractBalance[] = [];
     result = await getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0])
-    logger.info("Get balances per block done")
     results.push(...result)
   }
 
