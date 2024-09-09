@@ -45,7 +45,7 @@ function decodeMulticallResult(addressContractToMulticallResult: Utils.AddressCo
     }
   }
 
-  logger.warn(`Multicall partial failure for address-contract ${addressContract[0]}-${addressContract[1]}`)
+  logger.warn(`Multicall partial failure at block ${blockNumber} for address-contract ${addressContract[0]}-${addressContract[1]}`)
   return [blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]
 }
 
