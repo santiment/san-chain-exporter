@@ -45,7 +45,7 @@ function decodeMulticallResult(addressContractToMulticallResult: Utils.AddressCo
     }
   }
 
-  logger.warn(`Multicall partial failure for address-contract ${addressContract[0]}-${addressContract[1]}`)
+  logger.warn(`Multicall partial failure at block ${blockNumber} for address-contract ${addressContract[0]}-${addressContract[1]}`)
   return [blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]
 }
 
@@ -154,12 +154,23 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
 }
 
 // Build a balance map for all addresses involved in transactions
-async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][]): Promise<BlockNumberToBalances> {
+async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][],
+  maxConnectionConcurrency: number): Promise<BlockNumberToBalances> {
   const results: Utils.BlockNumberAddressContractBalance[] = []
+
+  let concurrentRequests: Promise<Utils.BlockNumberAddressContractBalance[]>[] = []
+  let countConcurrent = 0
+
   for (const blockNumberAddress of batchedAddresses) {
-    let result: Utils.BlockNumberAddressContractBalance[] = [];
-    result = await getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0])
-    results.push(...result)
+    concurrentRequests.push(getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0]))
+    countConcurrent += 1
+    if (countConcurrent >= maxConnectionConcurrency) {
+      results.push(... (await Promise.all(concurrentRequests)).flat())
+      countConcurrent = 0
+    }
+  }
+  if (countConcurrent > 0) {
+    results.push(... (await Promise.all(concurrentRequests)).flat())
   }
 
   return results.reduce((acc, result) => {
@@ -177,7 +188,8 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
   }, new Map() as BlockNumberToBalances)
 }
 
-export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number) {
+export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number,
+  maxConnectionConcurrency: number) {
   const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
   const batchedAddresses: [number, Utils.AddressContract[]][] = [];
@@ -192,7 +204,7 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
     })
   }
 
-  const balanceMap = await buildBalancesMap(web3, batchedAddresses);
+  const balanceMap = await buildBalancesMap(web3, batchedAddresses, maxConnectionConcurrency);
   for (const event of events) {
     if (Utils.isAddressEligableForBalance(event.from, event.contract)) {
       event.fromBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.from, event.contract))
