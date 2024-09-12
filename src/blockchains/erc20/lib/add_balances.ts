@@ -191,8 +191,10 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
       batchedAddresses.push([blockNumber, addressContract])
     })
   }
-
+  const startTime = new Date();
   const balanceMap = await buildBalancesMap(web3, batchedAddresses);
+  const endTime = new Date();
+  logger.debug(`Building balances map took: ${endTime.getTime() - startTime.getTime()} ms`);
   for (const event of events) {
     if (Utils.isAddressEligableForBalance(event.from, event.contract)) {
       event.fromBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.from, event.contract))
