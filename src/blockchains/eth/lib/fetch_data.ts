@@ -4,24 +4,27 @@ import { Trace, ETHBlock, ETHReceiptsMap, ETHReceipt } from '../eth_types';
 import { HTTPClientInterface } from '../../../types'
 
 
-export function parseEthInternalTrx(result: Trace[]): Trace[] {
+export function parseEthInternalTrx(result: Trace[], isETH: boolean, theMergeBlockNumber: number): Trace[] {
   const traces = filterErrors(result);
 
   return traces
     .filter((trace: Trace) =>
       trace['action']['value'] !== '0x0' &&
       trace['action']['balance'] !== '0x0' &&
-      !(trace['type'] === 'call' && trace['action']['callType'] !== 'call')
+      !(trace['type'] === 'call' && trace['action']['callType'] !== 'call') &&
+      (trace['type'] !== 'reward' || !isETH || trace.blockNumber < theMergeBlockNumber)
     );
 }
 
-export function fetchEthInternalTrx(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number): Promise<Trace[]> {
+export function fetchEthInternalTrx(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number,
+  toBlock: number, isETH: boolean, theMergeBlockNumber: number): Promise<Trace[]> {
   const filterParams = {
     fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
     toBlock: web3Wrapper.parseNumberToHex(toBlock)
   };
-  return ethClient.request('trace_filter', [filterParams]).then((data: any) => parseEthInternalTrx(data['result']));
+  return ethClient.request('trace_filter', [filterParams]).then((data: any) => parseEthInternalTrx(data['result'],
+    isETH, theMergeBlockNumber
+  ));
 }
 
 export async function fetchBlocks(ethClient: HTTPClientInterface,
