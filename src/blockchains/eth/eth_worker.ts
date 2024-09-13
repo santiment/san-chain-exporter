@@ -35,7 +35,8 @@ export class ETHWorker extends BaseWorker {
 
   async fetchData(fromBlock: number, toBlock: number): Promise<[Trace[], Map<number, ETHBlock>, ETHReceiptsMap]> {
     return await Promise.all([
-      fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock),
+      fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock, this.settings.IS_ETH,
+        this.settings.THE_MERGE),
       fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock, true),
       fetchReceipts(this.ethClient, this.web3Wrapper,
         this.settings.RECEIPTS_API_METHOD, fromBlock, toBlock),
