@@ -122,7 +122,7 @@ export class ICPWorker extends BaseWorker {
               blockNumber: blockNumber,
               transactionHash: txHash,
               from: operation.account.address,
-              to: 'burn',
+              to: this.BURN_ADDRESS,
               value: operation.amount.value.replace(/-/g, ''),
               symbol: operation.amount.currency.symbol,
               type: operation.type,
