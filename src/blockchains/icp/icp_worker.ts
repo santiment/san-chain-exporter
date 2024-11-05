@@ -1,8 +1,9 @@
 import { logger } from '../../lib/logger';
 import { BaseWorker } from '../../lib/worker_base';
-import { ICPBlock, ICPTransaction, Transaction } from './lib/icp_types';
+import { ICPBlock, Transaction, ExtendedTransaction } from './lib/icp_types';
 import fetch from 'node-fetch';
 import assert from 'assert';
+import { transactionOrder, stableSort } from '../eth/lib/util';
 
 export class ICPWorker extends BaseWorker {
   private readonly NODE_URL: string;
@@ -31,33 +32,46 @@ export class ICPWorker extends BaseWorker {
     this.lastConfirmedBlock = await this.getBlockNumber() - this.CONFIRMATIONS;
   }
 
-  async getBlockNumber() {
-    try {
+  async getBlockNumber(retries = 3, retryDelay = 1000): Promise<number> {
+    const fetchWithRetry = async (attempt: number): Promise<number> => {
+      try {
         const response = await fetch(this.NODE_URL + '/network/status', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Basic ${this.AUTH}`,
-                'Content-Type': 'application/json',
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${this.AUTH}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            network_identifier: {
+              blockchain: 'Internet Computer',
+              network: '00000000000000020101',
             },
-            body: JSON.stringify({
-                network_identifier: {
-                    blockchain: 'Internet Computer',
-                    network: '00000000000000020101',
-                },
-                metadata: {},
-            }),
-        });
+            metadata: {},
+          }),
+      });
 
-        const data = await response.json();
-        const blockIndex = data.current_block_identifier?.index;
-        if (blockIndex !== undefined) {
-            return blockIndex;
+      if (!response.ok) {
+        throw new Error(`Failed to fetch block number: ${response.statusText}`);
+      }
+      const data = await response.json();
+      const blockIndex: number = data.current_block_identifier?.index;
+
+      return blockIndex;
+      } catch (error) {
+        if (attempt < retries) {
+          logger.info(`Attempt ${attempt + 1} failed. Retrying in ${retryDelay}ms...`);
+          await new Promise(res => setTimeout(res, retryDelay));
+          return fetchWithRetry(attempt + 1);
         } else {
-          logger.error('Block index not found in the response');
+          if (error instanceof Error) {
+            throw new Error(`Failed to fetch block after ${retries} retries: ${error.message}`);
+          } else {
+            throw new Error(`Failed to fetch block after ${retries} retries: Unknown error`);
+          }
         }
-    } catch (error) {
-      logger.error('Error fetching block index:', error);
-    }
+      }
+    };
+    return fetchWithRetry(0)
   }
 
   async fetchBlock(block_index: number, retries = 3, retryDelay = 1000): Promise<ICPBlock> {
@@ -203,9 +217,25 @@ export class ICPWorker extends BaseWorker {
     const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + 1 + i));
     const blocks = await Promise.all(requests);
 
-    const transactions = await this.getTransactions(blocks);
-    
+    let transactions: (Transaction)[] = await this.getTransactions(blocks);
+    let extendedTransactions: (ExtendedTransaction)[] = [];
+    if (transactions.length > 0) {
+      stableSort(transactions, transactionOrder);
+      extendedTransactions = extendTransactionsWithPrimaryKey(transactions, this.lastPrimaryKey);
+
+      this.lastPrimaryKey += transactions.length;
+    }
+
     this.lastExportedBlock += blocks.length;
-    return transactions;
+    return extendedTransactions;
   }
+}
+
+export function extendTransactionsWithPrimaryKey(transactions: Transaction[], lastPrimaryKey: number): ExtendedTransaction[] {
+  return transactions.map((transaction, index) => ({
+    ...transaction,
+    primaryKey: lastPrimaryKey + index + 1, // Example logic to set primaryKey
+    transactionPosition: 0,
+    valueBase64: ""
+  }));
 }
