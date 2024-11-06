@@ -133,7 +133,7 @@ export class ICPWorker extends BaseWorker {
         for (const operation of tx.operations) {
           if (operation.type === 'FEE') {
             const transactionJson: Transaction = {
-              timestamp: timestamp,
+              timestamp: BigNumber(timestamp).div(1000000000).toString(), // nanoseconds to seconds
               blockNumber: blockNumber,
               transactionHash: txHash,
               from: operation.account.address,
