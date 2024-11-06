@@ -4,6 +4,7 @@ import { ICPBlock, Transaction, ExtendedTransaction } from './lib/icp_types';
 import fetch from 'node-fetch';
 import assert from 'assert';
 import { transactionOrder, stableSort } from '../eth/lib/util';
+import BigNumber from 'bignumber.js';
 
 export class ICPWorker extends BaseWorker {
   private readonly NODE_URL: string;
@@ -236,6 +237,6 @@ export function extendTransactionsWithPrimaryKey(transactions: Transaction[], la
     ...transaction,
     primaryKey: lastPrimaryKey + index + 1, // Example logic to set primaryKey
     transactionPosition: 0,
-    valueBase64: ""
+    valueExactBase36: BigNumber(transaction.value).toString(36)
   }));
 }

@@ -87,5 +87,5 @@ export type Transaction = {
 export type ExtendedTransaction = Transaction & {
     primaryKey?: number;
     transactionPosition?: number;
-    valueBase64?: string;
+    valueExactBase36: string;
   };
