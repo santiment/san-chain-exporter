@@ -65,9 +65,9 @@ export class ICPWorker extends BaseWorker {
           return fetchWithRetry(attempt + 1);
         } else {
           if (error instanceof Error) {
-            throw new Error(`Failed to fetch block after ${retries} retries: ${error.message}`);
+            throw new Error(`Failed to fetch block number after ${retries} retries: ${error.message}`);
           } else {
-            throw new Error(`Failed to fetch block after ${retries} retries: Unknown error`);
+            throw new Error(`Failed to fetch block number after ${retries} retries: Unknown error`);
           }
         }
       }
@@ -133,7 +133,7 @@ export class ICPWorker extends BaseWorker {
         for (const operation of tx.operations) {
           if (operation.type === 'FEE') {
             const transactionJson: Transaction = {
-              timestamp: BigNumber(timestamp).div(1000000000).toString(), // nanoseconds to seconds
+              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
               blockNumber: blockNumber,
               transactionHash: txHash,
               from: operation.account.address,
@@ -146,7 +146,7 @@ export class ICPWorker extends BaseWorker {
           }
           else if (operation.type === 'MINT') {
             const transactionJson: Transaction = {
-              timestamp: timestamp,
+              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
               blockNumber: blockNumber,
               transactionHash: txHash,
               from: 'mint',
@@ -159,7 +159,7 @@ export class ICPWorker extends BaseWorker {
           }
           else if (operation.type === 'APPROVE') {
             const transactionJson: Transaction = {
-              timestamp: timestamp,
+              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
               blockNumber: blockNumber,
               transactionHash: txHash,
               from: operation.account.address,
@@ -184,7 +184,7 @@ export class ICPWorker extends BaseWorker {
           }
           if (operation.type === 'TRANSACTION' && from && to && valueTo && symbolTo && valueFrom === valueTo && (Number(operationIndexFrom) + 1 === Number(operationIndexTo) || Number(operationIndexFrom) === Number(operationIndexTo) + 1)) {
             const transactionJson: Transaction = {
-              timestamp: timestamp,
+              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
               blockNumber: blockNumber,
               transactionHash: txHash,
               from: from,
