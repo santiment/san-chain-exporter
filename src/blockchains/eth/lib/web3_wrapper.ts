@@ -14,6 +14,12 @@ export interface Web3Interface {
     gweiToWei(amount: string): number;
 }
 
+function containsOnly0Andx(input: string) {
+    const chars = Array.from(input);
+
+    return chars.length > 0 && chars.every(char => char === '0' || char === 'x' || char === 'X');
+}
+
 export class Web3Wrapper implements Web3Interface {
     private web3: Web3;
     private lastBlockNumber: number;
@@ -31,7 +37,13 @@ export class Web3Wrapper implements Web3Interface {
      * Converts value to it's number representation. Returns bigint or number depending on value.
      */
     parseHexToNumber(field: string): number | bigint {
-        return this.web3.utils.hexToNumber(field);
+        // We want to interpret values which are not technically correct as 0. For example '0x'.
+        if (containsOnly0Andx(field)) {
+            return 0
+        }
+        else {
+            return this.web3.utils.hexToNumber(field);
+        }
     }
 
     parseNumberToHex(field: number): string {

@@ -466,3 +466,44 @@ describe('getEventsByTransactionTest', function () {
     assert.deepStrictEqual(result[1], [decodedEvent0, decodedEvent1]);
   });
 });
+
+
+describe('decodeBrokenEventTest', function () {
+  const decodeTransferEvent = fetch_events.__get__('decodeTransferEvent');
+
+  // A broken event on the Polygon chain where data is only "0x"
+  const brokenEventToDecode = {
+    "address": "0xb9b4856d9dbe659cf16891c735797bbf5b7cc530",
+    "topics": [
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+      "0x0000000000000000000000001234567890123456789012345678901234567890",
+      "0x0000000000000000000000009876543210987654321098765432109876543210"
+    ],
+    "data": "0x",
+    "blockNumber": 7207279,
+    "transactionHash": "0xda7953e0b756ddff528c1b9b74d0dff9f51298a6d8bdab8d592b76e9693d6a15",
+    "transactionIndex": 142,
+    "blockHash": "0x65c70fdf03e8aa957572f54756ad30508af9d48188e7d14bf2d80e33592b5480",
+    "logIndex": 596,
+    "removed": false
+
+  }
+
+  it('ensures data containing only 0x is decoded as 0', async function () {
+    const result = decodeTransferEvent(web3Wrapper, brokenEventToDecode, new TimestampsCacheMock())
+
+    const expected = {
+      "blockNumber": 7207279,
+      "transactionHash": "0xda7953e0b756ddff528c1b9b74d0dff9f51298a6d8bdab8d592b76e9693d6a15",
+      "logIndex": 596,
+      "contract": "0xb9b4856d9dbe659cf16891c735797bbf5b7cc530",
+      "to": "0x9876543210987654321098765432109876543210",
+      "from": "0x1234567890123456789012345678901234567890",
+      "value": 0,
+      "valueExactBase36": "0",
+      "timestamp": 1549899997
+    }
+
+    assert.deepStrictEqual(result, expected);
+  });
+});
