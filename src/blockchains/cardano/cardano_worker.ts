@@ -5,9 +5,6 @@ import util from './lib/util';
 import { logger } from '../../lib/logger';
 
 
-const CARDANO_GRAPHQL_URL = process.env.CARDANO_GRAPHQL_URL || 'http://localhost:3100/graphql';
-const DEFAULT_TIMEOUT_MSEC = parseInt(process.env.DEFAULT_TIMEOUT || '30000');
-
 export class CardanoWorker extends BaseWorker {
   private pRetry: any;
   private got: any;
@@ -18,7 +15,7 @@ export class CardanoWorker extends BaseWorker {
 
   async sendRequest(query: string): Promise<any> {
     try {
-      return await this.got.post(CARDANO_GRAPHQL_URL, {
+      return await this.got.post(this.settings.CARDANO_GRAPHQL_URL, {
         json: {
           jsonrpc: '2.0',
           id: uuidv1(),
@@ -28,7 +25,7 @@ export class CardanoWorker extends BaseWorker {
         password: this.settings.RPC_PASSWORD,
         responseType: 'json',
         timeout: {
-          request: DEFAULT_TIMEOUT_MSEC
+          request: this.settings.DEFAULT_TIMEOUT_MSEC
         }
       }).json();
     }
@@ -115,52 +112,58 @@ export class CardanoWorker extends BaseWorker {
     });
   }
 
-  async getTransactions(blockNumber: number, lastConfirmedBlock: number) {
-    logger.info(`Getting transactions for interval ${blockNumber} - ${lastConfirmedBlock}`);
-    const query = `
-    {
-      transactions(
-        where: {
-          block: { epoch: { number: { _is_null: false } } }
-          _and: [{ block: { number: { _gte: ${blockNumber} } } },
-                 { block: { number: { _lte: ${lastConfirmedBlock} } } }]
-        }
-        order_by: { includedAt: asc }
-      ) {
-        includedAt
-        blockIndex
-        fee
-        hash
+  async getTransactions(fromBlock: number, toBlock: number) {
+    logger.info(`Getting transactions for interval ${fromBlock} - ${toBlock}`);
+    const query = `{
+    transactions(
+       where: {
+         block: { epoch: { number: { _is_null: false } } }
+         _and: [
+           { block: { number: { _gte: ${fromBlock} } } },
+           { block: { number: { _lte: ${toBlock} } } }
+         ]
+       }
+       order_by: { includedAt: asc }
+     ) {
+       includedAt
+       blockIndex
+       fee
+       hash
 
-        block {
-          number
-          epochNo
-          transactionsCount
-        }
+       block {
+         number
+         epochNo
+         transactionsCount
+       }
 
-        inputs {
-          address
-          value
-        }
+       inputs {
+         address
+         value
+       }
 
-        outputs {
-          address
-          value
-        }
+       outputs {
+         address
+         value
+       }
+     }
+   }`;
 
-      }
-    }`;
+    const response = await this.pRetry(() => this.sendRequest(query), {
+      onFailedAttempt: (error: any) => {
+        // Determine the error message
+        const errorMessage = error.cause?.message || error.message || 'Unknown error';
 
-    const response = await this.pRetry(() => this.sendRequest(query),
-      {
-        onFailedAttempt: (error: any) => {
-          logger.warn(`Request ${blockNumber} - ${lastConfirmedBlock} is retried. There are ${error.retriesLeft} retries left.`);
-        },
-        retries: this.settings.NODE_REQUEST_RETRY
-      });
+        logger.warn(
+          `Request ${fromBlock} - ${toBlock} is retried. ` +
+          `There are ${error.retriesLeft} retries left. ` +
+          `Error: ${errorMessage}`
+        );
+      },
+      retries: this.settings.NODE_REQUEST_RETRY,
+    });
 
     if (response.data === null) {
-      throw new Error(`Error getting transactions for current block number ${blockNumber}`);
+      throw new Error(`Error getting transactions for block interval ${fromBlock} - ${toBlock}`);
     }
 
     return response.data.transactions;
@@ -208,7 +211,8 @@ export class CardanoWorker extends BaseWorker {
       this.setBlockZeroForGenesisTransfers(transactions);
     }
     else {
-      transactions = await this.getTransactions(fromBlock, this.lastConfirmedBlock);
+      transactions = await this.getTransactions(fromBlock, Math.min(this.lastConfirmedBlock,
+        fromBlock + this.settings.BLOCK_INTERVAL - 1));
       if (transactions.length === 0) {
         // Move the export interval by one block. This would prevent entering a loop asking for same interval.
         this.lastExportedBlock = fromBlock;
