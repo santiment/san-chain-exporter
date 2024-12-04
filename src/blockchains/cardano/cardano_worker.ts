@@ -124,29 +124,30 @@ export class CardanoWorker extends BaseWorker {
          ]
        }
        order_by: { includedAt: asc }
-     ) {
-       includedAt
-       blockIndex
-       fee
-       hash
+      ) {
+        includedAt
+        blockIndex
+        fee
+        hash
 
-       block {
-         number
-         epochNo
-         transactionsCount
-       }
+        block {
+          number
+          epochNo
+          transactionsCount
+        }
 
-       inputs {
-         address
-         value
-       }
+        inputs {
+          address
+          value
+        }
 
-       outputs {
-         address
-         value
-       }
-     }
-   }`;
+        outputs {
+          address
+          value
+        }
+
+      }
+    }`
 
     const response = await this.pRetry(() => this.sendRequest(query), {
       onFailedAttempt: (error: any) => {
