@@ -107,16 +107,14 @@ export class ETHWorker extends BaseWorker {
     let events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
 
     events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-    if (events.length > 0) {
-      stableSort(events, transactionOrder);
-      extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
-
-      this.lastPrimaryKey += events.length;
+    const aggregatedTransfers: ETHTransfer[] = aggregateTransfers(events)
+    if (aggregatedTransfers.length > 0) {
+      stableSort(aggregatedTransfers, transactionOrder);
     }
 
     this.lastExportedBlock = toBlock;
 
-    return events;
+    return aggregatedTransfers;
   }
 
   async init(): Promise<void> {
@@ -124,9 +122,26 @@ export class ETHWorker extends BaseWorker {
   }
 }
 
-export function extendEventsWithPrimaryKey<T extends { primaryKey?: number }>(events: T[], lastPrimaryKey: number) {
-  for (let i = 0; i < events.length; i++) {
-    events[i].primaryKey = lastPrimaryKey + i + 1;
-  }
+function aggregateTransfers(transfers: ETHTransfer[]): ETHTransfer[] {
+  const groupedTransfers = new Map<string, ETHTransfer>()
+
+  transfers.forEach((transfer) => {
+    // Create a unique key
+    const key = `${transfer.blockNumber}-${transfer.transactionHash ?? ''}-${transfer.transactionPosition ?? ''}-${transfer.from}-${transfer.to}`
+
+    if (groupedTransfers.has(key)) {
+      const existingTransfer = groupedTransfers.get(key)!
+      // Sum the 'value' fields
+      existingTransfer.value += transfer.value
+      existingTransfer.valueExactBase36 = BigInt(existingTransfer.value).toString(36)
+    } else {
+      // Clone the transfer to avoid mutating the original
+      groupedTransfers.set(key, { ...transfer })
+    }
+  });
+
+  return Array.from(groupedTransfers.values())
 }
+
+
 
