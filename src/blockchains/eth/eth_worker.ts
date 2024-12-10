@@ -1,3 +1,4 @@
+const { groupBy, forEach, map, flatMap } = require('lodash');
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
@@ -122,26 +123,36 @@ export class ETHWorker extends BaseWorker {
   }
 }
 
-function aggregateTransfers(transfers: ETHTransfer[]): ETHTransfer[] {
-  const groupedTransfers = new Map<string, ETHTransfer>()
+// function assignInternalTransactionPosition(transfers: ETHTransfer[]): ETHTransfer[] {
+//   const groupedTransfers = new Map<string, ETHTransfer>()
 
-  transfers.forEach((transfer) => {
-    // Create a unique key
-    const key = `${transfer.blockNumber}-${transfer.transactionHash ?? ''}-${transfer.transactionPosition ?? ''}-${transfer.from}-${transfer.to}`
+//   transfers.forEach((transfer) => {
+//     // Create a unique key
+//     const key = `${transfer.blockNumber}-${transfer.transactionHash ?? ''}-${transfer.transactionPosition ?? ''}-${transfer.from}-${transfer.to}`
 
-    if (groupedTransfers.has(key)) {
-      const existingTransfer = groupedTransfers.get(key)!
-      // Sum the 'value' fields
-      existingTransfer.value += transfer.value
-      existingTransfer.valueExactBase36 = BigInt(existingTransfer.value).toString(36)
-    } else {
-      // Clone the transfer to avoid mutating the original
-      groupedTransfers.set(key, { ...transfer })
-    }
-  });
+//     if (groupedTransfers.has(key)) {
+//       const existingTransfer = groupedTransfers.get(key)!
+//       existingTransfer.internalTransactionPosition += 1
+//     } else {
+//       // Clone the transfer to avoid mutating the original
+//       groupedTransfers.set(key, { ...transfer })
+//     }
+//   });
 
-  return Array.from(groupedTransfers.values())
+//   return Array.from(groupedTransfers.values())
+// }
+
+
+function assignInternalTransactionPosition(transfers: ETHTransfer[], groupByKey: (transfer: ETHTransfer) => string, indexKey = 'internalTransactionPosition'): ETHTransfer[] {
+  const grouped = groupBy(transfers, groupByKey)
+  const values: ETHTransfer[][] = Object.values(grouped)
+
+  return values.flatMap((transfersSameKey: ETHTransfer[]) => {
+    transfersSameKey.forEach((transfer: ETHTransfer, index: number) => {
+      transfer.internalTransactionPosition = index
+    })
+    return transfersSameKey
+  })
 }
-
 
 
