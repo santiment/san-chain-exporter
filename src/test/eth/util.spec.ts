@@ -1,23 +1,94 @@
 import { expect } from 'earl';
-const rewire = require('rewire');
-const util = rewire('../../blockchains/eth/lib/util');
+import { transactionOrder } from "../../blockchains/eth/lib/util"
+import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('utils', () => {
-    it('should sort by block and log position', () => {
-        let result = [{
-            block: 1,
-            logPosition: 2
+    it('should sort by block number', () => {
+        const transfers: ETHTransfer[] = [{
+            from: "fromAddress",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 2,
+            timestamp: 1000,
+            transactionHash: "hash",
+            transactionPosition: 10,
+            internalTransactionPosition: 0,
+            type: "type"
         }, {
-            block: 1,
-            logPosition: 3
-        },
-        {
-            block: 2,
-            logPosition: 3
+            from: "fromAddress",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 1,
+            timestamp: 2000,
+            transactionHash: "hash",
+            transactionPosition: 10,
+            internalTransactionPosition: 0,
+            type: "type"
         }
         ]
-        util.stableSort(result, util.transactionOrder)
-        expect(result[0].block).toEqual(1);
-        expect(result[0].logPosition).toEqual(2);
+        const result = transfers.sort(transactionOrder)
+        expect(result[0].blockNumber).toEqual(1);
+        expect(result[1].blockNumber).toEqual(2);
+    })
+
+    it('should sort by transaciton position', () => {
+        const transfers: ETHTransfer[] = [{
+            from: "fromAddress",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 1,
+            timestamp: 1000,
+            transactionHash: "hash",
+            transactionPosition: 20,
+            internalTransactionPosition: 0,
+            type: "type"
+        }, {
+            from: "fromAddress",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 1,
+            timestamp: 2000,
+            transactionHash: "hash",
+            transactionPosition: 10,
+            internalTransactionPosition: 0,
+            type: "type"
+        }
+        ]
+        const result = transfers.sort(transactionOrder)
+        expect(result[0].transactionPosition).toEqual(10);
+        expect(result[1].transactionPosition).toEqual(20);
+    })
+
+
+    it('should sort by internal transaciton position', () => {
+        const transfers: ETHTransfer[] = [{
+            from: "fromAddress",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 1,
+            timestamp: 1000,
+            transactionHash: "hash",
+            internalTransactionPosition: 5,
+            type: "type"
+        }, {
+            from: "fromAddress",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 1,
+            timestamp: 2000,
+            transactionHash: "hash",
+            internalTransactionPosition: 2,
+            type: "type"
+        }
+        ]
+        const result = transfers.sort(transactionOrder)
+        expect(result[0].internalTransactionPosition).toEqual(2);
+        expect(result[1].internalTransactionPosition).toEqual(5);
     })
 })

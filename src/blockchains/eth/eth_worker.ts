@@ -1,8 +1,9 @@
+const { groupBy, forEach, map, flatMap } = require('lodash');
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
-import { transactionOrder, stableSort } from './lib/util';
+import { assignInternalTransactionPosition, transactionOrder } from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
@@ -12,7 +13,7 @@ import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
 import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
-import { EOB, collectEndOfBlocks } from './lib/end_of_block';
+import { collectEndOfBlocks } from './lib/end_of_block';
 
 
 export class ETHWorker extends BaseWorker {
@@ -96,52 +97,31 @@ export class ETHWorker extends BaseWorker {
     return result;
   }
 
-  async work(): Promise<(ETHTransfer | EOB)[]> {
-    const workerContext = await analyzeWorkerContext(this);
-    setWorkerSleepTime(this, workerContext);
-    if (workerContext === NO_WORK_SLEEP) return [];
+  async work(): Promise<(ETHTransfer)[]> {
+    const workerContext = await analyzeWorkerContext(this)
+    setWorkerSleepTime(this, workerContext)
+    if (workerContext === NO_WORK_SLEEP) return []
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
-    let events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
-
+    const { fromBlock, toBlock } = nextIntervalCalculator(this)
+    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
+    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
+    const events: ETHTransfer[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
+    assignInternalTransactionPosition(events)
     events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-    const aggregatedTransfers: ETHTransfer[] = aggregateTransfers(events)
-    if (aggregatedTransfers.length > 0) {
-      stableSort(aggregatedTransfers, transactionOrder);
-    }
+    events.sort(transactionOrder)
 
-    this.lastExportedBlock = toBlock;
+    this.lastExportedBlock = toBlock
 
-    return aggregatedTransfers;
+    return events
   }
 
   async init(): Promise<void> {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS
   }
 }
 
-function aggregateTransfers(transfers: ETHTransfer[]): ETHTransfer[] {
-  const groupedTransfers = new Map<string, ETHTransfer>()
 
-  transfers.forEach((transfer) => {
-    // Create a unique key
-    const key = `${transfer.blockNumber}-${transfer.transactionHash ?? ''}-${transfer.transactionPosition ?? ''}-${transfer.from}-${transfer.to}`
 
-    if (groupedTransfers.has(key)) {
-      const existingTransfer = groupedTransfers.get(key)!
-      // Sum the 'value' fields
-      existingTransfer.value += transfer.value
-      existingTransfer.valueExactBase36 = BigInt(existingTransfer.value).toString(36)
-    } else {
-      // Clone the transfer to avoid mutating the original
-      groupedTransfers.set(key, { ...transfer })
-    }
-  });
-
-  return Array.from(groupedTransfers.values())
-}
 
 
 
