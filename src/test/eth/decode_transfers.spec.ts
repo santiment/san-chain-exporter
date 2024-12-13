@@ -115,6 +115,8 @@ describe('genesis transfers', function () {
     const result_expected = {
       'from': 'mining_block',
       'to': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+      'transactionHash': '0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c',
+      'transactionPosition': 10,
       'value': 5000000000000000000,
       'valueExactBase36': '11zk02pzlmwow',
       'blockNumber': 710093,

@@ -1,7 +1,6 @@
 import assert from 'assert';
 import v8 from 'v8';
-import { extendEventsWithPrimaryKey, ETHWorker } from '../../blockchains/eth/eth_worker';
-import { EOB } from '../../blockchains/eth/lib/end_of_block';
+import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import * as constants from '../../blockchains/eth/lib/constants';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from '../../blockchains/eth/eth_types';
 import { expect } from 'earl'
@@ -9,8 +8,8 @@ import { expect } from 'earl'
 describe('Test worker', function () {
     let feeResult: ETHTransfer;
     let callResult: ETHTransfer;
-    let endOfBlock: EOB;
-    let eobWithPrimaryKey: EOB & { primaryKey: number };
+    let endOfBlock: ETHTransfer;
+    let eobWithPrimaryKey: ETHTransfer & { primaryKey: number };
     let worker = new ETHWorker(constants);
     let blockInfos = new Map<number, ETHBlock>()
     let feeResultWithPrimaryKey: ETHTransfer;
@@ -55,27 +54,7 @@ describe('Test worker', function () {
     });
 
 
-    it('test primary key assignment', async function () {
-        let events = [feeResult, callResult]
-        extendEventsWithPrimaryKey(events, 0)
 
-        
-        expect(events).toLooseEqual([feeResultWithPrimaryKey, callResultWithPrimaryKey]);
-        // Overwrite variables and methods that the 'work' method would use internally.
-        worker.lastConfirmedBlock = 5711193;
-        worker.lastExportedBlock = 5711192;
-        worker.fetchData = async function (from: number, to: number) {
-            return Promise.resolve([[], blockInfos, {}]);
-        };
-        worker.transformPastEvents = function () {
-            return [feeResult, callResult];
-        };
-
-        const result = await worker.work();
-
-        expect(result).toLooseEqual([feeResultWithPrimaryKey, callResultWithPrimaryKey, eobWithPrimaryKey]);
-    });
-    
     it('test end of block events', async function () {
         worker.lastConfirmedBlock = 5711193;
         worker.lastExportedBlock = 5711190;
@@ -97,13 +76,6 @@ describe('Test worker', function () {
         expect(types).toEqual(["EOB", "EOB", "fee", "call", "EOB"]);
     })
 
-    it('test primary key assignment', async function () {
-        const events = [feeResult, callResult]
-        extendEventsWithPrimaryKey(events, 0)
-
-        expect(events).toLooseEqual([feeResultWithPrimaryKey, callResultWithPrimaryKey]);
-    });
-
 });
 
 function ethBlockEvent(blockNumber: number): ETHBlock {
@@ -117,11 +89,11 @@ function ethBlockEvent(blockNumber: number): ETHBlock {
         totalDifficulty: "3",
         difficulty: "2",
         size: '2',
-        transactions: [] 
+        transactions: []
     } satisfies ETHBlock
 }
 
-function endOfBlockEvent(blockNumber: number): EOB {
+function endOfBlockEvent(blockNumber: number): ETHTransfer {
     return {
         from: "0x0000000000000000000000000000000000000000",
         to: "0x0000000000000000000000000000000000000000",
