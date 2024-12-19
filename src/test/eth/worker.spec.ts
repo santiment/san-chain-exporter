@@ -1,6 +1,7 @@
 import assert from 'assert';
 import v8 from 'v8';
-import { ETHWorker } from '../../blockchains/eth/eth_worker';
+import { extendEventsWithPrimaryKey, ETHWorker } from '../../blockchains/eth/eth_worker';
+import { EOB } from '../../blockchains/eth/lib/end_of_block';
 import * as constants from '../../blockchains/eth/lib/constants';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from '../../blockchains/eth/eth_types';
 import { expect } from 'earl'
@@ -8,8 +9,8 @@ import { expect } from 'earl'
 describe('Test worker', function () {
     let feeResult: ETHTransfer;
     let callResult: ETHTransfer;
-    let endOfBlock: ETHTransfer;
-    let eobWithPrimaryKey: ETHTransfer & { primaryKey: number };
+    let endOfBlock: EOB;
+    let eobWithPrimaryKey: EOB & { primaryKey: number };
     let worker = new ETHWorker(constants);
     let blockInfos = new Map<number, ETHBlock>()
     let feeResultWithPrimaryKey: ETHTransfer;
@@ -93,7 +94,7 @@ function ethBlockEvent(blockNumber: number): ETHBlock {
     } satisfies ETHBlock
 }
 
-function endOfBlockEvent(blockNumber: number): ETHTransfer {
+function endOfBlockEvent(blockNumber: number): EOB {
     return {
         from: "0x0000000000000000000000000000000000000000",
         to: "0x0000000000000000000000000000000000000000",
