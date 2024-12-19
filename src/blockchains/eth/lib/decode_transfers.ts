@@ -16,6 +16,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
       valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
+      transactionHash: trace['transactionHash'],
+      transactionPosition: trace['transactionPosition'],
       type: trace['type']
     };
   }

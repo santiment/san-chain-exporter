@@ -27,12 +27,12 @@ export const collectEndOfBlocks = (from: number, to: number, blockInfos: Map<num
             timestamp: safeCastToNumber(web3Wrapper.parseHexToNumber(blockInfos.get(blockNumber)!!.timestamp)),
             transactionHash: "0x0000000000000000000000000000000000000000",
             transactionPosition: maxTxPosition,
+            internalTransactionPosition: 0,
             type: "EOB"
         }})
     }
 
-const maxTxPosition = Math.pow(2, 31) - 1 // max int32    
+const maxTxPosition = Math.pow(2, 31) - 1 // max int32
 // from - inclusive, to - exclusive
 const range = (from: number, to: number, step: number) =>
     [...Array(Math.floor((to - from) / step) + 1)].map((_, i) => from + i * step);
-  
