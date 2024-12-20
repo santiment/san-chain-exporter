@@ -10,7 +10,7 @@ export class WithdrawalsDecoder {
   }
 
   getBeaconChainWithdrawals(withdrawals: BeaconChainWithdrawal[], blockNumber: number, blockTimestamp: number): ETHTransfer[] {
-    return withdrawals.map((withdrawal) => {
+    return withdrawals.map((withdrawal, index) => {
       const gweiAmount = this.web3Wrapper.gweiToWei(withdrawal.amount);
       return {
         from: constants.ETH_WITHDRAWAL,
@@ -20,6 +20,8 @@ export class WithdrawalsDecoder {
         blockNumber: blockNumber,
         timestamp: blockTimestamp,
         transactionHash: `WITHDRAWAL_${blockNumber}`,
+        transactionPosition: 0,
+        internalTxPosition: index,
         type: 'beacon_withdrawal'
       };
     });
