@@ -77,7 +77,7 @@ export type ETHTransfer = {
   timestamp: number,
   transactionHash?: string,
   transactionPosition?: number,
-  internalTransactionPosition?: number,
+  internalTxPosition?: number,
   type: string,
   primaryKey?: number,
 }

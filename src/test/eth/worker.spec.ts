@@ -1,9 +1,8 @@
-import assert from 'assert';
 import v8 from 'v8';
-import { extendEventsWithPrimaryKey, ETHWorker } from '../../blockchains/eth/eth_worker';
+import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import { EOB } from '../../blockchains/eth/lib/end_of_block';
 import * as constants from '../../blockchains/eth/lib/constants';
-import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from '../../blockchains/eth/eth_types';
+import { ETHBlock, ETHTransfer } from '../../blockchains/eth/eth_types';
 import { expect } from 'earl'
 
 describe('Test worker', function () {

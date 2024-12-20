@@ -14,7 +14,7 @@ describe('transactionOrder utils', () => {
             timestamp: 1000,
             transactionHash: "hash",
             transactionPosition: 10,
-            internalTransactionPosition: 0,
+            internalTxPosition: 0,
             type: "type"
         }, {
             from: "fromAddress",
@@ -25,7 +25,7 @@ describe('transactionOrder utils', () => {
             timestamp: 2000,
             transactionHash: "hash",
             transactionPosition: 10,
-            internalTransactionPosition: 0,
+            internalTxPosition: 0,
             type: "type"
         }
         ]
@@ -44,7 +44,7 @@ describe('transactionOrder utils', () => {
             timestamp: 1000,
             transactionHash: "hash",
             transactionPosition: 20,
-            internalTransactionPosition: 0,
+            internalTxPosition: 0,
             type: "type"
         }, {
             from: "fromAddress",
@@ -55,7 +55,7 @@ describe('transactionOrder utils', () => {
             timestamp: 2000,
             transactionHash: "hash",
             transactionPosition: 10,
-            internalTransactionPosition: 0,
+            internalTxPosition: 0,
             type: "type"
         }
         ]
@@ -74,7 +74,7 @@ describe('transactionOrder utils', () => {
             blockNumber: 1,
             timestamp: 1000,
             transactionHash: "hash",
-            internalTransactionPosition: 5,
+            internalTxPosition: 5,
             type: "type"
         }, {
             from: "fromAddress",
@@ -84,13 +84,13 @@ describe('transactionOrder utils', () => {
             blockNumber: 1,
             timestamp: 2000,
             transactionHash: "hash",
-            internalTransactionPosition: 2,
+            internalTxPosition: 2,
             type: "type"
         }
         ]
         const result = transfers.sort(transactionOrder)
-        expect(result[0].internalTransactionPosition).toEqual(2);
-        expect(result[1].internalTransactionPosition).toEqual(5);
+        expect(result[0].internalTxPosition).toEqual(2);
+        expect(result[1].internalTxPosition).toEqual(5);
     })
 })
 
@@ -109,7 +109,7 @@ describe('assignInternalTransactionPosition utils', () => {
             type: "type"
         }]
         const expected = cloneDeep(transfers)
-        expected[0].internalTransactionPosition = 0
+        expected[0].internalTxPosition = 0
 
         const result = assignInternalTransactionPosition(transfers)
 
@@ -126,7 +126,7 @@ describe('assignInternalTransactionPosition utils', () => {
             timestamp: 1000,
             transactionHash: "hash",
             transactionPosition: 10,
-            internalTransactionPosition: 0,
+            internalTxPosition: 0,
             type: "type"
         }]
         const expected = cloneDeep(transfers)
@@ -160,8 +160,8 @@ describe('assignInternalTransactionPosition utils', () => {
             type: "type"
         }]
         const expected = cloneDeep(transfers)
-        expected[0].internalTransactionPosition = 0
-        expected[1].internalTransactionPosition = 0
+        expected[0].internalTxPosition = 0
+        expected[1].internalTxPosition = 0
 
         const result = assignInternalTransactionPosition(transfers)
         expect(result).toEqual(expected)
@@ -192,8 +192,8 @@ describe('assignInternalTransactionPosition utils', () => {
             type: "type"
         }]
         const expected = cloneDeep(transfers)
-        expected[0].internalTransactionPosition = 0
-        expected[1].internalTransactionPosition = 1
+        expected[0].internalTxPosition = 0
+        expected[1].internalTxPosition = 1
 
         const result = assignInternalTransactionPosition(transfers)
         expect(result).toEqual(expected)

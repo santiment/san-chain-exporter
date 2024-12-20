@@ -7,7 +7,7 @@ export type EOB = {
     value: number,
     valueExactBase36: string,
     blockNumber: number,
-    timestamp: number, 
+    timestamp: number,
     transactionHash: string,
     transactionPosition: number,
     type: string,
@@ -27,10 +27,11 @@ export const collectEndOfBlocks = (from: number, to: number, blockInfos: Map<num
             timestamp: safeCastToNumber(web3Wrapper.parseHexToNumber(blockInfos.get(blockNumber)!!.timestamp)),
             transactionHash: "0x0000000000000000000000000000000000000000",
             transactionPosition: maxTxPosition,
-            internalTransactionPosition: 0,
+            internalTxPosition: 0,
             type: "EOB"
-        }})
-    }
+        }
+    })
+}
 
 const maxTxPosition = Math.pow(2, 31) - 1 // max int32
 // from - inclusive, to - exclusive

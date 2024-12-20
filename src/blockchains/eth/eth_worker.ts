@@ -1,4 +1,3 @@
-const { groupBy, forEach, map, flatMap } = require('lodash');
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
@@ -13,7 +12,7 @@ import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
 import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
 import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
-import { collectEndOfBlocks } from './lib/end_of_block';
+import { EOB, collectEndOfBlocks } from './lib/end_of_block';
 
 
 export class ETHWorker extends BaseWorker {

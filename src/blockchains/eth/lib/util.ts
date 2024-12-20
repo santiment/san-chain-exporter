@@ -13,10 +13,10 @@ export function transactionOrder(a: ETHTransfer, b: ETHTransfer) {
     return transactionPositionA - transactionPositionB
   }
 
-  const internalTransactionPositionA = (a.internalTransactionPosition !== undefined) ? a.internalTransactionPosition : -1
-  const internalTransactionPositionB = (b.internalTransactionPosition !== undefined) ? b.internalTransactionPosition : -1
+  const internalTxPositionA = (a.internalTxPosition !== undefined) ? a.internalTxPosition : -1
+  const internalTxPositionB = (b.internalTxPosition !== undefined) ? b.internalTxPosition : -1
 
-  return internalTransactionPositionA - internalTransactionPositionB
+  return internalTxPositionA - internalTxPositionB
 }
 
 const ethTransferKey = (transfer: ETHTransfer) => `${transfer.blockNumber}-${transfer.transactionHash ?? ''}-${transfer.transactionPosition ?? ''}-${transfer.from}-${transfer.to}`
@@ -27,7 +27,7 @@ export function assignInternalTransactionPosition(transfers: ETHTransfer[], grou
 
   return values.flatMap((transfersSameKey: ETHTransfer[]) => {
     transfersSameKey.forEach((transfer: ETHTransfer, index: number) => {
-      transfer.internalTransactionPosition = index
+      transfer.internalTxPosition = index
     })
     return transfersSameKey
   })
