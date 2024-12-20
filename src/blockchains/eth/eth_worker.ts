@@ -2,7 +2,7 @@ import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
-import { assignInternalTransactionPosition, transactionOrder } from './lib/util'
+import { assignInternalTransactionPosition, doQAETHTransfers, transactionOrder, mergeSortedArrays } from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
@@ -105,13 +105,15 @@ export class ETHWorker extends BaseWorker {
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
-    assignInternalTransactionPosition(events)
-    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
     events.sort(transactionOrder)
+    doQAETHTransfers(events, fromBlock, toBlock)
+    assignInternalTransactionPosition(events)
+    const eobEvents = collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper)
+    const mergedEvents = mergeSortedArrays(events, eobEvents, transactionOrder)
 
     this.lastExportedBlock = toBlock
 
-    return events
+    return mergedEvents
   }
 
   async init(): Promise<void> {

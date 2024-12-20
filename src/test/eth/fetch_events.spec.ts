@@ -113,6 +113,7 @@ describe('fetch past events', function () {
       blockNumber: 5711193,
       timestamp: 1527814787,
       transactionHash: '0x1a06a3a86d2897741f3ddd774df060a63d626b01197c62015f404e1f007fa04d',
+      transactionPosition: 0,
       type: 'fee'
     };
 
@@ -155,6 +156,7 @@ describe('fetch past events', function () {
       blockNumber: 0,
       timestamp: 1438269973,
       transactionHash: 'GENESIS_000d836201318ec6899a67540690382780743280',
+      transactionPosition: 0,
       type: 'genesis'
     };
 
