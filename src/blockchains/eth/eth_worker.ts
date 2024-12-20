@@ -2,7 +2,7 @@ import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
-import { transactionOrder, stableSort } from './lib/util';
+import { assignInternalTransactionPosition, transactionOrder } from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
@@ -101,32 +101,26 @@ export class ETHWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
-    let events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
-
+    const { fromBlock, toBlock } = nextIntervalCalculator(this)
+    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
+    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
+    const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
+    assignInternalTransactionPosition(events)
     events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-    if (events.length > 0) {
-      stableSort(events, transactionOrder);
-      extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
+    events.sort(transactionOrder)
 
-      this.lastPrimaryKey += events.length;
-    }
+    this.lastExportedBlock = toBlock
 
-    this.lastExportedBlock = toBlock;
-
-    return events;
+    return events
   }
 
   async init(): Promise<void> {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS
   }
 }
 
-export function extendEventsWithPrimaryKey<T extends { primaryKey?: number }>(events: T[], lastPrimaryKey: number) {
-  for (let i = 0; i < events.length; i++) {
-    events[i].primaryKey = lastPrimaryKey + i + 1;
-  }
-}
+
+
+
+
 
