@@ -1,6 +1,6 @@
 import { expect } from 'earl';
 import { cloneDeep } from 'lodash';
-import { transactionOrder, assignInternalTransactionPosition } from "../../blockchains/eth/lib/util"
+import { transactionOrder, assignInternalTransactionPosition, doQAETHTransfers } from "../../blockchains/eth/lib/util"
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('transactionOrder utils', () => {
@@ -74,6 +74,7 @@ describe('transactionOrder utils', () => {
             blockNumber: 1,
             timestamp: 1000,
             transactionHash: "hash",
+            transactionPosition: 0,
             internalTxPosition: 5,
             type: "type"
         }, {
@@ -84,6 +85,7 @@ describe('transactionOrder utils', () => {
             blockNumber: 1,
             timestamp: 2000,
             transactionHash: "hash",
+            transactionPosition: 0,
             internalTxPosition: 2,
             type: "type"
         }
@@ -111,9 +113,9 @@ describe('assignInternalTransactionPosition utils', () => {
         const expected = cloneDeep(transfers)
         expected[0].internalTxPosition = 0
 
-        const result = assignInternalTransactionPosition(transfers)
+        assignInternalTransactionPosition(transfers)
 
-        expect(result).toEqual(expected)
+        expect(transfers).toEqual(expected)
     })
 
     it('zero position is not changed', () => {
@@ -131,8 +133,8 @@ describe('assignInternalTransactionPosition utils', () => {
         }]
         const expected = cloneDeep(transfers)
 
-        const result = assignInternalTransactionPosition(transfers)
-        expect(result).toEqual(expected)
+        assignInternalTransactionPosition(transfers)
+        expect(transfers).toEqual(expected)
     })
 
     it('two different records assigned correctly', () => {
@@ -163,8 +165,8 @@ describe('assignInternalTransactionPosition utils', () => {
         expected[0].internalTxPosition = 0
         expected[1].internalTxPosition = 0
 
-        const result = assignInternalTransactionPosition(transfers)
-        expect(result).toEqual(expected)
+        assignInternalTransactionPosition(transfers)
+        expect(transfers).toEqual(expected)
     })
 
     it('two equal records assigned correctly', () => {
@@ -195,7 +197,126 @@ describe('assignInternalTransactionPosition utils', () => {
         expected[0].internalTxPosition = 0
         expected[1].internalTxPosition = 1
 
-        const result = assignInternalTransactionPosition(transfers)
-        expect(result).toEqual(expected)
+        assignInternalTransactionPosition(transfers)
+        expect(transfers).toEqual(expected)
     })
 })
+
+
+describe('doQAETHTransfers', () => {
+    // Helper function to create ETHTransfer objects
+    const createTransfer = (from: string, to: string, value: number, blockNumber: number, transactionHash: string,
+        transactionPosition: number, internalTxPosition: number, type: string = 'transfer'): ETHTransfer => ({
+            from, to, value, valueExactBase36: value.toString(36), blockNumber, timestamp: 1000, transactionHash,
+            transactionPosition, internalTxPosition, type,
+        });
+
+    test('Valid transfers with multiple blocks and consecutive transactions', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash1", 0, 0),
+            createTransfer('C', 'D', 2, 100, "hash2", 0, 0),
+            createTransfer('E', 'F', 3, 101, "hash1", 0, 0),
+            createTransfer('G', 'H', 4, 101, "hash2", 0, 0),
+            createTransfer('I', 'J', 5, 102, "hash1", 0, 0),
+        ];
+
+        expect(() => doQAETHTransfers(transfers, 100, 102)).not.toThrow();
+    });
+
+    test('Throws error when a block in the range is missing', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+            createTransfer('C', 'D', 2, 102, "hash", 0, 0), // Missing block 101
+            createTransfer('E', 'F', 3, 103, "hash", 0, 0),
+        ];
+
+        expect(() => doQAETHTransfers(transfers, 100, 103)).toThrow(
+            'Transfer data missing for block 101'
+        );
+    });
+
+    test('Throws error when a transaction position is missing within a block', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+            // Missing transactionPosition 1 in block 100
+            createTransfer('E', 'F', 3, 101, "hash1", 0, 0),
+            createTransfer('G', 'H', 4, 101, "hash2", 1, 0),
+        ];
+
+        expect(() => doQAETHTransfers(transfers, 100, 101)).toThrow(
+            'Transaction at position 1 is missing in block 100'
+        );
+    });
+
+    test('Throws error when transfers array is empty', () => {
+        const transfers: ETHTransfer[] = [];
+
+        expect(() => doQAETHTransfers(transfers, 100, 100)).toThrow(
+            'Transfer data missing for block 100'
+        );
+    });
+
+    test('Valid single block with single transaction', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+        ];
+
+        expect(() => doQAETHTransfers(transfers, 100, 100)).not.toThrow();
+    });
+
+    test('Throws error when fromBlock is greater than toBlock', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+            createTransfer('C', 'D', 2, 101, "hash", 0, 0),
+        ];
+
+        expect(() => doQAETHTransfers(transfers, 102, 100)).toThrow(
+            'Transfer data missing for block 100'
+        );
+    });
+
+    test('Throws error when the last block is missing', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+            createTransfer('C', 'D', 2, 101, "hash", 0, 0),
+            // Missing block 102
+        ];
+
+        expect(() => doQAETHTransfers(transfers, 100, 102)).toThrow(
+            'Transfer data missing for block 102'
+        );
+    });
+
+    test('Throws error when the last block has no transactions', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+            createTransfer('C', 'D', 2, 101, "hash", 0, 0),
+            // Block 102 exists but has no transactions
+        ];
+
+        // To simulate block 102 existing with no transactions,
+        // we simply omit any transfer with blockNumber 102.
+        // The function should still throw an error for missing block 102.
+
+        expect(() => doQAETHTransfers(transfers, 100, 102)).toThrow(
+            'Transfer data missing for block 102'
+        );
+    });
+
+    it('should throw an error when the last block is missing', () => {
+        // Define block range
+        const fromBlock = 1;
+        const toBlock = 3;
+
+        // Define sortedTransfers with transfers for Block 1 and Block 2 only
+        const sortedTransfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0, 0),
+            createTransfer('A', 'B', 2, 100, "hash", 0, 0),
+        ];
+
+        // Attempt to perform QA and expect an error for the missing Block 3
+        expect(() => {
+            doQAETHTransfers(sortedTransfers, fromBlock, toBlock);
+        }).toThrowError('Transfer data missing for block 3');
+    });
+});
