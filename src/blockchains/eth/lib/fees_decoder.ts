@@ -27,6 +27,7 @@ export class FeesDecoder {
       timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
       transactionHash: transaction.hash,
       transactionPosition: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.transactionIndex)),
+      internalTxPosition: 0,
       type: 'fee'
     }];
   }
@@ -48,6 +49,7 @@ export class FeesDecoder {
       timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
       transactionHash: transaction.hash,
       transactionPosition: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.transactionIndex)),
+      internalTxPosition: 0,
       type: 'fee_burnt'
     };
   }
@@ -78,6 +80,7 @@ export class FeesDecoder {
         timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
         transactionHash: transaction.hash,
         transactionPosition: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.transactionIndex)),
+        internalTxPosition: 0,
         type: 'fee'
       };
     }
