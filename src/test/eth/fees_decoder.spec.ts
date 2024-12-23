@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { Web3Interface, constructWeb3WrapperNoCredentials, safeCastToNumber } from '../../blockchains/eth/lib/web3_wrapper';
 import { FeesDecoder } from '../../blockchains/eth/lib/fees_decoder';
-import { ETHBlock, ETHReceipt } from '../../blockchains/eth/eth_types';
+import { ETHBlock, ETHReceipt, ETHTransfer } from '../../blockchains/eth/eth_types';
 import * as constants from '../../blockchains/eth/lib/constants';
 
 /**
@@ -174,7 +174,7 @@ describe('Fees decoder test', function () {
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_zero_priority.number)),
       turnReceiptsToMap(receipts_json_post_london_no_priority), true);
 
-    const expected = [{
+    const expected: ETHTransfer[] = [{
       from: '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
       to: constants.BURN_ADDRESS,
       value: 1049725694283000,
@@ -182,6 +182,8 @@ describe('Fees decoder test', function () {
       blockNumber: 13447057,
       timestamp: 1634631172,
       transactionHash: '0xc8bebc11bbe703cdfb2a1a9599221baf4f19a1e20808866346791799d2dac7a9',
+      transactionPosition: 0,
+      internalTxPosition: 0,
       type: 'fee_burnt'
     }
     ];
@@ -194,12 +196,14 @@ describe('Fees decoder test', function () {
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_with_priority.number)),
       turnReceiptsToMap(receipts_json_post_london_with_priority), true);
 
-    const expected = [{
+    const expected: ETHTransfer[] = [{
       blockNumber: 13447057,
       from: '0x8ae57a027c63fca8070d1bf38622321de8004c67',
       timestamp: 1634631172,
       to: constants.BURN_ADDRESS,
       transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      transactionPosition: 164,
+      internalTxPosition: 0,
       type: 'fee_burnt',
       value: 3653345337731778,
       valueExactBase36: 'zz03ofi5du'
@@ -212,6 +216,8 @@ describe('Fees decoder test', function () {
       blockNumber: 13447057,
       timestamp: 1634631172,
       transactionHash: '0x1e53bf3951f6cb70461df500ec75ed5d88d73bd44d88ca7faabaa4b1e65aec98',
+      transactionPosition: 164,
+      internalTxPosition: 0,
       type: 'fee'
     }
     ];
@@ -224,12 +230,14 @@ describe('Fees decoder test', function () {
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_old_tx_type.number)),
       turnReceiptsToMap(receipts_json_post_london_old_tx_type), true);
 
-    const expected = [{
+    const expected: ETHTransfer[] = [{
       blockNumber: 13318440,
       from: '0xddfabcdc4d8ffc6d5beaf154f18b778f892a0740',
       timestamp: 1632888074,
       to: constants.BURN_ADDRESS,
       transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
+      transactionPosition: 97,
+      internalTxPosition: 0,
       type: 'fee_burnt',
       value: 1391883443307000,
       valueExactBase36: 'dpdqfcs260'
@@ -242,6 +250,8 @@ describe('Fees decoder test', function () {
       blockNumber: 13318440,
       timestamp: 1632888074,
       transactionHash: '0xec5b5841e0a425bf69553a0ccecfa58b053a63e30f5fbdd9ecbdee5e9fb0666c',
+      transactionPosition: 97,
+      internalTxPosition: 0,
       type: 'fee'
     }
     ];
@@ -254,7 +264,7 @@ describe('Fees decoder test', function () {
       safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_pre_london.number)),
       turnReceiptsToMap(receipts_json_pre_london), true);
 
-    const expected = [{
+    const expected: ETHTransfer[] = [{
       from: '0x39fa8c5f2793459d6622857e7d9fbb4bd91766d3',
       to: '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
       value: 2354887722000000,
@@ -262,6 +272,8 @@ describe('Fees decoder test', function () {
       blockNumber: 1000000,
       timestamp: 1455404053,
       transactionHash: '0xea1093d492a1dcb1bef708f771a99a96ff05dcab81ca76c31940300177fcf49f',
+      transactionPosition: 0,
+      internalTxPosition: 0,
       type: 'fee'
     }];
 

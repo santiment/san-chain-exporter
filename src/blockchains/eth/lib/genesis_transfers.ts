@@ -32,6 +32,7 @@ export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
       timestamp: GENESIS_TIMESTAMP,
       transactionHash: from,
       transactionPosition: currentCount,
+      internalTxPosition: 0,
       type: 'genesis'
     });
   });
@@ -45,6 +46,7 @@ export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
     timestamp: GENESIS_TIMESTAMP,
     transactionHash: 'GENESIS_mining_tx',
     transactionPosition: 0,
+    internalTxPosition: 0,
     type: 'reward'
   });
 
