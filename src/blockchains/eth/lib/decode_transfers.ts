@@ -18,6 +18,7 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
       transactionPosition: trace['transactionPosition'],
+      internalTxPosition: 0,
       type: trace['type']
     };
   }
@@ -37,6 +38,7 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
       transactionPosition: trace['transactionPosition'],
+      internalTxPosition: 0,
       type: trace['type']
     };
   }
@@ -55,6 +57,7 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
       transactionPosition: trace['transactionPosition'],
+      internalTxPosition: 0,
       type: trace['type']
     };
   }
@@ -76,6 +79,7 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
     timestamp: timestamp,
     transactionHash: trace['transactionHash'],
     transactionPosition: trace['transactionPosition'],
+    internalTxPosition: 0,
     type: trace['type']
   };
 }

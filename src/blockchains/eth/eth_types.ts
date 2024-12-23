@@ -75,9 +75,9 @@ export type ETHTransfer = {
   valueExactBase36: string,
   blockNumber: number,
   timestamp: number,
-  transactionHash?: string,
-  transactionPosition?: number,
-  internalTxPosition?: number,
+  transactionHash: string,
+  transactionPosition: number,
+  internalTxPosition: number,
   type: string,
   primaryKey?: number,
 }
