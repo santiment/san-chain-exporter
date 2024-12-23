@@ -49,34 +49,25 @@ export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBl
 
 export function assertTransfersWithinBlock(transfersPerBlock: ETHTransfer[]) {
   let expectedTxPosition = 0
-  let expectedInternalTxPosition = 0
 
   for (const transfer of transfersPerBlock) {
     if (transfer.transactionPosition !== expectedTxPosition) {
-      if ((transfer.transactionPosition === 0 && transfer.internalTxPosition === 0) // First record. Has to be with position 0 and 0.
-        || transfer.transactionPosition !== expectedTxPosition + 1 // Transaction position jump with more than 1 is an error.
-        || transfer.internalTxPosition !== 0) { // When transaction position jumps, internal transactions should start from 0.
-        throw new Error(`Unexpected transaction position for transfer: ${JSON.stringify(transfer)}`);
+      // We allow for multiple transfers withing a transaction. That is why we can see the same transaction position several times.
+      if (transfer.transactionPosition !== expectedTxPosition + 1) {
+        throw new Error(`Unexpected transaction position for transfer: ${JSON.stringify(transfer)}, expected tx position: ${expectedTxPosition} or ${expectedTxPosition + 1}`);
       }
-
       expectedTxPosition += 1
-      expectedInternalTxPosition = 0
     }
-
-    if (expectedInternalTxPosition !== transfer.internalTxPosition) {
-      throw new Error(`Unexpected internal transaction position: ${transfer.internalTxPosition} for transfer: ${JSON.stringify(transfer)}, expected is: ${expectedInternalTxPosition}`);
-    }
-
-    expectedInternalTxPosition += 1
   }
 }
+
 
 /**
  * Assert data quality guarantees on top of input Transfers
  *
  * Throw an error if:
  * 1. A block number is missing
- * 2. With a block, a transactions number is missing
+ * 2. Within a block, a transactions number is missing
  *
  * @param transfers Ordered array of transfers
  * @param fromBlock Block number indicating start of expected interval
@@ -84,7 +75,7 @@ export function assertTransfersWithinBlock(transfersPerBlock: ETHTransfer[]) {
  */
 export function doQAETHTransfers(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number) {
   if (fromBlock > toBlock) {
-    throw new Error(`Invalid block range: fromBlock (${fromBlock}) is greater than toBlock (${toBlock})`);
+    throw new Error(`Invalid block range: fromBlock ${fromBlock} is greater than toBlock ${toBlock}`);
   }
 
   const groupedTransfers = groupBy(sortedTransfers, (transfer: ETHTransfer) => transfer.blockNumber)
