@@ -1,7 +1,8 @@
 import { ETHTransfer } from '../eth_types';
+import { EOB } from './end_of_block'
 const { groupBy } = require('lodash');
 
-export function transactionOrder(a: ETHTransfer, b: ETHTransfer) {
+export function transactionOrder(a: ETHTransfer | EOB, b: ETHTransfer | EOB) {
   if (a.blockNumber !== b.blockNumber) {
     return a.blockNumber - b.blockNumber
   }
@@ -32,6 +33,44 @@ export function assignInternalTransactionPosition(transfers: ETHTransfer[], grou
   })
 }
 
+export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number) {
+  const keys = Object.keys(groupedTransfers)
+  if (keys.length !== toBlock - fromBlock + 1) {
+    throw new Error(`Wrong number of blocks seen. Expected ${toBlock - fromBlock + 1} got ${keys.length}.`)
+  }
+
+  for (let block = fromBlock; block <= toBlock; block++) {
+    if (!groupedTransfers.hasOwnProperty(block.toString())) {
+      throw new Error(`Missing transfers for block ${block}.`)
+    }
+  }
+}
+
+
+export function assertTransfersWithinBlock(transfersPerBlock: ETHTransfer[]) {
+  let expectedTxPosition = 0
+  let expectedInternalTxPosition = 0
+
+  for (const transfer of transfersPerBlock) {
+    if (transfer.transactionPosition !== expectedTxPosition) {
+      if ((transfer.transactionPosition === 0 && transfer.internalTxPosition === 0) // First record. Has to be with position 0 and 0.
+        || transfer.transactionPosition !== expectedTxPosition + 1 // Transaction position jump with more than 1 is an error.
+        || transfer.internalTxPosition !== 0) { // When transaction position jumps, internal transactions should start from 0.
+        throw new Error(`Unexpected transaction position for transfer: ${JSON.stringify(transfer)}`);
+      }
+
+      expectedTxPosition += 1
+      expectedInternalTxPosition = 0
+    }
+
+    if (expectedInternalTxPosition !== transfer.internalTxPosition) {
+      throw new Error(`Unexpected internal transaction position: ${transfer.internalTxPosition} for transfer: ${JSON.stringify(transfer)}, expected is: ${expectedInternalTxPosition}`);
+    }
+
+    expectedInternalTxPosition += 1
+  }
+}
+
 /**
  * Assert data quality guarantees on top of input Transfers
  *
@@ -48,30 +87,12 @@ export function doQAETHTransfers(sortedTransfers: ETHTransfer[], fromBlock: numb
     throw new Error(`Invalid block range: fromBlock (${fromBlock}) is greater than toBlock (${toBlock})`);
   }
 
-  let blockExpected = fromBlock
-  let txPositionExpected = 0
+  const groupedTransfers = groupBy(sortedTransfers, (transfer: ETHTransfer) => transfer.blockNumber)
 
-  for (const transfer of sortedTransfers) {
-    if (transfer.blockNumber < blockExpected) {
-      throw new Error(`Transfer for block ${transfer.blockNumber} when ${blockExpected} expected`)
-    }
-    if (transfer.blockNumber > blockExpected) {
-      if (txPositionExpected === 0) {
-        // We did not see any transactions for the previous block
-        throw new Error(`Transfer data missing for block ${blockExpected} `)
-      }
-      blockExpected += 1
-      txPositionExpected = 0
-    }
+  assertBlocksMatch(groupedTransfers, fromBlock, toBlock);
 
-    if (transfer.transactionPosition !== txPositionExpected) {
-      throw new Error(`Transaction at position ${txPositionExpected} is missing in block ${blockExpected}`)
-    }
-    txPositionExpected += 1
-  }
-
-  if (blockExpected != toBlock || txPositionExpected == 0) {
-    throw new Error(`Transfer data missing for block ${toBlock}`)
+  for (const key of Object.keys(groupedTransfers)) {
+    assertTransfersWithinBlock(groupedTransfers[key])
   }
 }
 
