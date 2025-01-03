@@ -2,7 +2,7 @@ import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
-import { transactionOrder, stableSort } from './lib/util';
+import { assignInternalTransactionPosition, transactionOrder } from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
@@ -101,26 +101,29 @@ export class ETHWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`);
-    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock);
-    let events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts);
-
-    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-    if (events.length > 0) {
-      stableSort(events, transactionOrder);
+    const { fromBlock, toBlock } = nextIntervalCalculator(this)
+    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
+    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
+    const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
+    if (this.settings.ASSIGN_INTERNAL_TX_POSITION) {
+      assignInternalTransactionPosition(events)
+    }
+    else {
       extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
 
       this.lastPrimaryKey += events.length;
     }
 
-    this.lastExportedBlock = toBlock;
+    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
+    events.sort(transactionOrder)
 
-    return events;
+    this.lastExportedBlock = toBlock
+
+    return events
   }
 
   async init(): Promise<void> {
-    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS;
+    this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS
   }
 }
 
