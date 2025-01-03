@@ -16,8 +16,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
       valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
-      transactionHash: trace['transactionHash'],
-      transactionPosition: trace['transactionPosition'],
+      transactionHash: trace['transactionHash'] ? trace['transactionHash'] : `mining_${trace['action']['rewardType']}`,
+      transactionPosition: trace['transactionPosition'] ? trace['transactionPosition'] : 0,
       internalTxPosition: 0,
       type: trace['type']
     };
@@ -27,7 +27,10 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
   if (trace['type'] === 'create') {
     assertIsDefined(trace['action']['from'], "'from' field is expected in trace action on 'create' type");
     assertIsDefined(trace['action']['value'], "'value' field is expected in trace action on 'create' type");
+    assertIsDefined(trace['result'], "'result' field is expected in trace on 'create' type");
     assertIsDefined(trace['result']['address'], "'address' field is expected in trace result on 'create' type");
+    assertIsDefined(trace['transactionHash'], "'transactionHash' field is expected in trace on 'create' type");
+    assertIsDefined(trace['transactionPosition'], "'transactionPosition' field is expected in trace on 'create' type");
 
     return {
       from: trace['action']['from'],
@@ -47,6 +50,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
     assertIsDefined(trace['action']['refundAddress'], "'refundAddress' field is expected in trace action on 'suicide' type");
     assertIsDefined(trace['action']['address'], "'address' field is expected in trace action on 'suicide' type");
     assertIsDefined(trace['action']['balance'], "'balance' field is expected in trace action on 'suicide' type")
+    assertIsDefined(trace['transactionHash'], "'transactionHash' field is expected in trace on 'suicide' type");
+    assertIsDefined(trace['transactionPosition'], "'transactionPosition' field is expected in trace on 'suicide' type");
 
     return {
       from: trace['action']['address'],
@@ -69,6 +74,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
   assertIsDefined(trace['action']['from'], `'from' field is expected in trace action on ${trace['type']} type`);
   assertIsDefined(trace['action']['value'], `'value' field is expected in trace action on ${trace['type']} type`);
   assertIsDefined(trace['action']['to'], `'to' field is expected in trace action on ${trace['type']} type`);
+  assertIsDefined(trace['transactionHash'], `'transactionHash' field is expected in trace on ${trace['type']} type`);
+  assertIsDefined(trace['transactionPosition'], `'transactionPosition' field is expected in trace on ${trace['type']} type`);
 
   return {
     from: trace['action']['from'],

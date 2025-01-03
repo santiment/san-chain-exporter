@@ -27,7 +27,9 @@ function constructCreationOutput(parentAddress: string, createTraces: Trace[], b
   ContractCreationTrace[] {
 
   const result: ContractCreationTrace[] = createTraces.map(trace => {
+    assertIsDefined(trace.result, "'result' field is expected in trace on 'create' type")
     assertIsDefined(trace.result.address, "'address' field is expected in trace result on 'create' type")
+    assertIsDefined(trace.transactionHash, "'transactionHash' field is expected in trace result on 'create' type")
 
     const record: ContractCreationTrace = {
       address: trace.result.address,
