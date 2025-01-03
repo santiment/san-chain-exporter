@@ -1,11 +1,26 @@
+import { z } from "zod"
+import { logger } from '../../../lib/logger';
 import { filterErrors } from './filter_errors';
 import { Web3Interface } from './web3_wrapper';
-import { Trace, ETHBlock, ETHReceiptsMap, ETHReceipt } from '../eth_types';
+import { Trace, TraceSchema, ETHBlock, ETHReceiptsMap, ETHReceipt } from '../eth_types';
 import { HTTPClientInterface } from '../../../types'
 
 
-export function parseEthInternalTrx(result: Trace[], isETH: boolean, theMergeBlockNumber: number): Trace[] {
-  const traces = filterErrors(result);
+export function parseEthInternalTrx(traceFilterResult: any[], isETH: boolean, theMergeBlockNumber: number): Trace[] {
+  const traces = filterErrors(traceFilterResult).map(t => {
+    try {
+      return TraceSchema.parse(t)
+    }
+    catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.error('Validation failed:\n', error.toString())
+        logger.error('Trying to parse object:\n', JSON.stringify(t));
+      } else {
+        logger.error('An unexpected error occurred:', error);
+      }
+      throw error
+    }
+  })
 
   return traces
     .filter((trace: Trace) =>

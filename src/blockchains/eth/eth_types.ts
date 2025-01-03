@@ -1,32 +1,41 @@
-export type TraceAction = {
-  author?: string,
-  address?: string,
-  rewardType?: string,
-  callType?: string,
-  from?: string,
-  to?: string,
-  value?: string,
-  balance?: string,
-  refundAddress?: string
-}
+import { z } from "zod"
 
-export type TraceResult = {
-  gasUsed: string,
-  address?: string
-}
+const TraceActionSchema = z.object({
+  author: z.string().optional(),
+  address: z.string().optional(),
+  rewardType: z.string().optional(),
+  callType: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  value: z.string().optional(),
+  balance: z.string().optional(),
+  refundAddress: z.string().optional()
+});
 
-export type Trace = {
-  action: TraceAction,
-  blockHash: string,
-  blockNumber: number,
-  result: TraceResult,
-  subtraces: number,
-  traceAddress: number[],
-  transactionHash: string,
-  transactionPosition: number,
-  type: string,
-  error?: string
-}
+
+export type TraceAction = z.infer<typeof TraceActionSchema>
+
+const TraceResultSchema = z.object({
+  gasUsed: z.string(),
+  address: z.string().optional()
+})
+
+export type TraceResult = z.infer<typeof TraceResultSchema>
+
+export const TraceSchema = z.object({
+  action: TraceActionSchema,
+  blockHash: z.string(),
+  blockNumber: z.number(),
+  result: TraceResultSchema.optional().nullable(),
+  subtraces: z.number(),
+  traceAddress: z.array(z.number()),
+  transactionHash: z.string().optional(),
+  transactionPosition: z.number().optional(),
+  type: z.string(),
+  error: z.string().optional()
+})
+
+export type Trace = z.infer<typeof TraceSchema>
 
 export type ETHBlock = {
   baseFeePerGas?: string,
