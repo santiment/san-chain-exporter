@@ -3,6 +3,7 @@ import assert from 'assert';
 import { WithdrawalsDecoder } from '../../blockchains/eth/lib/withdrawals_decoder';
 import { NODE_URL, ETH_WITHDRAWAL } from '../../blockchains/eth/lib/constants';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
@@ -19,7 +20,7 @@ describe('withdrawals decoder test', function () {
 
     const result = decoder.getBeaconChainWithdrawals([withdrawal], 18742200, 1702046471);
 
-    const expected = [{
+    const expected: ETHTransfer[] = [{
       from: ETH_WITHDRAWAL,
       to: withdrawal.address,
       value: 17482528000000000,
@@ -27,6 +28,8 @@ describe('withdrawals decoder test', function () {
       blockNumber: 18742200,
       timestamp: 1702046471,
       transactionHash: 'WITHDRAWAL_18742200',
+      transactionPosition: 0,
+      internalTxPosition: 0,
       type: 'beacon_withdrawal'
     }];
 
