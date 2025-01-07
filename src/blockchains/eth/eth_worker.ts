@@ -105,17 +105,18 @@ export class ETHWorker extends BaseWorker {
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
+    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
+
     if (this.settings.ASSIGN_INTERNAL_TX_POSITION) {
       assignInternalTransactionPosition(events)
+      events.sort(transactionOrder)
     }
     else {
+      events.sort(transactionOrder)
       extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
 
       this.lastPrimaryKey += events.length;
     }
-
-    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-    events.sort(transactionOrder)
 
     this.lastExportedBlock = toBlock
 
