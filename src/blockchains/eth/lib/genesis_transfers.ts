@@ -12,16 +12,9 @@ const GENESIS_TIMESTAMP = 1438269973;
 
 export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
   const result: ETHTransfer[] = [];
-
-  const txHashMap: Map<string, number> = new Map();
-
   GENESIS_TRANSFERS.forEach((transfer) => {
     const [id, from, to, amount] = transfer;
     const wei = web3Wrapper.etherToWei(amount);
-
-    // Used to construct incrementing internal transaction numbers
-    const currentCount = txHashMap.get(from) || 0;
-
 
     result.push({
       from: 'GENESIS',
@@ -31,7 +24,7 @@ export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
       blockNumber: 0,
       timestamp: GENESIS_TIMESTAMP,
       transactionHash: from,
-      transactionPosition: currentCount,
+      transactionPosition: 0,
       internalTxPosition: 0,
       type: 'genesis'
     });
