@@ -111,12 +111,10 @@ export class ETHWorker extends BaseWorker {
     const eobEvents = collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper)
     const mergedEvents = mergeSortedArrays(events, eobEvents, transactionOrder)
 
-    if (this.settings.ASSIGN_INTERNAL_TX_POSITION) {
-      assignInternalTransactionPosition(mergedEvents)
-    }
-    else {
-      extendEventsWithPrimaryKey(mergedEvents, this.lastPrimaryKey);
+    assignInternalTransactionPosition(mergedEvents)
 
+    if (this.settings.ASSIGN_PRIMARY_KEY) {
+      extendEventsWithPrimaryKey(mergedEvents, this.lastPrimaryKey);
       this.lastPrimaryKey += events.length;
     }
 
