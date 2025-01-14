@@ -1,6 +1,6 @@
 import { expect } from 'earl';
 import { cloneDeep } from 'lodash';
-import { transactionOrder, assignInternalTransactionPosition, doQAETHTransfers } from "../../blockchains/eth/lib/util"
+import { transactionOrder, assignInternalTransactionPosition, checkETHTransfersQuality } from "../../blockchains/eth/lib/util"
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('transactionOrder utils', () => {
@@ -208,7 +208,7 @@ describe('assignInternalTransactionPosition utils', () => {
 })
 
 
-describe('doQAETHTransfers', () => {
+describe('checkETHTransfersQuality', () => {
     // Helper function to create ETHTransfer objects
     const createTransfer = (
         from: string,
@@ -228,7 +228,7 @@ describe('doQAETHTransfers', () => {
             createTransfer('A', 'B', 1, 100, "hash", 0),
         ]
 
-        expect(() => doQAETHTransfers(transfers, 100, 100)).not.toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 100, 100)).not.toThrow()
     })
 
     it('Valid transfers with multiple blocks and consecutive transactions', () => {
@@ -240,7 +240,7 @@ describe('doQAETHTransfers', () => {
             createTransfer('I', 'J', 10, 102, "hash1", 0),
         ]
 
-        expect(() => doQAETHTransfers(transfers, 100, 102)).not.toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 100, 102)).not.toThrow()
     });
 
     it('Multiple transers with same transaction position', () => {
@@ -250,7 +250,7 @@ describe('doQAETHTransfers', () => {
             createTransfer('E', 'F', 10, 100, "hash", 0),
         ]
 
-        expect(() => doQAETHTransfers(transfers, 100, 100)).not.toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 100, 100)).not.toThrow()
     });
 
     it('Throws error when a block in the range is missing', () => {
@@ -260,7 +260,7 @@ describe('doQAETHTransfers', () => {
             createTransfer('E', 'F', 10, 103, "hash", 0)
         ]
 
-        expect(() => doQAETHTransfers(transfers, 100, 103)).toThrow('Wrong number of blocks seen. Expected 4 got 3.')
+        expect(() => checkETHTransfersQuality(transfers, 100, 103)).toThrow('Wrong number of blocks seen. Expected 4 got 3.')
     })
 
     it('Throws error when a transaction position is missing within a block', () => {
@@ -271,13 +271,13 @@ describe('doQAETHTransfers', () => {
             createTransfer('G', 'H', 10, 101, "hash2", 1),
         ]
 
-        expect(() => doQAETHTransfers(transfers, 100, 101)).toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 100, 101)).toThrow()
     })
 
     it('Throws error when transfers array is empty', () => {
         const transfers: ETHTransfer[] = []
 
-        expect(() => doQAETHTransfers(transfers, 100, 100)).toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 100, 100)).toThrow()
     })
 
     it('Throws error when fromBlock is greater than toBlock', () => {
@@ -286,7 +286,7 @@ describe('doQAETHTransfers', () => {
             createTransfer('C', 'D', 2, 101, "hash", 0),
         ]
 
-        expect(() => doQAETHTransfers(transfers, 102, 100)).toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 102, 100)).toThrow()
     })
 
     it('Throws error when the last block is missing', () => {
@@ -296,7 +296,7 @@ describe('doQAETHTransfers', () => {
             // Missing block 102
         ];
 
-        expect(() => doQAETHTransfers(transfers, 100, 102)).toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 100, 102)).toThrow()
     })
 
     it('Throws error when the data for unexpected blocks is present', () => {
@@ -305,6 +305,6 @@ describe('doQAETHTransfers', () => {
             createTransfer('C', 'D', 2, 101, "hash", 0)
         ];
 
-        expect(() => doQAETHTransfers(transfers, 102, 103)).toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 102, 103)).toThrow()
     })
 });

@@ -73,7 +73,7 @@ export function assertTransfersWithinBlock(transfersPerBlock: ETHTransfer[]) {
  * @param fromBlock Block number indicating start of expected interval
  * @param toBlock Block number indicating end of expected interval
  */
-export function doQAETHTransfers(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number) {
+export function checkETHTransfersQuality(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number) {
   if (fromBlock > toBlock) {
     throw new Error(`Invalid block range: fromBlock ${fromBlock} is greater than toBlock ${toBlock}`);
   }

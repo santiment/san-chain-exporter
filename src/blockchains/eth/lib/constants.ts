@@ -12,5 +12,6 @@ export const RECEIPTS_API_METHOD = process.env.RECEIPTS_API_METHOD || 'eth_getBl
 export const NODE_URL = process.env.NODE_URL || 'http://localhost:8545/';
 export const LOOP_INTERVAL_CURRENT_MODE_SEC = getIntEnvVariable('LOOP_INTERVAL_CURRENT_MODE_SEC', 30);
 export const ASSIGN_PRIMARY_KEY = getBoolEnvVariable('ASSIGN_PRIMARY_KEY', true);
+export const CHECK_QUALITY = getBoolEnvVariable('CHECK_QUALITY', true);
 
 
