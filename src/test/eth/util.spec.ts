@@ -1,6 +1,6 @@
 import { expect } from 'earl';
 import { cloneDeep } from 'lodash';
-import { transactionOrder, assignInternalTransactionPosition, checkETHTransfersQuality } from "../../blockchains/eth/lib/util"
+import { transactionOrder, assignInternalTransactionPosition, checkETHTransfersQuality, mergeSortedArrays } from "../../blockchains/eth/lib/util"
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('transactionOrder utils', () => {
@@ -207,22 +207,21 @@ describe('assignInternalTransactionPosition utils', () => {
     })
 })
 
+// Helper function to create ETHTransfer objects
+const createTransfer = (
+    from: string,
+    to: string,
+    value: number,
+    blockNumber: number,
+    transactionHash: string,
+    transactionPosition: number,
+    type: string = 'transfer'
+): ETHTransfer => ({
+    from, to, value, valueExactBase36: value.toString(36), blockNumber, timestamp: 1000, transactionHash,
+    transactionPosition, internalTxPosition: 0, type,
+});
 
 describe('checkETHTransfersQuality', () => {
-    // Helper function to create ETHTransfer objects
-    const createTransfer = (
-        from: string,
-        to: string,
-        value: number,
-        blockNumber: number,
-        transactionHash: string,
-        transactionPosition: number,
-        type: string = 'transfer'
-    ): ETHTransfer => ({
-        from, to, value, valueExactBase36: value.toString(36), blockNumber, timestamp: 1000, transactionHash,
-        transactionPosition, internalTxPosition: 0, type,
-    });
-
     it('Valid single block with single transaction', () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 1, 100, "hash", 0),
@@ -308,3 +307,81 @@ describe('checkETHTransfersQuality', () => {
         expect(() => checkETHTransfersQuality(transfers, 102, 103)).toThrow()
     })
 });
+
+
+describe('mergeSortedArrays', () => {
+    it('should return an empty array when merging two empty arrays', () => {
+
+        const emptyArray1: ETHTransfer[] = []
+        const emptyArray2: ETHTransfer[] = []
+
+        const emptyArrayResult: ETHTransfer[] = []
+        const result = mergeSortedArrays(emptyArray1, emptyArray2, transactionOrder)
+        expect(result).toEqual(emptyArrayResult)
+    })
+
+    it('merging empty array to another array returns the latter', () => {
+
+        const emptyArray: ETHTransfer[] = []
+        const transfer = createTransfer('A', 'B', 1, 100, "hash", 0)
+
+        const result = mergeSortedArrays(emptyArray, [transfer], transactionOrder)
+        expect(result).toEqual([transfer])
+    })
+
+    it('merging non empty array to an empty array returns the former', () => {
+
+        const emptyArray: ETHTransfer[] = []
+        const transfer = createTransfer('A', 'B', 1, 100, "hash", 0)
+
+        const result = mergeSortedArrays([transfer], emptyArray, transactionOrder)
+        expect(result).toEqual([transfer])
+    })
+
+    it('all elements in first array are smaller', () => {
+        const transfers1 = [
+            createTransfer('A', 'B', 1, 100, "hash", 0),
+            createTransfer('A', 'B', 1, 101, "hash", 0),
+            createTransfer('A', 'B', 1, 102, "hash", 0),
+        ]
+        const transfers2 = [
+            createTransfer('A', 'B', 1, 102, "hash", 1),
+            createTransfer('A', 'B', 1, 103, "hash", 0),
+            createTransfer('A', 'B', 1, 103, "hash", 1),
+        ]
+
+        const result = mergeSortedArrays(transfers1, transfers2, transactionOrder)
+
+        expect(result).toEqual([...transfers1, ...transfers2])
+    })
+
+    it('all elements in second array are smaller', () => {
+        const transfers1 = [
+            createTransfer('A', 'B', 1, 100, "hash", 0),
+            createTransfer('A', 'B', 1, 101, "hash", 0),
+            createTransfer('A', 'B', 1, 102, "hash", 0),
+        ]
+        const transfers2 = [
+            createTransfer('A', 'B', 1, 102, "hash", 1),
+            createTransfer('A', 'B', 1, 103, "hash", 0),
+            createTransfer('A', 'B', 1, 103, "hash", 1),
+        ]
+
+        const result = mergeSortedArrays(transfers2, transfers1, transactionOrder)
+
+        expect(result).toEqual([...transfers1, ...transfers2])
+    })
+
+    it('test elements are merged correctly', () => {
+        const transfer1 = createTransfer('A', 'B', 1, 100, "hash", 0)
+        const transfer2 = createTransfer('A', 'B', 1, 101, "hash", 0)
+        const transfer3 = createTransfer('A', 'B', 1, 102, "hash", 0)
+        const transfer4 = createTransfer('A', 'B', 1, 102, "hash", 1)
+        const transfer5 = createTransfer('A', 'B', 1, 103, "hash", 0)
+        const transfer6 = createTransfer('A', 'B', 1, 103, "hash", 1)
+
+        const result = mergeSortedArrays([transfer1, transfer3, transfer5], [transfer2, transfer4, transfer6], transactionOrder)
+
+        expect(result).toEqual([transfer1, transfer2, transfer3, transfer4, transfer5, transfer6])
+    })
+})
