@@ -3,6 +3,7 @@ process.env.IS_ETH = 'true';
 import { decodeTransferTrace } from '../../blockchains/eth/lib/decode_transfers';
 import { NODE_URL } from '../../blockchains/eth/lib/constants';
 import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 
 describe('genesis transfers', function () {
@@ -31,7 +32,7 @@ describe('genesis transfers', function () {
     const timestamp = 1000000;
     const result = decodeTransferTrace(suicide_trace, timestamp, web3Wrapper);
 
-    const result_expected = {
+    const result_expected: ETHTransfer = {
       'from': '0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb',
       'to': '0x245133ea0fb1b77fab5886d7ffb8046dfeff3858',
       'value': 160000000000000000,
@@ -39,6 +40,7 @@ describe('genesis transfers', function () {
       'blockNumber': 711983,
       'timestamp': 1000000,
       'transactionHash': '0xd715da4f846e41be86ea87dc97b186cafea3b50c95d5d9d889ec522b248b207f',
+      'internalTxPosition': 0,
       'transactionPosition': 10,
       'type': 'suicide'
     };
@@ -74,7 +76,7 @@ describe('genesis transfers', function () {
 
     const result = decodeTransferTrace(call_trace, timestamp, web3Wrapper);
 
-    const result_expected = {
+    const result_expected: ETHTransfer = {
       'from': '0x48f2e6e5d0872da169c7f5823d5a2d5ea5f2b5e7',
       'to': '0x7de5aba7de728950c92c57d08e20d4077161f12f',
       'value': 1,
@@ -83,6 +85,7 @@ describe('genesis transfers', function () {
       'timestamp': 1450433505,
       'transactionHash': '0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c',
       'transactionPosition': 10,
+      'internalTxPosition': 0,
       'type': 'call'
     };
 
@@ -112,17 +115,18 @@ describe('genesis transfers', function () {
     const timestamp = 1450433505;
 
     const result = decodeTransferTrace(reward_trace, timestamp, web3Wrapper);
-    const result_expected = {
+    const result_expected: ETHTransfer = {
       'from': 'mining_block',
       'to': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
       'transactionHash': '0x22f839c82ff455554ec8aa98ee2b9a03d0d5ed4707b46d4a0a217df7d58bda2c',
       'transactionPosition': 10,
+      'internalTxPosition': 0,
       'value': 5000000000000000000,
       'valueExactBase36': '11zk02pzlmwow',
       'blockNumber': 710093,
       'timestamp': 1450433505,
       'type': 'reward'
-    };
+    }
 
     assert.deepStrictEqual(result, result_expected);
   });
@@ -150,7 +154,7 @@ describe('genesis transfers', function () {
     const timestamp = 1450435908;
     const result = decodeTransferTrace(create_trace, timestamp, web3Wrapper);
 
-    const result_expected = {
+    const result_expected: ETHTransfer = {
       'from': '0x245133ea0fb1b77fab5886d7ffb8046dfeff3858',
       'to': '0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb',
       'value': 1500000000000000000,
@@ -159,8 +163,9 @@ describe('genesis transfers', function () {
       'timestamp': 1450435908,
       'transactionHash': '0x6d39df3c46f19e8ef5e8bb3b81a063a29cb352675a00d66f0dc2117a1799add1',
       'transactionPosition': 11,
+      'internalTxPosition': 0,
       'type': 'create'
-    };
+    }
 
     assert.deepStrictEqual(result, result_expected);
   });

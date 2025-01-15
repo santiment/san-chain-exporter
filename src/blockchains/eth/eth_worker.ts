@@ -2,7 +2,7 @@ import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
-import { assignInternalTransactionPosition, transactionOrder } from './lib/util'
+import { assignInternalTransactionPosition, checkETHTransfersQuality, transactionOrder, mergeSortedArrays } from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
@@ -105,22 +105,24 @@ export class ETHWorker extends BaseWorker {
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
-    events.push(...collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper))
-
-    if (this.settings.ASSIGN_INTERNAL_TX_POSITION) {
-      assignInternalTransactionPosition(events)
-      events.sort(transactionOrder)
+    events.sort(transactionOrder)
+    if (this.settings.CHECK_QUALITY) {
+      checkETHTransfersQuality(events, fromBlock, toBlock)
     }
-    else {
-      events.sort(transactionOrder)
-      extendEventsWithPrimaryKey(events, this.lastPrimaryKey);
 
+    const eobEvents = collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper)
+    const mergedEvents = mergeSortedArrays(events, eobEvents, transactionOrder)
+
+    assignInternalTransactionPosition(mergedEvents)
+
+    if (this.settings.ASSIGN_PRIMARY_KEY) {
+      extendEventsWithPrimaryKey(mergedEvents, this.lastPrimaryKey);
       this.lastPrimaryKey += events.length;
     }
 
     this.lastExportedBlock = toBlock
 
-    return events
+    return mergedEvents
   }
 
   async init(): Promise<void> {

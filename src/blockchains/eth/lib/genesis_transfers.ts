@@ -24,6 +24,8 @@ export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
       blockNumber: 0,
       timestamp: GENESIS_TIMESTAMP,
       transactionHash: from,
+      transactionPosition: 0,
+      internalTxPosition: 0,
       type: 'genesis'
     });
   });
@@ -35,6 +37,9 @@ export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
     valueExactBase36: BigInt('5000000000000000000').toString(36),
     blockNumber: 0,
     timestamp: GENESIS_TIMESTAMP,
+    transactionHash: 'GENESIS_mining_tx',
+    transactionPosition: 0,
+    internalTxPosition: 0,
     type: 'reward'
   });
 
