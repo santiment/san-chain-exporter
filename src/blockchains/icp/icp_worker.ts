@@ -3,7 +3,7 @@ import { BaseWorker } from '../../lib/worker_base';
 import { ICPBlock, Transaction, ExtendedTransaction } from './lib/icp_types';
 import fetch from 'node-fetch';
 import assert from 'assert';
-import { transactionOrder, stableSort } from '../eth/lib/util';
+import { transactionOrder, stableSort } from './lib/util';
 import BigNumber from 'bignumber.js';
 
 export class ICPWorker extends BaseWorker {

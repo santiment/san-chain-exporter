@@ -3,7 +3,7 @@ import { BaseWorker } from '../../lib/worker_base';
 import { ICRCBlock, Transaction, ExtendedTransaction, TransferPart } from './lib/icrc_types';
 import fetch from 'node-fetch';
 import assert from 'assert';
-import { transactionOrder, stableSort } from '../eth/lib/util';
+import { transactionOrder, stableSort } from './lib/util';
 import BigNumber from 'bignumber.js';
 
 export class ICRCWorker extends BaseWorker {
@@ -224,7 +224,7 @@ export class ICRCWorker extends BaseWorker {
             toTransferOperations.push(toOperation);
           }
           
-          if (operation.type !== 'TRANSFER' && operation.type !== 'APPROVE' && operation.type !== 'MINT' && operation.type !== 'FEE' && operation.type !== 'BURN' && operation.type !== 'FEE_COLLECTOR'){
+          if (operation.type !== 'TRANSFER' && operation.type !== 'APPROVE' && operation.type !== 'MINT' && operation.type !== 'FEE' && operation.type !== 'BURN' && operation.type !== 'FEE_COLLECTOR' && operation.type !== 'SPENDER'){
             console.log(operation.type);
             console.log(operation);
             console.log(block);
