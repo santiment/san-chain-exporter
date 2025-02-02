@@ -10,6 +10,7 @@ import { ReceiptsWorker } from './receipts/receipts_worker';
 import { UTXOWorker } from './utxo/utxo_worker';
 import { XRPWorker } from './xrp/xrp_worker';
 import { ICPWorker } from './icp/icp_worker';
+import { ICRCWorker } from './icrc/icrc_worker';
 
 export function constructWorker(blockchain: string, settings: any): BaseWorker {
   switch (blockchain) {
@@ -33,6 +34,8 @@ export function constructWorker(blockchain: string, settings: any): BaseWorker {
       return new ETHContractsWorker(settings);
     case 'icp':
       return new ICPWorker(settings);
+    case 'icrc':
+      return new ICRCWorker(settings);
     default:
       throw Error(`Blockchain type '${blockchain}' is not recognized`);
   }
