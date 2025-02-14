@@ -173,6 +173,10 @@ export class ERC20Worker extends BaseWorker {
     // If overwritten events have been generated, they need to be merged into the original events
     if (overwritten_events.length > 0) {
       stableSort(resultEvents, function primaryKeyOrder(a: ERC20Transfer, b: ERC20Transfer) {
+        const blockDif = a.blockNumber - b.blockNumber;
+        if (blockDif !== 0) {
+          return blockDif;
+        }
         if (typeof a.primaryKey !== 'number' || typeof b.primaryKey !== 'number') {
           throw Error('Primary keys should be set to number before event')
         }

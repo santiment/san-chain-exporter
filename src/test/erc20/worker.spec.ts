@@ -266,4 +266,70 @@ describe('Test ERC20 worker', function () {
         assert.deepStrictEqual(result, { success: false });
         assert.deepStrictEqual(worker.blocksList, []);
     });
+
+    it('test events would be ordered block number first even though the primary keys are inverted', async function () {
+        // Overwrite variables and methods that the 'work' method would use internally.
+        const constantsEdit = { ...constants };
+        constantsEdit.CONTRACT_MODE = 'extract_all_append';
+        constantsEdit.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
+
+        const worker = new ERC20Worker(constantsEdit);
+        sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(1))
+        sinon.stub(worker, 'ethClient').value(new MockEthClient())
+
+        const eventHugeLogIndex = {
+            'contract': CONTRACT_ORIGINAL,
+            'blockNumber': 10449853,
+            'timestamp': 0,
+            'transactionHash': '0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb',
+            'logIndex': 10002, // Set a huge log index so that the primary key generation would overflow
+            'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
+            'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
+            'value': 1.81e+21,
+            'valueExactBase36': 'alzj4rdbzkcq9s'
+        };
+        const eventNextBlock = {
+            'contract': CONTRACT_ORIGINAL,
+            'blockNumber': 10449854,
+            'timestamp': 0,
+            'transactionHash': '0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb',
+            'logIndex': 0,
+            'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
+            'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
+            'value': 1.81e+21,
+            'valueExactBase36': 'alzj4rdbzkcq9s'
+        };
+
+        // The 'Node' returns the events in correct block number.
+        sinon.stub(worker, 'getPastEventsFun').resolves([eventHugeLogIndex, eventNextBlock]);
+        await worker.init(undefined);
+
+        sinon.stub(worker, 'contractsOverwriteArray').value([new ContractOverwrite(
+            {
+                'old_contracts': [
+                    {
+                        'address': CONTRACT_ORIGINAL,
+                        'multiplier': 1
+                    },
+                    {
+                        'address': CONTRACT_ORIGINAL,
+                        'multiplier': 1
+                    }
+                ],
+                'new_address': 'snx_contract'
+            }
+        )]);
+        worker.lastConfirmedBlock = 1;
+        worker.lastExportedBlock = 0;
+
+        const result = await worker.work();
+
+        assert.equal(result.length, 4)
+        const blockNumberSequence = [10449853, 10449853, 10449854, 10449854]
+        const primaryKeySequence = [104498540002, 104498540003, 104498540000, 104498540001]
+
+        assert.deepStrictEqual(result.map(transfer => transfer.blockNumber), blockNumberSequence)
+        assert.deepStrictEqual(result.map(transfer => transfer.primaryKey), primaryKeySequence)
+
+    });
 });
