@@ -177,6 +177,9 @@ export class ERC20Worker extends BaseWorker {
         if (blockDif !== 0) {
           return blockDif;
         }
+        else if (a.logIndex !== b.logIndex) {
+          return a.logIndex - b.logIndex;
+        }
         if (typeof a.primaryKey !== 'number' || typeof b.primaryKey !== 'number') {
           throw Error('Primary keys should be set to number before event')
         }
