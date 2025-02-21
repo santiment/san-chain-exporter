@@ -306,6 +306,15 @@ describe('checkETHTransfersQuality', () => {
 
         expect(() => checkETHTransfersQuality(transfers, 102, 103)).toThrow()
     })
+
+    it('Do not throw an error when data for whitelisted contract is missing', () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 15537453, "hash", 0),
+            createTransfer('C', 'D', 2, 15537455, "hash", 0)
+        ];
+
+        expect(() => checkETHTransfersQuality(transfers, 15537453, 15537455)).not.toThrow()
+    })
 });
 
 

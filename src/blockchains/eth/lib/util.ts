@@ -35,12 +35,22 @@ export function assignInternalTransactionPosition(transfers: ETHTransfer[], grou
 
 export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number) {
   const keys = Object.keys(groupedTransfers)
-  if (keys.length !== toBlock - fromBlock + 1) {
-    throw new Error(`Wrong number of blocks seen. Expected ${toBlock - fromBlock + 1} got ${keys.length}.`)
+
+  const blocksExceptionList = [15537454]
+  let blocksExpected = toBlock - fromBlock + 1
+
+  for (const blockException of blocksExceptionList) {
+    if (blockException >= fromBlock && blockException <= toBlock) {
+      --blocksExpected;
+    }
+  }
+
+  if (keys.length !== blocksExpected) {
+    throw new Error(`Wrong number of blocks seen. Expected ${blocksExpected} got ${keys.length}.`)
   }
 
   for (let block = fromBlock; block <= toBlock; block++) {
-    if (!groupedTransfers.hasOwnProperty(block.toString())) {
+    if (!blocksExceptionList.includes(block) && !groupedTransfers.hasOwnProperty(block.toString())) {
       throw new Error(`Missing transfers for block ${block}.`)
     }
   }
