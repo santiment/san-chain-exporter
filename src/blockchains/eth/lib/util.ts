@@ -36,6 +36,7 @@ export function assignInternalTransactionPosition(transfers: ETHTransfer[], grou
 export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number) {
   const keys = Object.keys(groupedTransfers)
 
+  // A list of empty blocks, no transfers and no rewards.
   const blocksExceptionList = [15537454]
   let blocksExpected = toBlock - fromBlock + 1
 
