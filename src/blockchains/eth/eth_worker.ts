@@ -2,7 +2,10 @@ import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
-import { assignInternalTransactionPosition, checkETHTransfersQuality, transactionOrder, mergeSortedArrays } from './lib/util'
+import {
+  assignInternalTransactionPosition, checkETHTransfersQuality, transactionOrder, mergeSortedArrays,
+  parseBlockExceptionList
+} from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
 import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
@@ -20,6 +23,7 @@ export class ETHWorker extends BaseWorker {
   private ethClient: HTTPClientInterface;
   private feesDecoder: FeesDecoder;
   private withdrawalsDecoder: WithdrawalsDecoder;
+  private blocksExceptionList: number[];
 
   constructor(settings: any) {
     super(settings);
@@ -31,6 +35,10 @@ export class ETHWorker extends BaseWorker {
 
     this.feesDecoder = new FeesDecoder(this.web3Wrapper);
     this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
+    this.blocksExceptionList = [];
+    if (settings.CHECK_QUALITY) {
+
+    }
   }
 
   async fetchData(fromBlock: number, toBlock: number): Promise<[Trace[], Map<number, ETHBlock>, ETHReceiptsMap]> {
@@ -107,7 +115,7 @@ export class ETHWorker extends BaseWorker {
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
     events.sort(transactionOrder)
     if (this.settings.CHECK_QUALITY) {
-      checkETHTransfersQuality(events, fromBlock, toBlock)
+      checkETHTransfersQuality(events, fromBlock, toBlock, this.blocksExceptionList)
     }
 
     const eobEvents = collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper)
@@ -127,6 +135,7 @@ export class ETHWorker extends BaseWorker {
 
   async init(): Promise<void> {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS
+    this.blocksExceptionList = parseBlockExceptionList(this.settings.BLOCKS_EXCEPTION_LIST)
   }
 }
 

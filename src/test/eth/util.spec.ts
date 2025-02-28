@@ -1,6 +1,9 @@
 import { expect } from 'earl';
 import { cloneDeep } from 'lodash';
-import { transactionOrder, assignInternalTransactionPosition, checkETHTransfersQuality, mergeSortedArrays } from "../../blockchains/eth/lib/util"
+import {
+    transactionOrder, assignInternalTransactionPosition, checkETHTransfersQuality,
+    mergeSortedArrays, parseBlockExceptionList
+} from "../../blockchains/eth/lib/util"
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 describe('transactionOrder utils', () => {
@@ -313,7 +316,7 @@ describe('checkETHTransfersQuality', () => {
             createTransfer('C', 'D', 2, 15537455, "hash", 0)
         ];
 
-        expect(() => checkETHTransfersQuality(transfers, 15537453, 15537455)).not.toThrow()
+        expect(() => checkETHTransfersQuality(transfers, 15537453, 15537455, [15537454])).not.toThrow()
     })
 });
 
@@ -394,3 +397,41 @@ describe('mergeSortedArrays', () => {
         expect(result).toEqual([transfer1, transfer2, transfer3, transfer4, transfer5, transfer6])
     })
 })
+
+describe('parseBlockExceptionList', () => {
+    it('should parse a comma-separated list of positive integers', () => {
+        const input = "1,2,3,4,5";
+        const result = parseBlockExceptionList(input);
+        expect(result).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it('should trim spaces and parse the numbers correctly', () => {
+        const input = " 10,  20 ,30 ,   40  ";
+        const result = parseBlockExceptionList(input);
+        expect(result).toEqual([10, 20, 30, 40]);
+    });
+
+    it('should return an empty array if input contains only spaces or is empty', () => {
+        const input = "   , , ";
+        const result = parseBlockExceptionList(input);
+        expect(result).toEqual([]);
+    });
+
+    it('should throw an error if any value is not a valid positive integer', () => {
+        const input = "1,abc,3";
+        expect(() => parseBlockExceptionList(input)).toThrow('Invalid block number: "abc". Must be a positive integer.');
+    });
+
+    it('should throw an error for non-positive integers such as 0 or negative numbers', () => {
+        const input = "1,0,-3,4";
+        expect(() => parseBlockExceptionList(input)).toThrow('Invalid block number: "0". Must be a positive integer.');
+    });
+
+    // This test shows another test example (referring to the original style)
+    it('should parse a valid string despite extra commas', () => {
+        const input = "5,,6,   ,7";
+        const result = parseBlockExceptionList(input);
+        expect(result).toEqual([5, 6, 7]);
+    });
+}
+);

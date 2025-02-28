@@ -33,11 +33,10 @@ export function assignInternalTransactionPosition(transfers: ETHTransfer[], grou
   })
 }
 
-export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number) {
+export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number,
+  blocksExceptionList: number[]) {
   const keys = Object.keys(groupedTransfers)
 
-  // A list of empty blocks, no transfers and no rewards.
-  const blocksExceptionList = [15537454]
   let blocksExpected = toBlock - fromBlock + 1
 
   for (const blockException of blocksExceptionList) {
@@ -84,14 +83,16 @@ export function assertTransfersWithinBlock(transfersPerBlock: ETHTransfer[]) {
  * @param fromBlock Block number indicating start of expected interval
  * @param toBlock Block number indicating end of expected interval
  */
-export function checkETHTransfersQuality(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number) {
+export function checkETHTransfersQuality(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number,
+  blocksExceptionList: number[] = []
+) {
   if (fromBlock > toBlock) {
     throw new Error(`Invalid block range: fromBlock ${fromBlock} is greater than toBlock ${toBlock}`);
   }
 
   const groupedTransfers = groupBy(sortedTransfers, (transfer: ETHTransfer) => transfer.blockNumber)
 
-  assertBlocksMatch(groupedTransfers, fromBlock, toBlock);
+  assertBlocksMatch(groupedTransfers, fromBlock, toBlock, blocksExceptionList);
 
   for (const key of Object.keys(groupedTransfers)) {
     assertTransfersWithinBlock(groupedTransfers[key])
@@ -114,4 +115,35 @@ export function mergeSortedArrays<T>(sortedArr1: T[], sortedArr2: T[], comparato
   return merged.concat(sortedArr1.slice(i), sortedArr2.slice(j));
 }
 
+
+/**
+ * Parses a comma-separated list of block numbers from a string.
+ *
+ * This function splits the input by commas, trims any white spaces,
+ * and verifies that each value is a valid positive integer.
+ *
+ * @param {string} input - A comma-separated list of block numbers.
+ * @returns {number[]} An array of positive integers.
+ * @throws {Error} If any value is not a valid positive integer.
+ */
+export function parseBlockExceptionList(input: string): number[] {
+  if (typeof input !== 'string') {
+    throw new Error('Input must be a string.');
+  }
+
+  // Split the string by commas, trim whitespace, and filter out any empty entries.
+  const stringParts = input.split(',').map(part => part.trim()).filter(part => part !== '');
+
+  // Validate and parse each part into a positive integer.
+  const numbers = stringParts.map(part => {
+    // Ensure the part represents a positive integer.
+    // This regex matches a string that starts with a non-zero digit followed by any number of digits.
+    if (!/^[1-9]\d*$/.test(part)) {
+      throw new Error(`Invalid block number: "${part}". Must be a positive integer.`);
+    }
+    return parseInt(part, 10);
+  });
+
+  return numbers;
+}
 
