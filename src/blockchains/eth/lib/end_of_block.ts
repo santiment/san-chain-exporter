@@ -1,5 +1,5 @@
 import { ETHBlock } from "../eth_types";
-import { Web3Interface, safeCastToNumber } from "./web3_wrapper";
+import { Web3Static, safeCastToNumber } from "./web3_wrapper";
 
 export type EOB = {
     from: string,
@@ -17,7 +17,7 @@ export type EOB = {
 
 // returns array of EOBs for the range of blocks
 // from - inclusive, to - exclusive
-export const collectEndOfBlocks = (from: number, to: number, blockInfos: Map<number, ETHBlock>, web3Wrapper: Web3Interface): EOB[] => {
+export const collectEndOfBlocks = (from: number, to: number, blockInfos: Map<number, ETHBlock>): EOB[] => {
     return range(from, to, 1).map((blockNumber) => {
         return {
             from: "0x0000000000000000000000000000000000000000",
@@ -25,7 +25,7 @@ export const collectEndOfBlocks = (from: number, to: number, blockInfos: Map<num
             value: 0,
             valueExactBase36: "0",
             blockNumber: blockNumber,
-            timestamp: safeCastToNumber(web3Wrapper.parseHexToNumber(blockInfos.get(blockNumber)!!.timestamp)),
+            timestamp: safeCastToNumber(Web3Static.parseHexToNumber(blockInfos.get(blockNumber)!!.timestamp)),
             transactionHash: "0x0000000000000000000000000000000000000000",
             transactionPosition: maxTxPosition,
             internalTxPosition: 0,

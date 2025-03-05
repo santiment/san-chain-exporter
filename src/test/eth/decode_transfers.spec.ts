@@ -1,14 +1,10 @@
 import assert from 'assert';
 process.env.IS_ETH = 'true';
 import { decodeTransferTrace } from '../../blockchains/eth/lib/decode_transfers';
-import { NODE_URL } from '../../blockchains/eth/lib/constants';
-import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
 
 
 describe('genesis transfers', function () {
-  const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
-
   it('parses trace of type suicide', function () {
     const suicide_trace = {
       'action': {
@@ -30,7 +26,7 @@ describe('genesis transfers', function () {
     };
 
     const timestamp = 1000000;
-    const result = decodeTransferTrace(suicide_trace, timestamp, web3Wrapper);
+    const result = decodeTransferTrace(suicide_trace, timestamp);
 
     const result_expected: ETHTransfer = {
       'from': '0xa6c3b7f6520a0ef594fc666d3874ec78c561cdbb',
@@ -74,7 +70,7 @@ describe('genesis transfers', function () {
 
     const timestamp = 1450433505;
 
-    const result = decodeTransferTrace(call_trace, timestamp, web3Wrapper);
+    const result = decodeTransferTrace(call_trace, timestamp);
 
     const result_expected: ETHTransfer = {
       'from': '0x48f2e6e5d0872da169c7f5823d5a2d5ea5f2b5e7',
@@ -114,7 +110,7 @@ describe('genesis transfers', function () {
 
     const timestamp = 1450433505;
 
-    const result = decodeTransferTrace(reward_trace, timestamp, web3Wrapper);
+    const result = decodeTransferTrace(reward_trace, timestamp);
     const result_expected: ETHTransfer = {
       'from': 'mining_block',
       'to': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
@@ -152,7 +148,7 @@ describe('genesis transfers', function () {
     };
 
     const timestamp = 1450435908;
-    const result = decodeTransferTrace(create_trace, timestamp, web3Wrapper);
+    const result = decodeTransferTrace(create_trace, timestamp);
 
     const result_expected: ETHTransfer = {
       'from': '0x245133ea0fb1b77fab5886d7ffb8046dfeff3858',

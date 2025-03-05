@@ -4,7 +4,7 @@ import { injectDAOHackTransfers, DAO_HACK_FORK_BLOCK } from './lib/dao_hack';
 import { getGenesisTransfers } from './lib/genesis_transfers';
 import { assignInternalTransactionPosition, checkETHTransfersQuality, transactionOrder, mergeSortedArrays } from './lib/util'
 import { BaseWorker } from '../../lib/worker_base';
-import { Web3Interface, constructWeb3Wrapper, safeCastToNumber } from './lib/web3_wrapper';
+import { Web3Interface, constructWeb3Wrapper, safeCastToNumber, Web3Static } from './lib/web3_wrapper';
 import { decodeTransferTrace } from './lib/decode_transfers';
 import { FeesDecoder } from './lib/fees_decoder';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from './lib/next_interval_calculator';
@@ -20,6 +20,7 @@ export class ETHWorker extends BaseWorker {
   private ethClient: HTTPClientInterface;
   private feesDecoder: FeesDecoder;
   private withdrawalsDecoder: WithdrawalsDecoder;
+  private ethClientVerification: HTTPClientInterface | undefined
 
   constructor(settings: any) {
     super(settings);
@@ -29,15 +30,20 @@ export class ETHWorker extends BaseWorker {
     this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
       settings.DEFAULT_TIMEOUT)
 
-    this.feesDecoder = new FeesDecoder(this.web3Wrapper);
-    this.withdrawalsDecoder = new WithdrawalsDecoder(this.web3Wrapper);
+    if (settings.VERIFICATION_NODE) {
+      this.ethClientVerification = constructRPCClient(settings.VERIFICATION_NODE, settings.VERIFICATION_NODE_USERNAME,
+        settings.VERIFICATION_NODE_PASSWORD, settings.DEFAULT_TIMEOUT)
+    }
+
+    this.feesDecoder = new FeesDecoder();
+    this.withdrawalsDecoder = new WithdrawalsDecoder();
   }
 
   async fetchData(fromBlock: number, toBlock: number): Promise<[Trace[], Map<number, ETHBlock>, ETHReceiptsMap]> {
     return await Promise.all([
       fetchEthInternalTrx(this.ethClient, this.web3Wrapper, fromBlock, toBlock, this.settings.IS_ETH,
         this.settings.THE_MERGE),
-      fetchBlocks(this.ethClient, this.web3Wrapper, fromBlock, toBlock, true),
+      fetchBlocks(this.ethClient, fromBlock, toBlock, true),
       fetchReceipts(this.ethClient, this.web3Wrapper,
         this.settings.RECEIPTS_API_METHOD, fromBlock, toBlock),
     ]);
@@ -48,7 +54,7 @@ export class ETHWorker extends BaseWorker {
     let events: ETHTransfer[] = [];
     if (fromBlock === 0) {
       logger.info('Adding the GENESIS transfers');
-      events.push(...getGenesisTransfers(this.web3Wrapper));
+      events.push(...getGenesisTransfers());
     }
 
     const transformedTransferEvents = this.transformPastTransferEvents(traces, blocks);
@@ -57,7 +63,7 @@ export class ETHWorker extends BaseWorker {
     for (let event of transformedTransactionEvents) events.push(event);
     if (fromBlock <= DAO_HACK_FORK_BLOCK && DAO_HACK_FORK_BLOCK <= toBlock) {
       logger.info('Adding the DAO hack transfers');
-      events = injectDAOHackTransfers(events, this.web3Wrapper);
+      events = injectDAOHackTransfers(events);
     }
 
     return events;
@@ -72,8 +78,8 @@ export class ETHWorker extends BaseWorker {
       if (block === undefined) {
         throw Error(`Block ${blockNumber} is not found in block map`)
       }
-      const blockTimestamp: number = safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp));
-      result.push(decodeTransferTrace(traces[i], blockTimestamp, this.web3Wrapper));
+      const blockTimestamp: number = safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp));
+      result.push(decodeTransferTrace(traces[i], blockTimestamp));
     }
 
     return result;
@@ -83,11 +89,11 @@ export class ETHWorker extends BaseWorker {
     const result: ETHTransfer[] = [];
 
     for (const block of blocks) {
-      const blockNumber = safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.number));
+      const blockNumber = safeCastToNumber(Web3Static.parseHexToNumber(block.number));
       const decoded_transactions = this.feesDecoder.getFeesFromTransactionsInBlock(block, blockNumber, receipts,
         this.settings.IS_ETH);
       if (block.withdrawals !== undefined) {
-        const blockTimestamp = safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp));
+        const blockTimestamp = safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp));
         decoded_transactions.push(...this.withdrawalsDecoder.getBeaconChainWithdrawals(block.withdrawals, blockNumber, blockTimestamp));
       }
       result.push(...decoded_transactions);
@@ -106,11 +112,11 @@ export class ETHWorker extends BaseWorker {
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
     events.sort(transactionOrder)
-    if (this.settings.CHECK_QUALITY) {
-      checkETHTransfersQuality(events, fromBlock, toBlock)
+    if (this.ethClientVerification) {
+      await checkETHTransfersQuality(events, fromBlock, toBlock, this.ethClientVerification)
     }
 
-    const eobEvents = collectEndOfBlocks(fromBlock, toBlock, blocks, this.web3Wrapper)
+    const eobEvents = collectEndOfBlocks(fromBlock, toBlock, blocks)
     const mergedEvents = mergeSortedArrays(events, eobEvents, transactionOrder)
 
     assignInternalTransactionPosition(mergedEvents)

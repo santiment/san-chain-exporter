@@ -2,7 +2,7 @@ const { groupBy } = require('lodash');
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { BaseWorker } from '../../lib/worker_base';
-import { Web3Interface, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
+import { Web3Interface, constructWeb3Wrapper, Web3Static } from '../eth/lib/web3_wrapper';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 import { Trace } from '../eth/eth_types';
 import { HTTPClientInterface } from '../../types';
@@ -27,8 +27,8 @@ export class ETHContractsWorker extends BaseWorker {
 
   async fetchTraces(fromBlock: number, toBlock: number): Promise<Trace[]> {
     const filterParams = {
-      fromBlock: this.web3Wrapper.parseNumberToHex(fromBlock),
-      toBlock: this.web3Wrapper.parseNumberToHex(toBlock)
+      fromBlock: Web3Static.parseNumberToHex(fromBlock),
+      toBlock: Web3Static.parseNumberToHex(toBlock)
     };
 
     return await this.ethClient.request('trace_filter', [filterParams]).then((data: any) => filterErrors(data['result']));
@@ -43,7 +43,7 @@ export class ETHContractsWorker extends BaseWorker {
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
     const traces: Trace[] = await this.fetchTraces(fromBlock, toBlock);
     const groupedTraces: { [key: string]: Trace[] } = groupBy(traces, (tx: Trace) => tx.transactionHash);
-    const timestampsCache = new TimestampsCache(this.ethClient, this.web3Wrapper, fromBlock, toBlock);
+    const timestampsCache = new TimestampsCache(this.ethClient, fromBlock, toBlock);
     await timestampsCache.waitResponse();
     const outputRecords = Object.values(groupedTraces).flatMap((traces: Trace[]) => {
       return getCreationOutput(traces, timestampsCache.getBlockTimestamp(traces[0].blockNumber))

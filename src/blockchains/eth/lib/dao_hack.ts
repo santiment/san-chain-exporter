@@ -1,5 +1,7 @@
+import { ETHTransfer } from "../eth_types";
+import { Web3Static } from "./web3_wrapper";
 
-const DAO_HACK_ADDRESSES = [
+export const DAO_HACK_ADDRESSES = [
    {
       'address': '0xd4fe7bc31cedb7bfb8a345f31e668033056b2728',
       'balance': '186cc8bfaefb7be'
@@ -267,14 +269,14 @@ const DAO_HACK_ADDRESSES = [
 ];
 
 const DAO_REFUND_CONTRACT = '0xbf4ed7b27f1d666546e30d74d50d173d20bca754';
-const DAO_HACK_FORK_BLOCK = 1920000;
+export const DAO_HACK_FORK_BLOCK = 1920000;
 const DAO_HACK_FORK_BLOCK_TIMESTAMP = 1469020840;
 const DAO_HACK_FORK_TRANSACTION_ID = 'DAO_HACK_HARD_FORK';
 
-function daoAddressToTransfer(daoHackAddress, web3Wrapper) {
+export function daoAddressToTransfer(daoHackAddress: { address: string, balance: string }): ETHTransfer {
    let { address, balance } = daoHackAddress;
 
-   const balanceFloat = parseFloat(web3Wrapper.parseHexToNumberString('0x' + balance));
+   const balanceFloat = parseFloat(Web3Static.parseHexToNumberString('0x' + balance));
 
    return {
       from: address,
@@ -285,13 +287,14 @@ function daoAddressToTransfer(daoHackAddress, web3Wrapper) {
       timestamp: DAO_HACK_FORK_BLOCK_TIMESTAMP,
       transactionHash: DAO_HACK_FORK_TRANSACTION_ID,
       transactionPosition: 0,
+      internalTxPosition: 0,
       type: 'dao_hack'
    };
 }
 
-function injectDAOHackTransfers(transfers, web3Wrapper) {
+export function injectDAOHackTransfers(transfers: ETHTransfer[]) {
    const insertIndex = transfers.findIndex((transfer) => transfer.blockNumber === DAO_HACK_FORK_BLOCK);
-   const transfersToInsert = DAO_HACK_ADDRESSES.map(daoHackAddress => daoAddressToTransfer(daoHackAddress, web3Wrapper));
+   const transfersToInsert = DAO_HACK_ADDRESSES.map(daoHackAddress => daoAddressToTransfer(daoHackAddress));
 
    return transfers.slice(0, insertIndex).concat(
       transfersToInsert,
@@ -299,8 +302,3 @@ function injectDAOHackTransfers(transfers, web3Wrapper) {
    );
 }
 
-module.exports = {
-   DAO_HACK_FORK_BLOCK,
-   DAO_HACK_ADDRESSES,
-   injectDAOHackTransfers
-};

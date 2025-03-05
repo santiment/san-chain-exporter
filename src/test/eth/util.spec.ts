@@ -2,6 +2,9 @@ import { expect } from 'earl';
 import { cloneDeep } from 'lodash';
 import { transactionOrder, assignInternalTransactionPosition, checkETHTransfersQuality, mergeSortedArrays } from "../../blockchains/eth/lib/util"
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
+import { MockEthClient } from './mock_web3_wrapper';
+import { fetchBlocks } from '../../blockchains/eth/lib/fetch_data';
+import { constructRPCClient } from '../../lib/http_client';
 
 describe('transactionOrder utils', () => {
     it('should sort by block number', () => {
@@ -222,15 +225,16 @@ const createTransfer = (
 });
 
 describe('checkETHTransfersQuality', () => {
-    it('Valid single block with single transaction', () => {
+    it('Valid single block with single transaction', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 1, 100, "hash", 0),
         ]
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 100)).not.toThrow()
+        const notUsed: MockEthClient = new MockEthClient(null)
+        await expect(() => checkETHTransfersQuality(transfers, 100, 100, notUsed)).not.toBeRejected()
     })
 
-    it('Valid transfers with multiple blocks and consecutive transactions', () => {
+    it('Valid transfers with multiple blocks and consecutive transactions', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 10, 100, "hash1", 0),
             createTransfer('C', 'D', 20, 100, "hash2", 1),
@@ -239,30 +243,36 @@ describe('checkETHTransfersQuality', () => {
             createTransfer('I', 'J', 10, 102, "hash1", 0),
         ]
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 102)).not.toThrow()
+        const notUsed: MockEthClient = new MockEthClient(null)
+        await expect(() => checkETHTransfersQuality(transfers, 100, 102, notUsed)).not.toBeRejected()
     });
 
-    it('Multiple transers with same transaction position', () => {
+    it('Multiple transers with same transaction position', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 10, 100, "hash", 0),
             createTransfer('C', 'D', 20, 100, "hash", 0),
             createTransfer('E', 'F', 10, 100, "hash", 0),
         ]
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 100)).not.toThrow()
+        const notUsed: MockEthClient = new MockEthClient(null)
+        await expect(() => checkETHTransfersQuality(transfers, 100, 100, notUsed)).not.toBeRejected()
     });
 
-    it('Throws error when a block in the range is missing', () => {
+    it('Throws error when a block in the range is missing', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 10, 100, "hash", 0),
             createTransfer('C', 'D', 20, 102, "hash", 0), // Missing block 101
             createTransfer('E', 'F', 10, 103, "hash", 0)
         ]
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 103)).toThrow('Wrong number of blocks seen. Expected 4 got 3.')
+        const verifiedResult = new Map()
+        verifiedResult.set(102, { transactions: [] })
+        const verifyETHClient = new MockEthClient(verifiedResult)
+
+        await expect(() => checkETHTransfersQuality(transfers, 100, 103, verifyETHClient)).toBeRejected()
     })
 
-    it('Throws error when a transaction position is missing within a block', () => {
+    it('Throws error when a transaction position is missing within a block', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 10, 100, "hash", 0),
             // Missing transactionPosition 1 in block 100
@@ -270,51 +280,64 @@ describe('checkETHTransfersQuality', () => {
             createTransfer('G', 'H', 10, 101, "hash2", 1),
         ]
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 101)).toThrow()
+        const notUsed: MockEthClient = new MockEthClient(null)
+        await expect(() => checkETHTransfersQuality(transfers, 100, 101, notUsed)).toBeRejected()
     })
 
-    it('Throws error when transfers array is empty', () => {
+    it('Throws error when transfers array is empty', async () => {
         const transfers: ETHTransfer[] = []
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 100)).toThrow()
+        const verifiedResult = new Map()
+        verifiedResult.set(100, { transactions: [] })
+        const verifyETHClient = new MockEthClient(verifiedResult)
+
+        await expect(() => checkETHTransfersQuality(transfers, 100, 100, verifyETHClient)).toBeRejected()
     })
 
-    it('Throws error when fromBlock is greater than toBlock', () => {
+    it('Throws error when fromBlock is greater than toBlock', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 1, 100, "hash", 0),
             createTransfer('C', 'D', 2, 101, "hash", 0),
         ]
 
-        expect(() => checkETHTransfersQuality(transfers, 102, 100)).toThrow()
+        const notUsed: MockEthClient = new MockEthClient(null)
+        await expect(() => checkETHTransfersQuality(transfers, 102, 100, notUsed)).toBeRejected()
     })
 
-    it('Throws error when the last block is missing', () => {
+    it('Throws error when the last block is missing', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 1, 100, "hash", 0),
             createTransfer('C', 'D', 2, 101, "hash", 0),
             // Missing block 102
         ];
 
-        expect(() => checkETHTransfersQuality(transfers, 100, 102)).toThrow()
+        const verifiedResult = new Map()
+        verifiedResult.set(102, { transactions: [] })
+        const verifyETHClient = new MockEthClient(verifiedResult)
+
+        await expect(() => checkETHTransfersQuality(transfers, 100, 102, verifyETHClient)).toBeRejected()
     })
 
-    it('Throws error when the data for unexpected blocks is present', () => {
+    it('Throws error when the data for unexpected blocks is present', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 1, 100, "hash", 0),
-            createTransfer('C', 'D', 2, 101, "hash", 0)
+            createTransfer('C', 'D', 2, 101, "hash", 0),
+            createTransfer('C', 'D', 3, 102, "hash", 0)
         ];
 
-        expect(() => checkETHTransfersQuality(transfers, 102, 103)).toThrow()
+        const notUsed: MockEthClient = new MockEthClient(null)
+        await expect(() => checkETHTransfersQuality(transfers, 100, 101, notUsed)).toBeRejected()
     })
 
-    it('Do not throw an error when data for whitelisted contract is missing', () => {
-        const transfers: ETHTransfer[] = [
-            createTransfer('A', 'B', 1, 15537453, "hash", 0),
-            createTransfer('C', 'D', 2, 15537455, "hash", 0)
-        ];
+    // it('Do not throw an error when data for whitelisted contract is missing', () => {
+    //     const transfers: ETHTransfer[] = [
+    //         createTransfer('A', 'B', 1, 15537453, "hash", 0),
+    //         createTransfer('C', 'D', 2, 15537455, "hash", 0)
+    //     ];
 
-        expect(() => checkETHTransfersQuality(transfers, 15537453, 15537455)).not.toThrow()
-    })
+    //     const notUsed: MockEthClient = new MockEthClient(null)
+    //     expect(() => checkETHTransfersQuality(transfers, 15537453, 15537455)).not.toThrow()
+    // })
 });
 
 

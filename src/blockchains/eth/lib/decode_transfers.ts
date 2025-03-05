@@ -1,9 +1,9 @@
-import { Web3Interface } from './web3_wrapper';
+import { Web3Static } from './web3_wrapper';
 import { Trace, ETHTransfer } from '../eth_types';
 import { logger } from '../../../lib/logger';
 import { assertIsDefined } from '../../../lib/utils';
 
-export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper: Web3Interface): ETHTransfer {
+export function decodeTransferTrace(trace: Trace, timestamp: number): ETHTransfer {
   // Block & uncle rewards
   if (trace['type'] === 'reward') {
     assertIsDefined(trace['action']['author'], "'author' field is expected in trace action on 'reward' type");
@@ -12,8 +12,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
     return {
       from: `mining_${trace['action']['rewardType']}`,
       to: trace['action']['author'],
-      value: Number(web3Wrapper.parseHexToNumber(trace['action']['value'])),
-      valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
+      value: Number(Web3Static.parseHexToNumber(trace['action']['value'])),
+      valueExactBase36: Web3Static.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
       transactionHash: trace['transactionHash'] ? trace['transactionHash'] : `mining_${trace['action']['rewardType']}`,
@@ -35,8 +35,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
     return {
       from: trace['action']['from'],
       to: trace['result']['address'],
-      value: Number(web3Wrapper.parseHexToNumber(trace['action']['value'])),
-      valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
+      value: Number(Web3Static.parseHexToNumber(trace['action']['value'])),
+      valueExactBase36: Web3Static.parseHexToBase36String(trace['action']['value']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
@@ -56,8 +56,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
     return {
       from: trace['action']['address'],
       to: trace['action']['refundAddress'],
-      value: Number(web3Wrapper.parseHexToNumber(trace['action']['balance'])),
-      valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['balance']),
+      value: Number(Web3Static.parseHexToNumber(trace['action']['balance'])),
+      valueExactBase36: Web3Static.parseHexToBase36String(trace['action']['balance']),
       blockNumber: trace['blockNumber'],
       timestamp: timestamp,
       transactionHash: trace['transactionHash'],
@@ -80,8 +80,8 @@ export function decodeTransferTrace(trace: Trace, timestamp: number, web3Wrapper
   return {
     from: trace['action']['from'],
     to: trace['action']['to'],
-    value: Number(web3Wrapper.parseHexToNumber(trace['action']['value'])),
-    valueExactBase36: web3Wrapper.parseHexToBase36String(trace['action']['value']),
+    value: Number(Web3Static.parseHexToNumber(trace['action']['value'])),
+    valueExactBase36: Web3Static.parseHexToBase36String(trace['action']['value']),
     blockNumber: trace['blockNumber'],
     timestamp: timestamp,
     transactionHash: trace['transactionHash'],

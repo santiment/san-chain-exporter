@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { logger } from '../../../lib/logger';
 import { filterErrors } from './filter_errors';
-import { Web3Interface } from './web3_wrapper';
+import { Web3Interface, Web3Static } from './web3_wrapper';
 import { Trace, TraceSchema, ETHBlock, ETHReceiptsMap, ETHReceipt } from '../eth_types';
 import { HTTPClientInterface } from '../../../types'
 
@@ -34,29 +34,31 @@ export function parseEthInternalTrx(traceFilterResult: any[], isETH: boolean, th
 export function fetchEthInternalTrx(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number,
   toBlock: number, isETH: boolean, theMergeBlockNumber: number): Promise<Trace[]> {
   const filterParams = {
-    fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
-    toBlock: web3Wrapper.parseNumberToHex(toBlock)
+    fromBlock: Web3Static.parseNumberToHex(fromBlock),
+    toBlock: Web3Static.parseNumberToHex(toBlock)
   };
   return ethClient.request('trace_filter', [filterParams]).then((data: any) => parseEthInternalTrx(data['result'],
     isETH, theMergeBlockNumber
   ));
 }
 
-export async function fetchBlocks(ethClient: HTTPClientInterface,
-  web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, getTransactionDetails: boolean): Promise<Map<number, ETHBlock>> {
+export async function fetchBlocks(ethClient: HTTPClientInterface, fromBlock: number, toBlock: number,
+  getTransactionDetails: boolean): Promise<Map<number, ETHBlock>> {
   const blockRequests: any[] = [];
   for (let i = fromBlock; i <= toBlock; i++) {
     blockRequests.push(
       ethClient.generateRequest(
         'eth_getBlockByNumber',
-        [web3Wrapper.parseNumberToHex(i), getTransactionDetails]
+        [Web3Static.parseNumberToHex(i), getTransactionDetails]
       )
     );
   }
 
   const responses = await ethClient.requestBulk(blockRequests);
   const result = new Map();
-  responses.forEach((response: any, index: number) => result.set(fromBlock + index, response.result));
+  responses.forEach((response: any, index: number) => {
+    result.set(fromBlock + index, response.result)
+  });
   return result;
 }
 
@@ -67,7 +69,7 @@ export async function fetchReceipts(ethClient: HTTPClientInterface,
     batch.push(
       ethClient.generateRequest(
         receiptsAPIMethod,
-        [web3Wrapper.parseNumberToHex(currBlock)]
+        [Web3Static.parseNumberToHex(currBlock)]
       )
     );
   }

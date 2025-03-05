@@ -98,7 +98,8 @@ export type ETHReceipt = {
   transactionHash: string,
   cumulativeGasUsed: string,
   logs: any[],
-  transactionIndex: string
+  transactionIndex: string,
+  timestamp?: number
 }
 
 export type ETHReceiptsMap = {

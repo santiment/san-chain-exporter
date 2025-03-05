@@ -1,9 +1,12 @@
 'use strict';
-import helper from './lib/helper';
+import {
+  parseBlocks, parseTransactionReceipts, decodeReceipt, decodeBlock,
+  prepareBlockTimestampsObject, setReceiptsTimestamp, parseReceipts
+} from './lib/helper';
 import { logger } from '../../lib/logger';
 import { constructRPCClient } from '../../lib/http_client';
 import { BaseWorker } from '../../lib/worker_base';
-import { Web3Interface, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
+import { Web3Interface, constructWeb3Wrapper, Web3Static } from '../eth/lib/web3_wrapper';
 import { HTTPClientInterface } from '../../types';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 
@@ -31,13 +34,13 @@ export class ReceiptsWorker extends BaseWorker {
       batch.push(
         this.client.generateRequest(
           this.settings.GET_BLOCK_ENDPOINT,
-          [this.web3Wrapper.parseNumberToHex(i),
+          [Web3Static.parseNumberToHex(i),
             true]
         )
       );
     }
 
-    return this.client.requestBulk(batch).then((responses) => helper.parseBlocks(responses));
+    return this.client.requestBulk(batch).then((responses) => parseBlocks(responses));
   }
 
   async fetchReceiptsFromTransaction(blocks: any[]) {
@@ -55,7 +58,7 @@ export class ReceiptsWorker extends BaseWorker {
         );
       }
     }
-    return (!batch.length) ? [] : this.client.requestBulk(batch).then((responses) => helper.parseTransactionReceipts(responses));
+    return (!batch.length) ? [] : this.client.requestBulk(batch).then((responses) => parseTransactionReceipts(responses));
   }
 
   async getReceiptsForBlocks(fromBlock: number, toBlock: number) {
@@ -69,11 +72,11 @@ export class ReceiptsWorker extends BaseWorker {
     else {
       receipts = await this.fetchReceiptsFromTransaction(blocks);
     }
-    const decodedReceipts = receipts.map((receipt: any) => helper.decodeReceipt(receipt, this.web3Wrapper));
-    const decodedBlocks = blocks.map((block: any) => helper.decodeBlock(block, this.web3Wrapper));
-    const timestamps = helper.prepareBlockTimestampsObject(decodedBlocks);
+    const decodedReceipts = receipts.map((receipt: any) => decodeReceipt(receipt));
+    const decodedBlocks = blocks.map((block: any) => decodeBlock(block));
+    const timestamps = prepareBlockTimestampsObject(decodedBlocks);
 
-    return helper.setReceiptsTimestamp(decodedReceipts, timestamps);
+    return setReceiptsTimestamp(decodedReceipts, timestamps);
   }
 
   async fetchReceipts(fromBlock: number, toBlock: number) {
@@ -82,11 +85,11 @@ export class ReceiptsWorker extends BaseWorker {
       batch.push(
         this.client.generateRequest(
           this.settings.GET_RECEIPTS_ENDPOINT,
-          [this.web3Wrapper.parseNumberToHex(i)]
+          [Web3Static.parseNumberToHex(i)]
         )
       );
     }
-    return this.client.requestBulk(batch).then((responses) => helper.parseReceipts(responses));
+    return this.client.requestBulk(batch).then((responses) => parseReceipts(responses));
   }
 
   async work() {

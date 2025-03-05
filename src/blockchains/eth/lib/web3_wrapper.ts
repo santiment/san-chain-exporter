@@ -4,14 +4,8 @@ import Web3HttpProvider, { HttpProviderOptions } from 'web3-providers-http';
 import { buildHttpOptions } from '../../../lib/build_http_options';
 
 export interface Web3Interface {
-    parseHexToNumberString(field: string): string;
-    parseHexToNumber(field: string): number | bigint;
-    parseNumberToHex(field: number): string;
-    parseHexToBase36String(field: string): string;
     getBlockNumber(): Promise<number>;
     getPastLogs(queryObject: any): Promise<any>;
-    etherToWei(amount: string): number;
-    gweiToWei(amount: string): number;
 }
 
 function containsOnly0Andx(input: string) {
@@ -22,42 +16,14 @@ function containsOnly0Andx(input: string) {
 
 export class Web3Wrapper implements Web3Interface {
     private web3: Web3;
-    private lastBlockNumber: number;
 
     constructor(web3: Web3) {
         this.web3 = web3;
-        this.lastBlockNumber = 0;
-    }
-
-    parseHexToNumberString(field: string): string {
-        return this.web3.utils.hexToNumberString(field);
-    }
-
-    /**
-     * Converts value to it's number representation. Returns bigint or number depending on value.
-     */
-    parseHexToNumber(field: string): number | bigint {
-        // We want to interpret values which are not technically correct as 0. For example '0x'.
-        if (containsOnly0Andx(field)) {
-            return 0
-        }
-        else {
-            return this.web3.utils.hexToNumber(field);
-        }
-    }
-
-    parseNumberToHex(field: number): string {
-        return this.web3.utils.numberToHex(field);
-    }
-
-    parseHexToBase36String(field: string): string {
-        return BigInt(this.web3.utils.hexToNumberString(field)).toString(36);
     }
 
     async getBlockNumber(): Promise<number> {
         // We are casting to Number here due to how this field is expected in our pipeline
-        this.lastBlockNumber = Number(await this.web3.eth.getBlockNumber());
-        return this.lastBlockNumber;
+        return Number(await this.web3.eth.getBlockNumber());
     }
 
     async getPastLogs(queryObject: any): Promise<any> {
@@ -68,16 +34,50 @@ export class Web3Wrapper implements Web3Interface {
         return await this.web3.eth.getBlock(blockNumber, false);
     }
 
-    etherToWei(amount: string): number {
-        return Number(this.web3.utils.toWei(amount, 'ether'));
-    }
-
-    gweiToWei(amount: string): number {
-        return Number(this.web3.utils.toWei(amount, 'gwei'));
-    }
-
     getWeb3(): Web3 {
         return this.web3;
+    }
+
+}
+
+
+/**
+ * A set of static Web3 functions which do not require connection to a Node
+ */
+export class Web3Static {
+    private static web3: Web3 = new Web3();
+
+    static parseHexToNumberString(field: string): string {
+        return Web3Static.web3.utils.hexToNumberString(field);
+    }
+
+    /**
+     * Converts value to it's number representation. Returns bigint or number depending on value.
+     */
+    static parseHexToNumber(field: string): number | bigint {
+        // We want to interpret values which are not technically correct as 0. For example '0x'.
+        if (containsOnly0Andx(field)) {
+            return 0
+        }
+        else {
+            return Web3Static.web3.utils.hexToNumber(field);
+        }
+    }
+
+    static parseNumberToHex(field: number): string {
+        return Web3Static.web3.utils.numberToHex(field);
+    }
+
+    static parseHexToBase36String(field: string): string {
+        return BigInt(Web3Static.web3.utils.hexToNumberString(field)).toString(36);
+    }
+
+    static etherToWei(amount: string): number {
+        return Number(Web3Static.web3.utils.toWei(amount, 'ether'));
+    }
+
+    static gweiToWei(amount: string): number {
+        return Number(Web3Static.web3.utils.toWei(amount, 'gwei'));
     }
 }
 
@@ -92,10 +92,6 @@ export function constructWeb3Wrapper(nodeURL: string, username: string, password
     const authCredentials = username + ':' + password;
     const httpProviderOptions: HttpProviderOptions = buildHttpOptions(authCredentials);
     return new Web3Wrapper(new Web3(new Web3HttpProvider(nodeURL, httpProviderOptions)));
-}
-
-export function constructWeb3WrapperNoCredentials(nodeURL: string): Web3Interface {
-    return new Web3Wrapper(new Web3(new Web3HttpProvider(nodeURL)));
 }
 
 

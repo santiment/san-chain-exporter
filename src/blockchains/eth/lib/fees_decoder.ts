@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { Web3Interface, safeCastToNumber } from './web3_wrapper';
+import { Web3Static, safeCastToNumber } from './web3_wrapper';
 import { ETHBlock, ETHTransaction, ETHTransfer, ETHReceiptsMap } from '../eth_types';
 import { BURN_ADDRESS, LONDON_FORK_BLOCK } from './constants';
 
@@ -9,24 +9,18 @@ function isETHTransaction(transaction: ETHTransaction | string): transaction is 
 }
 
 export class FeesDecoder {
-  private web3Wrapper: Web3Interface;
-
-  constructor(web3Wrapper: Web3Interface) {
-    this.web3Wrapper = web3Wrapper;
-  }
-
   getPreLondonForkFees(transaction: ETHTransaction, block: ETHBlock, receipts: any): ETHTransfer[] {
-    const gasExpense = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) *
-      BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed));
+    const gasExpense = BigInt(Web3Static.parseHexToNumber(transaction.gasPrice)) *
+      BigInt(Web3Static.parseHexToNumber(receipts[transaction.hash].gasUsed));
     return [{
       from: transaction.from,
       to: block.miner,
       value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
-      blockNumber: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.blockNumber)),
-      timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+      blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
+      timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
       transactionHash: transaction.hash,
-      transactionPosition: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.transactionIndex)),
+      transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
       internalTxPosition: 0,
       type: 'fee'
     }];
@@ -37,18 +31,18 @@ export class FeesDecoder {
     const gasExpense = (block.baseFeePerGas === undefined) ?
       0
       :
-      BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas)) *
-      BigInt(this.web3Wrapper.parseHexToNumber(receipts[transaction.hash].gasUsed))
+      BigInt(Web3Static.parseHexToNumber(block.baseFeePerGas)) *
+      BigInt(Web3Static.parseHexToNumber(receipts[transaction.hash].gasUsed))
 
     return {
       from: transaction.from,
       to: burnAddress,
       value: Number(gasExpense),
       valueExactBase36: gasExpense.toString(36),
-      blockNumber: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.blockNumber)),
-      timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+      blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
+      timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
       transactionHash: transaction.hash,
-      transactionPosition: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.transactionIndex)),
+      transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
       internalTxPosition: 0,
       type: 'fee_burnt'
     };
@@ -66,20 +60,20 @@ export class FeesDecoder {
    **/
   getMinerFee(transaction: ETHTransaction, block: ETHBlock, receiptsMap: ETHReceiptsMap): ETHTransfer | undefined {
     const baseFeePerGas = (block.baseFeePerGas === undefined) ?
-      BigInt(0) : BigInt(this.web3Wrapper.parseHexToNumber(block.baseFeePerGas));
+      BigInt(0) : BigInt(Web3Static.parseHexToNumber(block.baseFeePerGas));
 
-    const tipMinerPerGas = BigInt(this.web3Wrapper.parseHexToNumber(transaction.gasPrice)) - baseFeePerGas;
-    const gasExpense = tipMinerPerGas * BigInt(this.web3Wrapper.parseHexToNumber(receiptsMap[transaction.hash].gasUsed));
+    const tipMinerPerGas = BigInt(Web3Static.parseHexToNumber(transaction.gasPrice)) - baseFeePerGas;
+    const gasExpense = tipMinerPerGas * BigInt(Web3Static.parseHexToNumber(receiptsMap[transaction.hash].gasUsed));
     if (tipMinerPerGas > 0) {
       return {
         from: transaction.from,
         to: block.miner,
         value: Number(gasExpense),
         valueExactBase36: gasExpense.toString(36),
-        blockNumber: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.blockNumber)),
-        timestamp: safeCastToNumber(this.web3Wrapper.parseHexToNumber(block.timestamp)),
+        blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
+        timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
         transactionHash: transaction.hash,
-        transactionPosition: safeCastToNumber(this.web3Wrapper.parseHexToNumber(transaction.transactionIndex)),
+        transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
         internalTxPosition: 0,
         type: 'fee'
       };
