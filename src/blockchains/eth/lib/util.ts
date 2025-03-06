@@ -1,8 +1,8 @@
 import { ETHTransfer } from '../eth_types';
 import { EOB } from './end_of_block'
-import { Web3Interface } from './web3_wrapper';
 import { HTTPClientInterface } from '../../../types';
 import { fetchBlocks } from './fetch_data';
+import { logger } from '../../../lib/logger';
 const { groupBy } = require('lodash');
 
 export function transactionOrder(a: ETHTransfer | EOB, b: ETHTransfer | EOB) {
@@ -49,6 +49,9 @@ export async function assertBlocksMatch(groupedTransfers: any, fromBlock: number
       }
       if (blockData.transactions.length !== 0) {
         throw new Error(`Missing transfers for block ${block} from main node. Verify node has data.`)
+      }
+      else {
+        logger.info(`Block ${block} has no data in both main and verify nodes`)
       }
     }
   }
