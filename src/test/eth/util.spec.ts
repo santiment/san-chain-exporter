@@ -258,18 +258,19 @@ describe('checkETHTransfersQuality', () => {
         await expect(() => checkETHTransfersQuality(transfers, 100, 100, notUsed)).not.toBeRejected()
     });
 
-    it('Throws error when a block in the range is missing', async () => {
+    it('Throws error when a block in the range is missing. Verify node has it.', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 10, 100, "hash", 0),
             createTransfer('C', 'D', 20, 102, "hash", 0), // Missing block 101
             createTransfer('E', 'F', 10, 103, "hash", 0)
         ]
 
-        const verifiedResult = new Map()
-        verifiedResult.set(102, { transactions: [] })
+        const verifiedResult = [{ result: { transactions: ["non-empty-transaction"] } }]
         const verifyETHClient = new MockEthClient(verifiedResult)
 
-        await expect(() => checkETHTransfersQuality(transfers, 100, 103, verifyETHClient)).toBeRejected()
+        await expect(() => checkETHTransfersQuality(transfers, 100, 103, verifyETHClient)).toBeRejectedWith(
+            Error, `Missing transfers for block 101 from main node. Verify node has data.`
+        )
     })
 
     it('Throws error when a transaction position is missing within a block', async () => {
@@ -281,17 +282,20 @@ describe('checkETHTransfersQuality', () => {
         ]
 
         const notUsed: MockEthClient = new MockEthClient(null)
-        await expect(() => checkETHTransfersQuality(transfers, 100, 101, notUsed)).toBeRejected()
+        await expect(() => checkETHTransfersQuality(transfers, 100, 101, notUsed)).toBeRejectedWith(
+            Error, /^Unexpected transaction position for transfer/
+        )
     })
 
     it('Throws error when transfers array is empty', async () => {
         const transfers: ETHTransfer[] = []
 
-        const verifiedResult = new Map()
-        verifiedResult.set(100, { transactions: [] })
+        const verifiedResult = [{ result: { transactions: ["non-empty-transaction"] } }]
         const verifyETHClient = new MockEthClient(verifiedResult)
 
-        await expect(() => checkETHTransfersQuality(transfers, 100, 100, verifyETHClient)).toBeRejected()
+        await expect(() => checkETHTransfersQuality(transfers, 100, 100, verifyETHClient)).toBeRejectedWith(
+            Error, `Missing transfers for block 100 from main node. Verify node has data.`
+        )
     })
 
     it('Throws error when fromBlock is greater than toBlock', async () => {
@@ -301,21 +305,24 @@ describe('checkETHTransfersQuality', () => {
         ]
 
         const notUsed: MockEthClient = new MockEthClient(null)
-        await expect(() => checkETHTransfersQuality(transfers, 102, 100, notUsed)).toBeRejected()
+        await expect(() => checkETHTransfersQuality(transfers, 102, 100, notUsed)).toBeRejectedWith(
+            Error, 'Invalid block range: fromBlock 102 is greater than toBlock 100'
+        )
     })
 
-    it('Throws error when the last block is missing', async () => {
+    it('Throws error when last block is missing. Verify node returns it.', async () => {
         const transfers: ETHTransfer[] = [
             createTransfer('A', 'B', 1, 100, "hash", 0),
             createTransfer('C', 'D', 2, 101, "hash", 0),
             // Missing block 102
         ];
 
-        const verifiedResult = new Map()
-        verifiedResult.set(102, { transactions: [] })
+        const verifiedResult = [{ result: { transactions: ["non-empty-transaction"] } }]
         const verifyETHClient = new MockEthClient(verifiedResult)
 
-        await expect(() => checkETHTransfersQuality(transfers, 100, 102, verifyETHClient)).toBeRejected()
+        await expect(() => checkETHTransfersQuality(transfers, 100, 102, verifyETHClient)).toBeRejectedWith(
+            Error, `Missing transfers for block 102 from main node. Verify node has data.`
+        )
     })
 
     it('Throws error when the data for unexpected blocks is present', async () => {
@@ -326,18 +333,39 @@ describe('checkETHTransfersQuality', () => {
         ];
 
         const notUsed: MockEthClient = new MockEthClient(null)
-        await expect(() => checkETHTransfersQuality(transfers, 100, 101, notUsed)).toBeRejected()
+        await expect(() => checkETHTransfersQuality(transfers, 100, 101, notUsed)).toBeRejectedWith(
+            Error, 'Node returns more blocks than expected. Expected 2 got 3.'
+        )
     })
 
-    // it('Do not throw an error when data for whitelisted contract is missing', () => {
-    //     const transfers: ETHTransfer[] = [
-    //         createTransfer('A', 'B', 1, 15537453, "hash", 0),
-    //         createTransfer('C', 'D', 2, 15537455, "hash", 0)
-    //     ];
+    it('Do not throw an error when block is missing but verify node also does not return it', async () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0),
+            createTransfer('C', 'D', 2, 102, "hash", 0),
+            // Missing block 101
+        ];
 
-    //     const notUsed: MockEthClient = new MockEthClient(null)
-    //     expect(() => checkETHTransfersQuality(transfers, 15537453, 15537455)).not.toThrow()
-    // })
+        const verifiedResult = [{ result: { transactions: [] } }]
+        const verifyETHClient = new MockEthClient(verifiedResult)
+
+        await expect(() => checkETHTransfersQuality(transfers, 100, 102, verifyETHClient)).not.toBeRejected()
+    })
+
+    it('Throw an error when verify node does not return proper data', async () => {
+        const transfers: ETHTransfer[] = [
+            createTransfer('A', 'B', 1, 100, "hash", 0),
+            createTransfer('C', 'D', 2, 102, "hash", 0),
+            // Missing block 101
+        ];
+
+        const verifiedResult = [{ result: { /*transactions: []*/ } }] // No transactions element
+        const verifyETHClient = new MockEthClient(verifiedResult)
+
+        await expect(() => checkETHTransfersQuality(transfers, 100, 102, verifyETHClient)).toBeRejectedWith(
+            Error,
+            'Empty result querying verify node for block 101.'
+        )
+    })
 });
 
 

@@ -54,8 +54,8 @@ export async function assertBlocksMatch(groupedTransfers: any, fromBlock: number
   }
 
   const blocksExpected = toBlock - fromBlock + 1
-  if (keys.length !== blocksExpected) {
-    throw new Error(`Wrong number of blocks seen. Expected ${blocksExpected} got ${keys.length}.`)
+  if (keys.length > blocksExpected) {
+    throw new Error(`Node returns more blocks than expected. Expected ${blocksExpected} got ${keys.length}.`)
   }
 }
 
