@@ -1,12 +1,8 @@
 import assert from 'assert';
 const rewire = require('rewire');
-import { NODE_URL } from '../../blockchains/erc20/lib/constants';
 import { TimestampsCacheInterface } from '../../blockchains/erc20/lib/timestamps_cache';
 
 const fetch_events = rewire('../../blockchains/erc20/lib/fetch_events');
-import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
-
-const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 const rawEvents = [
   // bat mint
@@ -371,7 +367,7 @@ class TimestampsCacheMock implements TimestampsCacheInterface {
 describe('decodeEvents', function () {
   it('decodes the events fetched from the ethereum node', async function () {
     const decodeEvents = fetch_events.__get__('decodeEvents');
-    const result = await decodeEvents(web3Wrapper, rawEvents, new TimestampsCacheMock());
+    const result = await decodeEvents(rawEvents, new TimestampsCacheMock());
     assert.deepEqual(
       result,
       decodedEvents
@@ -393,7 +389,7 @@ describe('filterEvents', function () {
 describe('getPastEvents', function () {
   it('fetches and parses events from the ethereum node', async function () {
     const getPastEvents = fetch_events.__get__('getPastEvents');
-    const result = await getPastEvents(web3Wrapper, 0, 0, null, new TimestampsCacheMock());
+    const result = await getPastEvents(null, 0, 0, null, new TimestampsCacheMock());
     assert.deepEqual(
       result,
       filteredEvents
@@ -490,7 +486,7 @@ describe('decodeBrokenEventTest', function () {
   }
 
   it('ensures data containing only 0x is decoded as 0', async function () {
-    const result = decodeTransferEvent(web3Wrapper, brokenEventToDecode, new TimestampsCacheMock())
+    const result = decodeTransferEvent(brokenEventToDecode, new TimestampsCacheMock())
 
     const expected = {
       "blockNumber": 7207279,

@@ -1,5 +1,5 @@
 'use strict';
-import { Web3Interface, safeCastToNumber } from '../../eth/lib/web3_wrapper';
+import { Web3Static, safeCastToNumber } from '../../eth/lib/web3_wrapper';
 import { HTTPClientInterface } from '../../../types'
 
 export interface TimestampsCacheInterface {
@@ -10,20 +10,18 @@ export interface TimestampsCacheInterface {
 export class TimestampsCache implements TimestampsCacheInterface {
   private timestampStore: { [key: number]: number };
   private rangeSize: number;
-  private web3Wrapper: Web3Interface;
   private responsePromise: Promise<any>;
 
-  constructor(ethClient: HTTPClientInterface, web3Wrapper: Web3Interface, fromBlock: number, toBlock: number) {
+  constructor(ethClient: HTTPClientInterface, fromBlock: number, toBlock: number) {
     this.timestampStore = {};
     this.rangeSize = toBlock - fromBlock + 1;
-    this.web3Wrapper = web3Wrapper;
 
     const blockRequests = Array.from(
       { length: toBlock - fromBlock + 1 },
       (_, index) => ethClient.generateRequest(
         'eth_getBlockByNumber',
         // Some Nodes would also accept decimal, but we convert to be on the safe side
-        [web3Wrapper.parseNumberToHex(fromBlock + index), false]
+        [Web3Static.parseNumberToHex(fromBlock + index), false]
       )
     );
 
@@ -40,8 +38,8 @@ export class TimestampsCache implements TimestampsCacheInterface {
     }
 
     for (const result of resultsArray) {
-      const blockNumber = safeCastToNumber(this.web3Wrapper.parseHexToNumber(result.result.number));
-      const blockTimestamp = safeCastToNumber(this.web3Wrapper.parseHexToNumber(result.result.timestamp));
+      const blockNumber = safeCastToNumber(Web3Static.parseHexToNumber(result.result.number));
+      const blockTimestamp = safeCastToNumber(Web3Static.parseHexToNumber(result.result.timestamp));
       this.timestampStore[blockNumber] = blockTimestamp;
     }
   }

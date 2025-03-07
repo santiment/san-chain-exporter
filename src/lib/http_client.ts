@@ -26,19 +26,21 @@ class JaysonHTTPClient implements HTTPClientInterface {
   }
 }
 
-export function constructRPCClient(nodeURL: string, username: string, password: string, timeout: number): HTTPClientInterface {
+export function constructRPCClient(nodeURL: string, username: string | undefined, password: string | undefined, timeout: number): HTTPClientInterface {
   const nodeUrl = new URL(nodeURL);
-  const authCredentials = username + ':' + password;
 
   const options: HttpsClientOptions = {
     hostname: nodeUrl.hostname,
     port: nodeUrl.port,
     path: nodeUrl.pathname,
     method: 'POST',
-    auth: authCredentials,
     timeout: timeout,
     version: 2
   };
+
+  if (username && password) {
+    options.auth = `${username}:${password}`;
+  }
 
   const agentOptions = {
     keepAlive: true, // Enable keep-alive

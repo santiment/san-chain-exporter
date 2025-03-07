@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Web3Interface, constructWeb3WrapperNoCredentials, safeCastToNumber } from '../../blockchains/eth/lib/web3_wrapper';
+import { Web3Static, safeCastToNumber } from '../../blockchains/eth/lib/web3_wrapper';
 import { FeesDecoder } from '../../blockchains/eth/lib/fees_decoder';
 import { ETHBlock, ETHReceipt, ETHTransfer } from '../../blockchains/eth/eth_types';
 import * as constants from '../../blockchains/eth/lib/constants';
@@ -166,12 +166,11 @@ function turnReceiptsToMap(receipts: any[]) {
 }
 
 describe('Fees decoder test', function () {
-  const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(constants.NODE_URL);
-  const feesDecoder = new FeesDecoder(web3Wrapper);
+  const feesDecoder = new FeesDecoder();
 
   it('test fees post London zero priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_zero_priority,
-      safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_zero_priority.number)),
+      safeCastToNumber(Web3Static.parseHexToNumber(block_json_post_london_zero_priority.number)),
       turnReceiptsToMap(receipts_json_post_london_no_priority), true);
 
     const expected: ETHTransfer[] = [{
@@ -193,7 +192,7 @@ describe('Fees decoder test', function () {
 
   it('test fees post London with priority', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_with_priority,
-      safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_with_priority.number)),
+      safeCastToNumber(Web3Static.parseHexToNumber(block_json_post_london_with_priority.number)),
       turnReceiptsToMap(receipts_json_post_london_with_priority), true);
 
     const expected: ETHTransfer[] = [{
@@ -227,7 +226,7 @@ describe('Fees decoder test', function () {
 
   it('test old type fees post London', async function () {
     const postLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_post_london_old_tx_type,
-      safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_post_london_old_tx_type.number)),
+      safeCastToNumber(Web3Static.parseHexToNumber(block_json_post_london_old_tx_type.number)),
       turnReceiptsToMap(receipts_json_post_london_old_tx_type), true);
 
     const expected: ETHTransfer[] = [{
@@ -261,7 +260,7 @@ describe('Fees decoder test', function () {
 
   it('test fees pre London', async function () {
     const preLondonFees = feesDecoder.getFeesFromTransactionsInBlock(block_json_pre_london,
-      safeCastToNumber(web3Wrapper.parseHexToNumber(block_json_pre_london.number)),
+      safeCastToNumber(Web3Static.parseHexToNumber(block_json_pre_london.number)),
       turnReceiptsToMap(receipts_json_pre_london), true);
 
     const expected: ETHTransfer[] = [{

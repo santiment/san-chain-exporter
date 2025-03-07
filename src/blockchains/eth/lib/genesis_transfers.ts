@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { ETHTransfer } from '../eth_types';
-import { Web3Interface } from './web3_wrapper';
+import { Web3Static } from './web3_wrapper';
 
 const GENESIS_TRANSFERS = fs.readFileSync(path.resolve(__dirname) + '/ethereum_genesis.csv', { encoding: 'utf8' })
   .split('\n')
@@ -10,11 +10,11 @@ const GENESIS_TRANSFERS = fs.readFileSync(path.resolve(__dirname) + '/ethereum_g
 
 const GENESIS_TIMESTAMP = 1438269973;
 
-export function getGenesisTransfers(web3Wrapper: Web3Interface): ETHTransfer[] {
+export function getGenesisTransfers(): ETHTransfer[] {
   const result: ETHTransfer[] = [];
   GENESIS_TRANSFERS.forEach((transfer) => {
     const [id, from, to, amount] = transfer;
-    const wei = web3Wrapper.etherToWei(amount);
+    const wei = Web3Static.etherToWei(amount);
 
     result.push({
       from: 'GENESIS',

@@ -1,5 +1,8 @@
 import { ETHTransfer } from '../eth_types';
 import { EOB } from './end_of_block'
+import { HTTPClientInterface } from '../../../types';
+import { fetchBlocks } from './fetch_data';
+import { logger } from '../../../lib/logger';
 const { groupBy } = require('lodash');
 
 export function transactionOrder(a: ETHTransfer | EOB, b: ETHTransfer | EOB) {
@@ -33,27 +36,29 @@ export function assignInternalTransactionPosition(transfers: ETHTransfer[], grou
   })
 }
 
-export function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number) {
+export async function assertBlocksMatch(groupedTransfers: any, fromBlock: number, toBlock: number,
+  ethClientVerification: HTTPClientInterface) {
   const keys = Object.keys(groupedTransfers)
 
-  // A list of empty blocks, no transfers and no rewards.
-  const blocksExceptionList = [15537454]
-  let blocksExpected = toBlock - fromBlock + 1
-
-  for (const blockException of blocksExceptionList) {
-    if (blockException >= fromBlock && blockException <= toBlock) {
-      --blocksExpected;
-    }
-  }
-
-  if (keys.length !== blocksExpected) {
-    throw new Error(`Wrong number of blocks seen. Expected ${blocksExpected} got ${keys.length}.`)
-  }
-
   for (let block = fromBlock; block <= toBlock; block++) {
-    if (!blocksExceptionList.includes(block) && !groupedTransfers.hasOwnProperty(block.toString())) {
-      throw new Error(`Missing transfers for block ${block}.`)
+    if (!groupedTransfers.hasOwnProperty(block.toString())) {
+      const blocksCheck = await fetchBlocks(ethClientVerification, block, block, false)
+      const blockData = blocksCheck?.get?.(block)
+      if (!blockData || !Array.isArray(blocksCheck.get(block)?.transactions)) {
+        throw new Error(`Empty result querying verify node for block ${block}.`)
+      }
+      if (blockData.transactions.length !== 0) {
+        throw new Error(`Missing transfers for block ${block} from main node. Verify node has data.`)
+      }
+      else {
+        logger.info(`Block ${block} has no data in both main and verify nodes`)
+      }
     }
+  }
+
+  const blocksExpected = toBlock - fromBlock + 1
+  if (keys.length > blocksExpected) {
+    throw new Error(`Node returns more blocks than expected. Expected ${blocksExpected} got ${keys.length}.`)
   }
 }
 
@@ -83,15 +88,17 @@ export function assertTransfersWithinBlock(transfersPerBlock: ETHTransfer[]) {
  * @param transfers Ordered array of transfers
  * @param fromBlock Block number indicating start of expected interval
  * @param toBlock Block number indicating end of expected interval
+ * @param ethClientVerification Extra ETH client service to check if a missing block is returned from the main service
  */
-export function checkETHTransfersQuality(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number) {
+export async function checkETHTransfersQuality(sortedTransfers: ETHTransfer[], fromBlock: number, toBlock: number,
+  ethClientVerification: HTTPClientInterface) {
   if (fromBlock > toBlock) {
     throw new Error(`Invalid block range: fromBlock ${fromBlock} is greater than toBlock ${toBlock}`);
   }
 
   const groupedTransfers = groupBy(sortedTransfers, (transfer: ETHTransfer) => transfer.blockNumber)
 
-  assertBlocksMatch(groupedTransfers, fromBlock, toBlock);
+  await assertBlocksMatch(groupedTransfers, fromBlock, toBlock, ethClientVerification);
 
   for (const key of Object.keys(groupedTransfers)) {
     assertTransfersWithinBlock(groupedTransfers[key])

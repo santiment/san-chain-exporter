@@ -1,9 +1,6 @@
 import assert from 'assert';
-import helper from '../../blockchains/receipts/lib/helper';
-import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
-import { NODE_URL } from '../../blockchains/eth/lib/constants';
+import { decodeReceipt, parseReceipts, parseBlocks, setReceiptsTimestamp } from '../../blockchains/receipts/lib/helper';
 
-const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 describe('blocks parsing', () => {
   it('parses blocks', () => {
@@ -18,7 +15,7 @@ describe('blocks parsing', () => {
       }
     ];
 
-    const result = helper.parseBlocks(responses);
+    const result = parseBlocks(responses);
     assert.deepStrictEqual(result, [
       { timestamp: '0x56c097f1', number: '0xf53d5' },
       { timestamp: '0x56c097f4', number: '0xf5408' }
@@ -50,7 +47,7 @@ describe('receipt parsing', () => {
       }
     ];
 
-    const result = helper.parseReceipts(responses);
+    const result = parseReceipts(responses);
     assert.deepStrictEqual(result,
       [
         {
@@ -91,7 +88,7 @@ context('receipt without logs', () => {
 
   describe('receipt decoding', () => {
     it('converts blockNumber from hex to number', () => {
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
+      const result = decodeReceipt(receipt);
 
       const expected = {
         blockHash: '0x209bc40be9e6961d88435382b91754b7a6e180d6cbf9120a61246e1d2506f3a6',
@@ -171,7 +168,7 @@ context('receipt with logs', () => {
         transactionIndex: 4
       };
 
-      const result = helper.decodeReceipt(receipt, web3Wrapper);
+      const result = decodeReceipt(receipt);
 
       assert.deepStrictEqual(result, expected);
     });
@@ -182,7 +179,7 @@ describe('setting reciept\'s timestamp', () => {
   it('sets receipt\'s timestamp', async () => {
     const receipt = { blockNumber: 1004250 };
     const timestamps = { '1004250': 1455576747 };
-    const result = await helper.setReceiptsTimestamp([receipt], timestamps);
+    const result = await setReceiptsTimestamp([receipt], timestamps);
 
     assert.deepStrictEqual(result, [{ blockNumber: 1004250, timestamp: 1455576747 }]);
   });

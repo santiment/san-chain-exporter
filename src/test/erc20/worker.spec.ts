@@ -6,23 +6,11 @@ import * as constants from '../../blockchains/erc20/lib/constants';
 import { ContractOverwrite } from '../../blockchains/erc20/lib/contract_overwrite';
 import helpers from './helpers';
 import { ERC20Transfer } from '../../blockchains/erc20/erc20_types';
-import { MockWeb3Wrapper } from '../eth/mock_web3_wrapper';
+import { MockWeb3Wrapper, MockEthClient } from '../eth/mock_web3_wrapper';
 
 
 
-class MockEthClient {
-    request(): Promise<any> {
-        return Promise.resolve()
-    }
 
-    requestBulk(): Promise<any> {
-        return Promise.resolve()
-    }
-
-    generateRequest(): any {
-        return null;
-    }
-}
 
 describe('Test ERC20 worker', function () {
     let originalEvent: ERC20Transfer;

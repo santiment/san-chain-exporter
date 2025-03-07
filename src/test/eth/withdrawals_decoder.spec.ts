@@ -1,15 +1,12 @@
 import assert from 'assert';
 
 import { WithdrawalsDecoder } from '../../blockchains/eth/lib/withdrawals_decoder';
-import { NODE_URL, ETH_WITHDRAWAL } from '../../blockchains/eth/lib/constants';
-import { Web3Interface, constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
+import { ETH_WITHDRAWAL } from '../../blockchains/eth/lib/constants';
 import { ETHTransfer } from '../../blockchains/eth/eth_types';
-
-const web3Wrapper: Web3Interface = constructWeb3WrapperNoCredentials(NODE_URL);
 
 describe('withdrawals decoder test', function () {
   it('basic test', async function () {
-    const decoder = new WithdrawalsDecoder(web3Wrapper);
+    const decoder = new WithdrawalsDecoder();
 
     const withdrawal = {
       index: '0x1a0ce76',

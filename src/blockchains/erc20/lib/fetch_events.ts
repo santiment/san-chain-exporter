@@ -3,7 +3,7 @@
 import { decodeAddress } from './util';
 import { addCustomTokenDistribution } from './custom_token_distribution';
 import { logger } from '../../../lib/logger';
-import { Web3Interface } from '../../eth/lib/web3_wrapper';
+import { Web3Static, Web3Interface } from '../../eth/lib/web3_wrapper';
 import { TimestampsCacheInterface } from './timestamps_cache';
 import { ERC20Transfer } from '../erc20_types';
 
@@ -37,7 +37,7 @@ export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCach
 /**Transfer(address,address,uint256)
  * Used by all ERC20 tokens
  **/
-function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeTransferEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['topics'].length !== 3) {
     return null;
   }
@@ -53,8 +53,8 @@ function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsC
   }
 
   result.from = decodeAddress(event['topics'][1]);
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -62,7 +62,7 @@ function decodeTransferEvent(web3Wrapper: Web3Interface, event: any, timestampsC
 /**Burn(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeBurnEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['topics'].length !== 2) {
     return null;
   }
@@ -71,8 +71,8 @@ function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -80,7 +80,7 @@ function decodeBurnEvent(web3Wrapper: Web3Interface, event: any, timestampsCache
 /**Mint(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeMintEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['topics'].length !== 2) {
     return null;
   }
@@ -89,8 +89,8 @@ function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -98,7 +98,7 @@ function decodeMintEvent(web3Wrapper: Web3Interface, event: any, timestampsCache
 /**Freeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeBNBFreezeEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
@@ -108,8 +108,8 @@ function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestamps
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = FREEZE_ADDRESS;
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -117,7 +117,7 @@ function decodeBNBFreezeEvent(web3Wrapper: Web3Interface, event: any, timestamps
 /**Unfreeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeBNBUnfreezeEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== BNB_contract
     || event['topics'].length !== 2) {
     return null;
@@ -127,8 +127,8 @@ function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestam
 
   result.from = FREEZE_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -136,7 +136,7 @@ function decodeBNBUnfreezeEvent(web3Wrapper: Web3Interface, event: any, timestam
 /**Deposit(address indexed dst, uint wad)
  * Only for WETH
  **/
-function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeWETHDepositEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
@@ -146,8 +146,8 @@ function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestam
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -155,7 +155,7 @@ function decodeWETHDepositEvent(web3Wrapper: Web3Interface, event: any, timestam
 /**Withdrawal(address,uint256)
  * Only for WETH
  **/
-function decodeWETHWithdrawalEvent(web3Wrapper: Web3Interface, event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeWETHWithdrawalEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== WETH_contract
     || event['topics'].length !== 2) {
     return null;
@@ -165,8 +165,8 @@ function decodeWETHWithdrawalEvent(web3Wrapper: Web3Interface, event: any, times
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
-  result.value = Number(web3Wrapper.parseHexToNumber(event['data']));
-  result.valueExactBase36 = web3Wrapper.parseHexToNumber(event['data']).toString(36);
+  result.value = Number(Web3Static.parseHexToNumber(event['data']));
+  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
 
   return result;
 }
@@ -190,7 +190,7 @@ export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: numbe
   const startTime = Date.now();
   await timestampsCache.waitResponse();
   logger.debug(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
-  const decodedEvents = decodeEvents(web3Wrapper, events, timestampsCache);
+  const decodedEvents = decodeEvents(events, timestampsCache);
   const result = filterEvents(decodedEvents);
 
   addCustomTokenDistribution(result, fromBlock, toBlock, contractAddress);
@@ -201,8 +201,8 @@ export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: numbe
 
 async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, contractAddress: string) {
   let queryObject: any = {
-    fromBlock: web3Wrapper.parseNumberToHex(fromBlock),
-    toBlock: web3Wrapper.parseNumberToHex(toBlock),/*,
+    fromBlock: Web3Static.parseNumberToHex(fromBlock),
+    toBlock: Web3Static.parseNumberToHex(toBlock),/*,
     // Parity has a bug when filtering topics: https://github.com/paritytech/parity-ethereum/issues/9629
     // TODO: Revert it when they fix it
     topics: decodeFunctions.keys()*/
@@ -215,13 +215,13 @@ async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlo
   return await web3Wrapper.getPastLogs(queryObject);
 }
 
-export function decodeEvents(web3Wrapper: Web3Interface, events: any, timestampsCache: TimestampsCacheInterface, decodeFunctions: any = decodeFunctionsMap) {
+export function decodeEvents(events: any, timestampsCache: TimestampsCacheInterface, decodeFunctions: any = decodeFunctionsMap) {
   const result: ERC20Transfer[] = [];
   for (const event of events) {
     if (event.topics && event.topics[0]) {
       const decodeFunction = decodeFunctions[event.topics[0]];
       if (decodeFunction) {
-        const decodedEvent: ERC20Transfer | null = decodeFunction(web3Wrapper, event, timestampsCache);
+        const decodedEvent: ERC20Transfer | null = decodeFunction(event, timestampsCache);
         if (decodedEvent) result.push(decodedEvent);
       }
     }

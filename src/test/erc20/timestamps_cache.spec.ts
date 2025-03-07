@@ -1,8 +1,6 @@
 import assert from 'assert';
 import { HTTPClientInterface } from '../../types'
 import { TimestampsCache } from '../../blockchains/erc20/lib/timestamps_cache';
-import { NODE_URL } from '../../blockchains/erc20/lib/constants';
-import { constructWeb3WrapperNoCredentials } from '../../blockchains/eth/lib/web3_wrapper';
 
 
 const blockResponses = [
@@ -47,7 +45,7 @@ class EthClientMock implements HTTPClientInterface {
 
 class TimestampsCacheMock extends TimestampsCache {
   constructor() {
-    super(new EthClientMock(), constructWeb3WrapperNoCredentials(NODE_URL), 10000, 10001);
+    super(new EthClientMock(), 10000, 10001);
   }
 }
 
