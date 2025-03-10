@@ -34,25 +34,25 @@ slaveTemplates.dockerTemplate { label ->
               -f docker/Dockerfile ."
             sh "docker push ${awsRegistry}/${imageName}:${branchNameSanitized}"
             sh "docker push ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT}"
-          }
 
-          if(branch == 'master' || branch == 'main') {
+            if(branch == 'master' || branch == 'main') {
               sh """
                   docker tag ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT} ${awsRegistry}/${imageName}:stage;
                   docker push ${awsRegistry}/${imageName}:stage
               """
-          }
-          if(isProductionBuild) {
-              sh """
-                  docker tag ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT} ${awsRegistry}/${imageName}:production;
-                  docker push ${awsRegistry}/${imageName}:production
-              """
-          }
-          if (isTagDefined) {
-              sh """
-                  docker tag ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT} ${awsRegistry}/${imageName}:${tag};
-                  docker push ${awsRegistry}/${imageName}:${tag}
-              """
+            }
+            if(isProductionBuild) {
+                sh """
+                    docker tag ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT} ${awsRegistry}/${imageName}:production;
+                    docker push ${awsRegistry}/${imageName}:production
+                """
+            }
+            if (isTagDefined) {
+                sh """
+                    docker tag ${awsRegistry}/${imageName}:${scmVars.GIT_COMMIT} ${awsRegistry}/${imageName}:${tag};
+                    docker push ${awsRegistry}/${imageName}:${tag}
+                """
+            }
           }
         }
       }
