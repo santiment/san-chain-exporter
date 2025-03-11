@@ -7,6 +7,9 @@ slaveTemplates = new podTemplates()
 slaveTemplates.dockerTemplate { label ->
   node(label) {
     container('docker') {
+      // Mark the workspace as safe for Git operations
+      // Workaround for 'fatal: detected dubious ownership in repository at...'
+      sh "git config --global --add safe.directory ${env.WORKSPACE}"
       def scmVars = checkout scm
       def imageName = "san-chain-exporter"
 
@@ -14,7 +17,7 @@ slaveTemplates.dockerTemplate { label ->
         sh "./bin/test.sh"
       }
 
-      def tag               = sh(returnStdout: true, script: "git tag --contains | head -1").trim()
+      def tag = sh(returnStdout: true, script: "set -o pipefail; git tag --contains | head -1").trim()
       def isTagDefined      = tag != null && tag.length() > 1
       def isProductionBuild = false
       if(isTagDefined) { // expect all tags were fetched by scm
