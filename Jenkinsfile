@@ -7,6 +7,9 @@ slaveTemplates = new podTemplates()
 slaveTemplates.dockerTemplate { label ->
   node(label) {
     container('docker') {
+      // Mark the workspace as safe for Git operations
+      // Workaround for 'fatal: detected dubious ownership in repository at...'
+      sh "git config --global --add safe.directory ${env.WORKSPACE}"
       def scmVars = checkout scm
       def imageName = "san-chain-exporter"
 
