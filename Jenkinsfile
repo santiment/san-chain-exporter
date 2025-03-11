@@ -14,7 +14,7 @@ slaveTemplates.dockerTemplate { label ->
         sh "./bin/test.sh"
       }
 
-      def tag               = sh(returnStdout: true, script: "git tag --contains | head -1").trim()
+      def tag = sh(returnStdout: true, script: "set -o pipefail; git tag --contains | head -1").trim()
       def isTagDefined      = tag != null && tag.length() > 1
       def isProductionBuild = false
       if(isTagDefined) { // expect all tags were fetched by scm
