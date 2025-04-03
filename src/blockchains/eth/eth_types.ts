@@ -45,7 +45,7 @@ export type ETHBlock = {
   miner: string,
   number: string,
   timestamp: string,
-  totalDifficulty: string,
+  totalDifficulty?: string,
   difficulty: string,
   size: string,
   minGasPrice?: string

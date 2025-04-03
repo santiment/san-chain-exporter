@@ -27,7 +27,7 @@ export class ETHBlocksWorker extends BaseWorker {
       hash: block.hash,
       miner: block.miner,
       difficulty: Web3Static.parseHexToNumberString(block.difficulty),
-      totalDifficulty: Web3Static.parseHexToNumberString(block.totalDifficulty),
+      totalDifficulty: Web3Static.parseHexToNumberString(block.totalDifficulty !== undefined ? block.totalDifficulty : '0x0'),
       timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
       size: safeCastToNumber(Web3Static.parseHexToNumber(block.size)),
       gasLimit: safeCastToNumber(Web3Static.parseHexToNumber(block.gasLimit)),
