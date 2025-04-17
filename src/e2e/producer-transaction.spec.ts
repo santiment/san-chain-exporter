@@ -117,7 +117,7 @@ describe('Producer transactions', function () {
     // consumer but there is something I am missing.
     setTimeout(async function () {
       for (let i = 0; i < num_messages_test; i++) {
-        exporter.sendDataWithKey({
+        exporter.sendData({
           timestamp: 10000000,
           iso_date: new Date().toISOString(),
           key: 1
