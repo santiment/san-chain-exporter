@@ -13,4 +13,5 @@ export const START_PRIMARY_KEY = getIntEnvVariable('START_PRIMARY_KEY', -1);
 export const WRITE_SIGNAL_RECORDS_KAFKA = getBoolEnvVariable('WRITE_SIGNAL_RECORDS_KAFKA', false);
 export const KAFKA_TOPIC = process.env.KAFKA_TOPIC;
 export const TEST_ENV = getBoolEnvVariable('TEST_ENV', false);
+export const KAFKA_PRODUCER_DISABLE_STICKY_PARTITION = getBoolEnvVariable('KAFKA_PRODUCER_DISABLE_STICKY_PARTITION', false);
 
