@@ -27,9 +27,9 @@ export class Main {
     ))
   }
 
-  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string) {
+  async initExporter(exporterName: string, isTransactions: boolean, kafkaTopic: string, disableStickyPartition: boolean) {
     const INIT_EXPORTER_ERR_MSG = 'Error when initializing exporter: ';
-    this.exporter = new Exporter(exporterName, isTransactions, kafkaTopic);
+    this.exporter = new Exporter(exporterName, isTransactions, kafkaTopic, disableStickyPartition);
     await this.exporter
       .connect()
       .then(() => this.exporter.initTransactions())
@@ -70,7 +70,7 @@ export class Main {
   async init(blockchain: string) {
     const blockchainSpecificConstants = require(`./blockchains/${blockchain}/lib/constants`);
     const mergedConstants = { ...constantsBase, ...blockchainSpecificConstants };
-    await this.initExporter(EXPORTER_NAME, true, mergedConstants.KAFKA_TOPIC);
+    await this.initExporter(EXPORTER_NAME, true, mergedConstants.KAFKA_TOPIC, mergedConstants.KAFKA_PRODUCER_DISABLE_STICKY_PARTITION);
     await this.initWorker(blockchain, mergedConstants);
     metrics.startCollection();
 

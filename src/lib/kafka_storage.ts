@@ -43,13 +43,13 @@ class Partitioner {
 
   async init(hashFunction: ((value: object) => number), topicName: string, producer: Kafka.Producer) {
     this.hashFunction = hashFunction;
-    this.partitionCount = await this.findPartitionCount(topicName, producer);
+    this.partitionCount = await this.#findPartitionCount(topicName, producer);
     if (this.partitionCount <= 0) {
       throw new Error('Partition count should be > 0');
     }
   }
 
-  async findPartitionCount(topicName: string, producer: Kafka.Producer) {
+  async #findPartitionCount(topicName: string, producer: Kafka.Producer) {
     // We depend on the producer already being connected
     logger.info(`Finding partition count for topic ${topicName}`);
     const metadata: Kafka.Metadata = await new Promise((resolve, reject) => {
@@ -106,7 +106,7 @@ export class Exporter {
   private readonly zookeeperClient: ZookeeperClientAsync;
   private partitioner: Partitioner | null;
 
-  constructor(exporter_name: string, transactional: boolean, topicName: string) {
+  constructor(exporter_name: string, transactional: boolean, topicName: string, disableStickyPartition: boolean = false) {
     this.exporter_name = exporter_name;
 
     const producer_settings: ProducerGlobalConfig = {
@@ -131,6 +131,10 @@ export class Exporter {
       const transactionalID = `${this.topicName}-${uniqueIdentifier}-${timestamp}`;
       producer_settings['transactional.id'] = transactionalID;
       producer_settings['enable.idempotence'] = true;
+    }
+
+    if (disableStickyPartition) {
+      producer_settings['sticky.partitioning.linger.ms'] = 0;
     }
 
     this.producer = new Kafka.Producer(producer_settings);
@@ -296,27 +300,7 @@ export class Exporter {
     }
   }
 
-  async sendData(events: Array<any>) {
-    if (events.constructor !== Array) {
-      events = [events];
-    }
-
-    events = events.map(
-      event => (typeof event === 'object' ? JSON.stringify(event) : event)
-    );
-    events.forEach(event => {
-      this.producer.produce(this.topicName, null, Buffer.from(event));
-    });
-
-    return new Promise<void>((resolve, reject) =>
-      this.producer.flush(KAFKA_FLUSH_TIMEOUT, (err: LibrdKafkaError) => {
-        if (err) return reject(err);
-        resolve();
-      })
-    );
-  }
-
-  async sendDataWithKey(events: object | Array<object>, keyField: string, signalRecordData: object | null) {
+  async sendData(events: object | Array<object>, keyField: string | null, signalRecordData: object | null) {
     const arrayEvents: Array<object> = (events.constructor !== Array) ? [events] : events
 
     if (signalRecordData !== null && this.partitioner === null) {
@@ -324,14 +308,16 @@ export class Exporter {
     }
 
     arrayEvents.forEach((event: any) => {
-      const partitionNumberPayload = this.partitioner ? this.partitioner.getPartitionNumber(event) : null;
+      const key = keyField !== null ? event[keyField] : null
+
+      const partitionNumberOfPayload = this.partitioner ? this.partitioner.getPartitionNumber(event) : null;
       const eventString = typeof event === 'object' ? JSON.stringify(event) : event;
-      this.producer.produce(this.topicName, partitionNumberPayload, Buffer.from(eventString), event[keyField]);
+      this.producer.produce(this.topicName, partitionNumberOfPayload, Buffer.from(eventString), key);
       if (signalRecordData !== null && this.partitioner !== null) {
         const signalRecordString = typeof signalRecordData === 'object' ? JSON.stringify(signalRecordData) : signalRecordData;
         for (let partitionNumber = 0; partitionNumber < this.partitioner.getPartitionCount(); ++partitionNumber) {
-          if (partitionNumber !== partitionNumberPayload) {
-            this.producer.produce(this.topicName, partitionNumber, Buffer.from(signalRecordString), event[keyField]);
+          if (partitionNumber !== partitionNumberOfPayload) {
+            this.producer.produce(this.topicName, partitionNumber, Buffer.from(signalRecordString), key);
           }
         }
       }
@@ -382,11 +368,12 @@ export class Exporter {
     const signalRecord: object | null = writeSignalRecordsKafka ? { 'santiment_signal_record': true } : null
     try {
       if (BLOCKCHAIN === 'utxo') {
-        await this.sendDataWithKey(events, 'height', signalRecord);
-      } else if (BLOCKCHAIN === 'receipts') {
-        await this.sendDataWithKey(events, 'transactionHash', signalRecord);
-      } else {
-        await this.sendDataWithKey(events, 'primaryKey', signalRecord);
+        await this.sendData(events, 'height', signalRecord);
+      } else if (BLOCKCHAIN === 'receipts' || BLOCKCHAIN === 'eth') {
+        await this.sendData(events, 'transactionHash', signalRecord);
+      }
+      else {
+        await this.sendData(events, 'primaryKey', signalRecord);
       }
       await this.commitTransaction();
     } catch (exception) {
