@@ -369,8 +369,10 @@ export class Exporter {
     try {
       if (BLOCKCHAIN === 'utxo') {
         await this.sendData(events, 'height', signalRecord);
-      } else if (BLOCKCHAIN === 'receipts' || BLOCKCHAIN === 'eth') {
+      } else if (BLOCKCHAIN === 'receipts') {
         await this.sendData(events, 'transactionHash', signalRecord);
+      } else if (BLOCKCHAIN === 'eth') {
+        await this.sendData(events, null, signalRecord);
       }
       else {
         await this.sendData(events, 'primaryKey', signalRecord);
