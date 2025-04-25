@@ -23,7 +23,7 @@ export function transactionOrder(a: ETHTransfer | EOB, b: ETHTransfer | EOB) {
   return internalTxPositionA - internalTxPositionB
 }
 
-const ethTransferKey = (transfer: ETHTransfer) => `${transfer.blockNumber}-${transfer.transactionHash ?? ''}-${transfer.transactionPosition ?? ''}-${transfer.from}-${transfer.to}`
+const ethTransferKey = (transfer: ETHTransfer) => `${transfer.blockNumber}-${transfer.transactionHash ?? ''}`
 
 export function assignInternalTransactionPosition(transfers: ETHTransfer[], groupByKey: (transfer: ETHTransfer) => string = ethTransferKey): void {
   const grouped = groupBy(transfers, groupByKey)
