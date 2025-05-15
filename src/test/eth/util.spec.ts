@@ -208,6 +208,41 @@ describe('assignInternalTransactionPosition utils', () => {
         assignInternalTransactionPosition(transfers)
         expect(transfers).toEqual(expected)
     })
+
+    it('same tx position, different tx hash is assigned correctly', () => {
+        // Records shoud be equal based on 'group by' criteria. Expect to get grouped.
+        // 'group by' criteria should consider transaction position and transaction hash.
+        const transfers: ETHTransfer[] = [{
+            from: "mining_uncle",
+            to: "toAddress",
+            value: 100,
+            valueExactBase36: "2S",
+            blockNumber: 2,
+            timestamp: 1000,
+            transactionHash: "mining_uncle",
+            transactionPosition: 0,
+            internalTxPosition: 0,
+            type: "type"
+        },
+        {
+            from: "fromAddress",
+            to: "toAddress",
+            value: 50,
+            valueExactBase36: "1S",
+            blockNumber: 2,
+            timestamp: 1000,
+            transactionHash: "hash",
+            transactionPosition: 0,
+            internalTxPosition: 0,
+            type: "type"
+        }]
+        const expected = cloneDeep(transfers)
+        expected[0].internalTxPosition = 0
+        expected[1].internalTxPosition = 1
+
+        assignInternalTransactionPosition(transfers)
+        expect(transfers).toEqual(expected)
+    })
 })
 
 // Helper function to create ETHTransfer objects
