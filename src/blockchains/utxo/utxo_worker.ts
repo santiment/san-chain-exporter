@@ -89,9 +89,9 @@ export class UTXOWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this)
+    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock)
 
-    const numConcurrentRequests = Math.min(this.MAX_CONCURRENT_REQUESTS, toBlock - fromBlock + 1);
+    const numConcurrentRequests = toBlock - fromBlock + 1
     const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + 1 + i));
     const blocks = await Promise.all(requests);
     this.lastExportedBlock += blocks.length;

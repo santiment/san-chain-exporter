@@ -70,21 +70,19 @@ describe('setWorkerSleepTime', () => {
 
 describe('nextIntervalCalculator', () => {
   it('would not exceed BLOCK_INTERVAL', () => {
-    const worker = new ETHWorker(constantsEdit)
-    worker.lastExportedBlock = 0;
-    worker.lastConfirmedBlock = 150;
+    const lastExportedBlock = 0;
+    const lastConfirmedBlock = 150;
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(worker);
+    const { fromBlock, toBlock } = nextIntervalCalculator(lastExportedBlock, constantsEdit.BLOCK_INTERVAL, lastConfirmedBlock);
     assert.deepStrictEqual(fromBlock, 1);
     assert.deepStrictEqual(toBlock, 100);
   });
 
   it('would not return full BLOCK_INTERVAL', () => {
-    const worker = new ETHWorker(constantsEdit)
-    worker.lastExportedBlock = 0;
-    worker.lastConfirmedBlock = 37;
+    const lastExportedBlock = 0;
+    const lastConfirmedBlock = 37;
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(worker);
+    const { fromBlock, toBlock } = nextIntervalCalculator(lastExportedBlock, constantsEdit.BLOCK_INTERVAL, lastConfirmedBlock);
     assert.deepStrictEqual(fromBlock, 1);
     assert.deepStrictEqual(toBlock, 37);
   });
@@ -98,7 +96,7 @@ describe('various scenarios', () => {
 
     const context = await analyzeWorkerContext(worker, lastBlockFun1);
     assert.deepStrictEqual(context, WORK_SLEEP);
-    const result = nextIntervalCalculator(worker);
+    const result = nextIntervalCalculator(worker.lastExportedBlock, constantsEdit.BLOCK_INTERVAL, worker.lastConfirmedBlock);
 
     // Modify the last exported block as if we have consumed this interval
     worker.lastExportedBlock = result.toBlock;

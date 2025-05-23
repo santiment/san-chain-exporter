@@ -48,7 +48,7 @@ export class ETHBlocksWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
     const blocks = await fetchBlocks(this.ethClient, fromBlock, toBlock, false);
     const events = Array.from(blocks).map(([key, block]) => {

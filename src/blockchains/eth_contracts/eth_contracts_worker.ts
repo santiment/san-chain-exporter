@@ -39,7 +39,7 @@ export class ETHContractsWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
     logger.info(`Fetching blocks events for interval ${fromBlock}:${toBlock}`);
     const traces: Trace[] = await this.fetchTraces(fromBlock, toBlock);
     const groupedTraces: { [key: string]: Trace[] } = groupBy(traces, (tx: Trace) => tx.transactionHash);
