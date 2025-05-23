@@ -16,10 +16,10 @@ export const NO_WORK_SLEEP = 2;
  * @param {BaseWorker} worker A worker instance, inherriting the BaseWorker class.
  * @returns {number} A number, which points to one of the above-given scenarios
  */
-export async function analyzeWorkerContext(worker: any) {
+export async function analyzeWorkerContext(worker: any, getLastNodeBlock: () => Promise<number>) {
   if (worker.lastExportedBlock < worker.lastConfirmedBlock) return WORK_NO_SLEEP;
 
-  const newConfirmedBlock = await worker.web3Wrapper.getBlockNumber() - worker.settings.CONFIRMATIONS;
+  const newConfirmedBlock = await getLastNodeBlock() - worker.settings.CONFIRMATIONS;
   if (newConfirmedBlock > worker.lastConfirmedBlock) {
     worker.lastConfirmedBlock = newConfirmedBlock;
     return WORK_SLEEP;
