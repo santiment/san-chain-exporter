@@ -53,12 +53,3 @@ export function nextIntervalCalculator(lastExportedBlock: number, blockInterval:
     toBlock: Math.min(lastExportedBlock + blockInterval, lastConfirmedBlock)
   };
 }
-
-module.exports = {
-  WORK_SLEEP,
-  NO_WORK_SLEEP,
-  WORK_NO_SLEEP,
-  setWorkerSleepTime,
-  analyzeWorkerContext,
-  nextIntervalCalculator
-};
