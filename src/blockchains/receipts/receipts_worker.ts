@@ -93,11 +93,11 @@ export class ReceiptsWorker extends BaseWorker {
   }
 
   async work() {
-    const workerContext = await analyzeWorkerContext(this);
+    const workerContext = await analyzeWorkerContext(this, this.web3Wrapper.getBlockNumber);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this);
+    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
     logger.info(`Fetching receipts for interval ${fromBlock}:${toBlock}`);
     const receipts = await this.getReceiptsForBlocks(fromBlock, toBlock);
 

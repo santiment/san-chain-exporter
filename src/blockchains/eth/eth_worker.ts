@@ -103,11 +103,11 @@ export class ETHWorker extends BaseWorker {
   }
 
   async work(): Promise<(ETHTransfer | EOB)[]> {
-    const workerContext = await analyzeWorkerContext(this);
+    const workerContext = await analyzeWorkerContext(this, this.web3Wrapper.getBlockNumber);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this)
+    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)

@@ -4,6 +4,7 @@ import { constructRPCClient } from '../../lib/http_client';
 import { BaseWorker } from '../../lib/worker_base';
 import { Exporter } from '../../lib/kafka_storage';
 import { HTTPClientInterface } from '../../types';
+import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 
 
 export class UTXOWorker extends BaseWorker {
@@ -14,7 +15,6 @@ export class UTXOWorker extends BaseWorker {
   private readonly CONFIRMATIONS: number;
   private readonly DEFAULT_TIMEOUT: number;
   private readonly MAX_CONCURRENT_REQUESTS: number;
-  private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
   private client: HTTPClientInterface;
 
   constructor(settings: any) {
@@ -27,7 +27,6 @@ export class UTXOWorker extends BaseWorker {
     this.CONFIRMATIONS = settings.CONFIRMATIONS;
     this.DEFAULT_TIMEOUT = settings.DEFAULT_TIMEOUT;
     this.MAX_CONCURRENT_REQUESTS = settings.MAX_CONCURRENT_REQUESTS;
-    this.LOOP_INTERVAL_CURRENT_MODE_SEC = settings.LOOP_INTERVAL_CURRENT_MODE_SEC;
 
     logger.info(`Connecting to the node ${this.NODE_URL}`);
     this.client = constructRPCClient(this.NODE_URL, this.RPC_USERNAME, this.RPC_PASSWORD, this.DEFAULT_TIMEOUT);
@@ -80,22 +79,19 @@ export class UTXOWorker extends BaseWorker {
     return await this.sendRequestWithRetry('getblock', [blockHash, 2]);
   }
 
+  getLastNodeBlock = async (): Promise<number> => {
+    const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
+    return blockchainInfo.blocks
+  }
+
   async work() {
-    if (this.lastConfirmedBlock === this.lastExportedBlock) {
-      this.sleepTimeMsec = this.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
+    const workerContext = await analyzeWorkerContext(this, this.getLastNodeBlock);
+    setWorkerSleepTime(this, workerContext);
+    if (workerContext === NO_WORK_SLEEP) return [];
 
-      const blockchainInfo = await this.sendRequestWithRetry('getblockchaininfo', []);
-      const newConfirmedBlock = blockchainInfo.blocks - this.CONFIRMATIONS;
-      if (newConfirmedBlock === this.lastConfirmedBlock) {
-        return [];
-      }
-      this.lastConfirmedBlock = newConfirmedBlock;
-    }
-    else {
-      this.sleepTimeMsec = 0;
-    }
+    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock)
 
-    const numConcurrentRequests = Math.min(this.MAX_CONCURRENT_REQUESTS, this.lastConfirmedBlock - this.lastExportedBlock);
+    const numConcurrentRequests = toBlock - fromBlock + 1
     const requests = Array.from({ length: numConcurrentRequests }, (_, i) => this.fetchBlock(this.lastExportedBlock + 1 + i));
     const blocks = await Promise.all(requests);
     this.lastExportedBlock += blocks.length;

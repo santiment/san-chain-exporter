@@ -24,11 +24,11 @@ export class MaticWorker extends BaseWorker {
   }
 
   async work() {
-    const workerContext = await analyzeWorkerContext(this);
+    const workerContext = await analyzeWorkerContext(this, this.web3Wrapper.getBlockNumber);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const result = nextIntervalCalculator(this);
+    const result = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
 
     logger.info(`Fetching transfer events for interval ${result.fromBlock}:${result.toBlock}`);
 

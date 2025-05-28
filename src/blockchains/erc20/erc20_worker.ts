@@ -114,13 +114,13 @@ export class ERC20Worker extends BaseWorker {
   }
 
   async work(): Promise<ERC20Transfer[]> {
-    const workerContext = await analyzeWorkerContext(this);
+    const workerContext = await analyzeWorkerContext(this, this.web3Wrapper.getBlockNumber);
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
     const interval = this.settings.EXPORT_BLOCKS_LIST ?
       this.getBlocksListInterval() :
-      nextIntervalCalculator(this);
+      nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
 
     logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 
