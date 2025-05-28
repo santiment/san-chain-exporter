@@ -24,7 +24,7 @@ export class MaticWorker extends BaseWorker {
   }
 
   async work() {
-    const workerContext = await analyzeWorkerContext(this, this.web3Wrapper.getBlockNumber);
+    const workerContext = await analyzeWorkerContext(this, () => this.web3Wrapper.getBlockNumber());
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
