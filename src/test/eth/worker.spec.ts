@@ -1,4 +1,3 @@
-import v8 from 'v8';
 import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import { EOB } from '../../blockchains/eth/lib/end_of_block';
 import * as constants from '../../blockchains/eth/lib/constants';

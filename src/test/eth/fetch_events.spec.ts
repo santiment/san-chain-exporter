@@ -1,8 +1,10 @@
 import assert from 'assert';
+const sinon = require('sinon');
 import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import * as constants from '../../blockchains/eth/lib/constants';
 import { injectDAOHackTransfers, DAO_HACK_ADDRESSES, DAO_HACK_FORK_BLOCK } from '../../blockchains/eth/lib/dao_hack';
 import { ETHBlock, ETHReceiptsMap, ETHTransfer } from '../../blockchains/eth/eth_types';
+import { MockWeb3Wrapper } from './mock_web3_wrapper';
 
 describe('fetch past events', function () {
   const transaction = {
@@ -99,11 +101,12 @@ describe('fetch past events', function () {
     'type': 'call'
   };
 
-  const worker = new ETHWorker(constants);
+  let worker: ETHWorker;
   let feeResult!: ETHTransfer;
   let callResult!: ETHTransfer;
 
   beforeEach(function () {
+    worker = new ETHWorker(constants);
     feeResult = {
       from: '0x03b16ab6e23bdbeeab719d8e4c49d63674876253',
       to: '0x829bd824b016326a401d083b33d092293333a830',
@@ -146,8 +149,10 @@ describe('fetch past events', function () {
     assert.deepStrictEqual(result, expectedResult);
   });
 
-  it('add genesis events', function () {
-    const result = worker.transformPastEvents(0, 1, [trace], blocks, receipts);
+  it('add genesis events', async function () {
+    sinon.stub(worker, 'fetchData').resolves([[trace], blocks, receipts]);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(100))
+    const result = await worker.work();
 
     const firstGenesisEvent: ETHTransfer = {
       from: 'GENESIS',
@@ -166,8 +171,10 @@ describe('fetch past events', function () {
     assert.deepStrictEqual(result[0], firstGenesisEvent);
   });
 
-  it('genesis events ordering', function () {
-    const result = worker.transformPastEvents(0, 1, [trace], blocks, receipts);
+  it('genesis events ordering', async function () {
+    sinon.stub(worker, 'fetchData').resolves([trace], [...blocks.values()], receipts);
+    sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(100))
+    const result = await worker.work();
 
     const genesisEventsInserted = 8894;
     assert.strictEqual(result.length, genesisEventsInserted + 2);

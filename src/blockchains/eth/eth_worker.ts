@@ -52,10 +52,6 @@ export class ETHWorker extends BaseWorker {
   transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[],
     blocks: any, receipts: ETHReceiptsMap): ETHTransfer[] {
     let events: ETHTransfer[] = [];
-    if (fromBlock === 0) {
-      logger.info('Adding the GENESIS transfers');
-      events.push(...getGenesisTransfers());
-    }
 
     const transformedTransferEvents = this.transformPastTransferEvents(traces, blocks);
     const transformedTransactionEvents = this.transformPastTransactionEvents(blocks.values(), receipts);
@@ -107,10 +103,21 @@ export class ETHWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
+    let { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
+    const events: (ETHTransfer | EOB)[] = []
+    if (fromBlock === 0 && this.settings.IS_ETH) {
+      logger.info('Adding the GENESIS transfers');
+      events.push(...getGenesisTransfers());
+      // We do not want to ask the Node for data for block 0. We already inject all the genesis transfers.
+      fromBlock = 1;
+      if (toBlock === 0) {
+        toBlock = 1;
+      }
+    }
+
     logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
     const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
-    const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
+    events.push(...this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts))
     events.sort(transactionOrder)
     if (this.ethClientVerification) {
       await checkETHTransfersQuality(events, fromBlock, toBlock, this.ethClientVerification)
