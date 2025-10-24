@@ -7,10 +7,10 @@ export type ERC20Transfer = {
   blockNumber: number,
   timestamp: number,
   transactionHash: string,
-  logIndex: number
+  logIndex: number,
+  transactionIndex: number,
   type?: string,
   primaryKey?: number
   fromBalance?: string,
   toBalance?: string
 }
-

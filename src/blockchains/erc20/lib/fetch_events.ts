@@ -24,7 +24,8 @@ export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCach
     blockNumber: Number(event['blockNumber']),
     timestamp: timestamp,
     transactionHash: event['transactionHash'],
-    logIndex: Number(event['logIndex'])
+    logIndex: Number(event['logIndex']),
+    transactionIndex: Number(event['transactionIndex'] ?? -1)
   };
 
   if (addContract) {
