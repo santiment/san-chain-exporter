@@ -8144,6 +8144,10 @@ const sanPresaleTransfers = [
     }
 ];
 
+sanPresaleTransfers.forEach((transfer) => {
+    transfer.value = BigInt(transfer.value);
+});
+
 describe('addCustomTokenDistribution', function () {
     it('adds SAN presale transfers', async function () {
         let result = [];

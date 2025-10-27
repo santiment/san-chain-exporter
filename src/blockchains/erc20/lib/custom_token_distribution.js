@@ -60,8 +60,8 @@ function addTransfers(transfers, transfersData) {
       return;
     }
 
-    const amount = Number(amountString);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const amount = BigInt(amountString);
+    if (amount <= 0n) {
       return;
     }
 
@@ -92,8 +92,8 @@ function addTransfers(transfers, transfersData) {
       logIndex: logIndexReached,
       from: from,
       to: to,
-      value: amountString,
-      valueExactBase36: BigInt(amountString).toString(36)
+      value: amount,
+      valueExactBase36: amount.toString(36)
     });
   });
 }

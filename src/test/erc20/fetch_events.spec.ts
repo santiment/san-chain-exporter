@@ -175,7 +175,7 @@ const decodedEvents = [
     transactionIndex: 143,
     from: 'mint',
     to: '0xfbfa258b9028c7d4fc52ce28031469214d10daeb',
-    value: 49681657105546240000,
+    value: 49681657105546240000n,
     valueExactBase36: 'ahghhm93wk1ds'
   },
   // bnb freeze
@@ -188,7 +188,7 @@ const decodedEvents = [
     transactionIndex: 70,
     from: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
     to: 'freeze',
-    value: 6.4e+25,
+    value: 64000000000000000000000000n,
     valueExactBase36: '81huq41v3rsnftyps'
   },
   // bnb unfreeze
@@ -201,7 +201,7 @@ const decodedEvents = [
     transactionIndex: 129,
     from: 'freeze',
     to: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
-    value: 1.6e+25,
+    value: 16000000000000000000000000n,
     valueExactBase36: '20dgoj0grxy5uyhog'
   },
   // transfer
@@ -214,7 +214,7 @@ const decodedEvents = [
     transactionIndex: 13,
     from: '0x5e575279bf9f4acf0a130c186861454247394c06',
     to: '0xfd247ccdeb4229aea8f302993eaa80ab52050264',
-    value: 16168549947,
+    value: 16168549947n,
     valueExactBase36: '7fec4zf'
   },
   // mint
@@ -227,7 +227,7 @@ const decodedEvents = [
     transactionIndex: 53,
     from: 'mint',
     to: '0xfbd95709188b3681fd4d07f25f8d64c3ffa5bf97',
-    value: 1.76e+24,
+    value: 1760000000000000000000000n,
     valueExactBase36: '7ylmuw3a9ura8u0w'
   },
   // transfer which duplicates the mint above
@@ -240,7 +240,7 @@ const decodedEvents = [
     transactionIndex: 53,
     from: '0x0000000000000000000000000000000000000000',
     to: '0xfbd95709188b3681fd4d07f25f8d64c3ffa5bf97',
-    value: 1.76e+24,
+    value: 1760000000000000000000000n,
     valueExactBase36: '7ylmuw3a9ura8u0w'
   },
   // burn
@@ -253,7 +253,7 @@ const decodedEvents = [
     transactionIndex: 18,
     from: '0x000000000000000000000000000000000000005d',
     to: 'burn',
-    value: 2.924819e+22,
+    value: 29248190000000000000000n,
     valueExactBase36: '4rgm1aauy6roni8'
   },
   // transfer which duplicates the burn above
@@ -266,7 +266,7 @@ const decodedEvents = [
     transactionIndex: 18,
     from: '0x000000000000000000000000000000000000005d',
     to: '0x0000000000000000000000000000000000000000',
-    value: 2.924819e+22,
+    value: 29248190000000000000000n,
     valueExactBase36: '4rgm1aauy6roni8'
   }
 ];
@@ -282,7 +282,7 @@ const filteredEvents = [
     transactionIndex: 143,
     from: 'mint',
     to: '0xfbfa258b9028c7d4fc52ce28031469214d10daeb',
-    value: 49681657105546240000,
+    value: 49681657105546240000n,
     valueExactBase36: 'ahghhm93wk1ds'
   },
   // bnb freeze
@@ -295,7 +295,7 @@ const filteredEvents = [
     transactionIndex: 70,
     from: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
     to: 'freeze',
-    value: 6.4e+25,
+    value: 64000000000000000000000000n,
     valueExactBase36: '81huq41v3rsnftyps'
   },
   // bnb unfreeze
@@ -308,7 +308,7 @@ const filteredEvents = [
     transactionIndex: 129,
     from: 'freeze',
     to: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
-    value: 1.6e+25,
+    value: 16000000000000000000000000n,
     valueExactBase36: '20dgoj0grxy5uyhog'
   },
   // transfer
@@ -321,7 +321,7 @@ const filteredEvents = [
     transactionIndex: 13,
     from: '0x5e575279bf9f4acf0a130c186861454247394c06',
     to: '0xfd247ccdeb4229aea8f302993eaa80ab52050264',
-    value: 16168549947,
+    value: 16168549947n,
     valueExactBase36: '7fec4zf'
   },
   // mint
@@ -334,7 +334,7 @@ const filteredEvents = [
     transactionIndex: 53,
     from: 'mint',
     to: '0xfbd95709188b3681fd4d07f25f8d64c3ffa5bf97',
-    value: 1.76e+24,
+    value: 1760000000000000000000000n,
     valueExactBase36: '7ylmuw3a9ura8u0w'
   },
   // burn
@@ -347,7 +347,7 @@ const filteredEvents = [
     transactionIndex: 18,
     from: '0x000000000000000000000000000000000000005d',
     to: 'burn',
-    value: 2.924819e+22,
+    value: 29248190000000000000000n,
     valueExactBase36: '4rgm1aauy6roni8'
   }
 ];
@@ -423,7 +423,7 @@ describe('getEventsByTransactionTest', function () {
     'transactionIndex': 0,
     'from': 'mint',
     'to': '0x97623428a891542df710be9589093c9f3d2b60d3',
-    'value': 500000000000000000000,
+    'value': 500000000000000000000n,
     'valueExactBase36': '2xirk7k6w3mt4w'
   };
 
@@ -436,7 +436,7 @@ describe('getEventsByTransactionTest', function () {
     'transactionIndex': 0,
     'to': '0x97623428a891542df710be9589093c9f3d2b60d3',
     'from': '0x0000000000000000000000000000000000000000',
-    'value': 500000000000000000000,
+    'value': 500000000000000000000n,
     'valueExactBase36': '2xirk7k6w3mt4w'
   };
 
@@ -449,7 +449,7 @@ describe('getEventsByTransactionTest', function () {
     'transactionIndex': 1,
     'from': 'mint',
     'to': '0xc94698ffa0e74a35707eef8d6f847130c2008df3',
-    'value': 1e+21,
+    'value': 1000000000000000000000n,
     'valueExactBase36': '5v1j4f4ds79m9s'
   };
 
@@ -513,7 +513,7 @@ describe('decodeBrokenEventTest', function () {
       "contract": "0xb9b4856d9dbe659cf16891c735797bbf5b7cc530",
       "to": "0x9876543210987654321098765432109876543210",
       "from": "0x1234567890123456789012345678901234567890",
-      "value": 0,
+      "value": 0n,
       "valueExactBase36": "0",
       "timestamp": 1549899997
     }

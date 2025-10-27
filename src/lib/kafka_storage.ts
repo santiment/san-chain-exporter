@@ -19,6 +19,9 @@ const BUFFERING_MAX_MESSAGES: number = parseInt(process.env.BUFFERING_MAX_MESSAG
 const TRANSACTIONS_TIMEOUT_MS: number = parseInt(process.env.TRANSACTIONS_TIMEOUT_MS || '60000');
 const KAFKA_MESSAGE_MAX_BYTES: number = parseInt(process.env.KAFKA_MESSAGE_MAX_BYTES || '10485760');
 
+const jsonStringify = (value: unknown): string =>
+  JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? v.toString() : v));
+
 process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void => {
   // Otherwise unhandled promises are not possible to trace with the information logged
   if (reason instanceof Error) {
@@ -261,7 +264,7 @@ export class Exporter {
   async savePosition(position: object) {
     if (typeof position !== 'undefined') {
       const newNodeValue = Buffer.from(
-        FORMAT_HEADER + JSON.stringify(position),
+        FORMAT_HEADER + jsonStringify(position),
         'utf-8'
       );
 
@@ -282,7 +285,7 @@ export class Exporter {
   async saveLastBlockTimestamp(blockTimestamp: number) {
     if (typeof blockTimestamp !== 'undefined') {
       const newNodeValue = Buffer.from(
-        FORMAT_HEADER + JSON.stringify(blockTimestamp),
+        FORMAT_HEADER + jsonStringify(blockTimestamp),
         'utf-8'
       );
 
@@ -311,10 +314,10 @@ export class Exporter {
       const key = keyField !== null ? event[keyField] : null
 
       const partitionNumberOfPayload = this.partitioner ? this.partitioner.getPartitionNumber(event) : null;
-      const eventString = typeof event === 'object' ? JSON.stringify(event) : event;
+      const eventString = typeof event === 'object' ? jsonStringify(event) : event;
       this.producer.produce(this.topicName, partitionNumberOfPayload, Buffer.from(eventString), key);
       if (signalRecordData !== null && this.partitioner !== null) {
-        const signalRecordString = typeof signalRecordData === 'object' ? JSON.stringify(signalRecordData) : signalRecordData;
+        const signalRecordString = typeof signalRecordData === 'object' ? jsonStringify(signalRecordData) : signalRecordData;
         for (let partitionNumber = 0; partitionNumber < this.partitioner.getPartitionCount(); ++partitionNumber) {
           if (partitionNumber !== partitionNumberOfPayload) {
             this.producer.produce(this.topicName, partitionNumber, Buffer.from(signalRecordString), key);
@@ -434,4 +437,3 @@ export class Exporter {
     return this.producer.isConnected();
   }
 }
-

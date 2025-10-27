@@ -1,7 +1,7 @@
 export type ERC20Transfer = {
   from: string,
   to: string,
-  value: number,
+  value: bigint,
   valueExactBase36: string,
   contract: string,
   blockNumber: number,

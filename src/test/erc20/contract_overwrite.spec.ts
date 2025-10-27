@@ -78,7 +78,7 @@ const decodedEventNotSNX = {
   'transactionIndex': 101,
   'to': '0xd49e06c1ed4925af893a503bfcb9cff947e7679e',
   'from': '0x5a5d5d0cde67e18f00e5d08ad7890858a6ee62bc',
-  'value': 103000000,
+  'value': 103000000n,
   'valueExactBase36': '1pbnb4'
 };
 
@@ -91,12 +91,11 @@ const decodedEventSNXLegacy = {
   'transactionIndex': 83,
   'to': '0xe5379a734c4e6d505634ddefc3f9d0ff8d7bb171',
   'from': '0x20312e96b1a0568ac31c6630844a962383cc66c2',
-  'value': 103604731090000000000,
+  'value': 103604731090000000000n,
   'valueExactBase36': 'lv51o1db8270g'
 };
 
-const correctedEventSNXLegacy = JSON.parse(JSON.stringify(decodedEventSNXLegacy));
-correctedEventSNXLegacy.contract = SNXContractReplacer;
+const correctedEventSNXLegacy = { ...decodedEventSNXLegacy, contract: SNXContractReplacer };
 
 const decodedEventSNXNew = {
   'contract': SNXContractNew,
@@ -107,12 +106,11 @@ const decodedEventSNXNew = {
   'transactionIndex': 118,
   'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
   'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-  'value': 1.81e+21,
+  'value': 1810000000000000000000n,
   'valueExactBase36': 'alzj4rdbzkcq9s'
 };
 
-const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew));
-correctedEventSNXNew.contract = SNXContractReplacer;
+const correctedEventSNXNew = { ...decodedEventSNXNew, contract: SNXContractReplacer };
 
 class TimestampsCacheMock implements TimestampsCacheInterface {
   getBlockTimestamp(): number {

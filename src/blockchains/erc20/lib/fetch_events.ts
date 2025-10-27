@@ -15,6 +15,14 @@ const FREEZE_ADDRESS = 'freeze';
 const BNB_contract = '0xb8c77482e45f1f44de1745f52c74426c631bdd52';
 const QNT_contract = '0x4a220e6096b25eadb88358cb44068a3248254675';
 const WETH_contract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+const ZERO_HEX_REGEX = /^0x0*$/i;
+
+function parseHexToBigInt(hexValue: string): bigint {
+  if (ZERO_HEX_REGEX.test(hexValue)) {
+    return 0n;
+  }
+  return BigInt(Web3Static.parseHexToNumberString(hexValue));
+}
 
 
 export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCacheInterface, addContract = true): ERC20Transfer {
@@ -54,8 +62,9 @@ function decodeTransferEvent(event: any, timestampsCache: TimestampsCacheInterfa
   }
 
   result.from = decodeAddress(event['topics'][1]);
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }
@@ -72,8 +81,9 @@ function decodeBurnEvent(event: any, timestampsCache: TimestampsCacheInterface):
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }
@@ -90,8 +100,9 @@ function decodeMintEvent(event: any, timestampsCache: TimestampsCacheInterface):
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }
@@ -109,8 +120,9 @@ function decodeBNBFreezeEvent(event: any, timestampsCache: TimestampsCacheInterf
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = FREEZE_ADDRESS;
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }
@@ -128,8 +140,9 @@ function decodeBNBUnfreezeEvent(event: any, timestampsCache: TimestampsCacheInte
 
   result.from = FREEZE_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }
@@ -147,8 +160,9 @@ function decodeWETHDepositEvent(event: any, timestampsCache: TimestampsCacheInte
 
   result.from = MINT_ADDRESS;
   result.to = decodeAddress(event['topics'][1]);
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }
@@ -166,8 +180,9 @@ function decodeWETHWithdrawalEvent(event: any, timestampsCache: TimestampsCacheI
 
   result.from = decodeAddress(event['topics'][1]);
   result.to = BURN_ADDRESS;
-  result.value = Number(Web3Static.parseHexToNumber(event['data']));
-  result.valueExactBase36 = Web3Static.parseHexToNumber(event['data']).toString(36);
+  const value = parseHexToBigInt(event['data']);
+  result.value = value;
+  result.valueExactBase36 = value.toString(36);
 
   return result;
 }

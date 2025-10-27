@@ -42,10 +42,12 @@ function changeContractAddresses(events, contractsOverwriteArray) {
  */
 function editAddressAndAmount(event, contractOverwrite) {
   const multiplier = contractOverwrite.mapAddressToMultiplier[event.contract];
-  if (!multiplier) {
+  if (multiplier === undefined) {
     throw new Error('Event contract does not match expected');
   }
-  event.contract = contractOverwrite.newContract;
+  const valueBigNumber = new BigNumber(event.value.toString());
+  const updatedValue = valueBigNumber.times(multiplier).integerValue(BigNumber.ROUND_FLOOR);
+  event.value = BigInt(updatedValue.toFixed(0));
   /**
    * Note 1: Whether we should round here is up for discussion. The amounts in our pipeline are 'float' anyways but up until this feature
    * actual values have always been Integers. Choosing to round for simplicity and backwards compatibility.
@@ -54,9 +56,9 @@ function editAddressAndAmount(event, contractOverwrite) {
    * we loose precision and possibly mis-represent small amounts on the affected contract. The other possible decision is to multiply
    * amounts on the contract using smaller amounts but in this way we may generate too huge values. We are choosing the first option.
    */
-  event.value = Math.floor(event.value * multiplier);
-  const bigNumber = new BigNumber(event.valueExactBase36, 36).times(multiplier).integerValue();
+  const bigNumber = new BigNumber(event.valueExactBase36, 36).times(multiplier).integerValue(BigNumber.ROUND_FLOOR);
   event.valueExactBase36 = bigNumber.toString(36);
+  event.contract = contractOverwrite.newContract;
 }
 
 /**
@@ -70,9 +72,9 @@ function extractChangedContractAddresses(events, contractsOverwriteArray) {
   for (let event of events) {
     for (const contractOverwrite of contractsOverwriteArray) {
       if (contractOverwrite.oldAddresses.includes(event.contract)) {
-        event = JSON.parse(JSON.stringify(event));
-        editAddressAndAmount(event, contractOverwrite);
-        result.push(event);
+        const clonedEvent = { ...event };
+        editAddressAndAmount(clonedEvent, contractOverwrite);
+        result.push(clonedEvent);
         break;
       }
     }

@@ -6,6 +6,8 @@ import { MULTICALL_ADDRESS } from './constants';
 import * as Utils from './balance_utils';
 import { logger } from '../../../lib/logger';
 
+const stringifyTransfer = (event: ERC20Transfer): string =>
+  JSON.stringify(event, (_key, value) => typeof value === 'bigint' ? value.toString() : value);
 
 type BlockNumberToBalances = Map<number, Utils.AddressContractToBalance>;
 type BlockNumberToAffectedAddresses = Map<number, Utils.AddressContractStore>;
@@ -215,13 +217,12 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
   for (const event of events) {
     if (Utils.isAddressEligableForBalance(event.from, event.contract)) {
       event.fromBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.from, event.contract))
-      assertIsDefinedLazy(event.fromBalance, () => `'from' balance should have been resovled for event ${JSON.stringify(event)}`)
+      assertIsDefinedLazy(event.fromBalance, () => `'from' balance should have been resovled for event ${stringifyTransfer(event)}`)
     }
 
     if (Utils.isAddressEligableForBalance(event.to, event.contract)) {
       event.toBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.to, event.contract))
-      assertIsDefinedLazy(event.toBalance, () => `'to' balance should have been resovled for event ${JSON.stringify(event)}`)
+      assertIsDefinedLazy(event.toBalance, () => `'to' balance should have been resovled for event ${stringifyTransfer(event)}`)
     }
   }
 }
-

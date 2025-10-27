@@ -39,7 +39,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s'
     };
 
@@ -56,7 +56,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s',
       'fromBalance': '123',
       'toBalance': '456'
@@ -86,7 +86,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s'
     };
 
@@ -99,7 +99,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s'
     };
 
@@ -116,7 +116,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s',
       'fromBalance': '123',
       'toBalance': '456'
@@ -131,7 +131,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s',
       'fromBalance': '789',
       'toBalance': '101'
@@ -160,7 +160,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s'
     };
 
@@ -177,7 +177,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s',
       'fromBalance': '123',
       'toBalance': MULTICALL_FAILURE
@@ -204,7 +204,7 @@ describe('test extendTransfersWithBalances', function () {
       'transactionIndex': 0,
       'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
       'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-      'value': 1.81e+21,
+      'value': 1810000000000000000000n,
       'valueExactBase36': 'alzj4rdbzkcq9s'
     };
 
