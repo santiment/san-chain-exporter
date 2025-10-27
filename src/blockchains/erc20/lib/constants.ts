@@ -14,12 +14,13 @@ export const CONTRACT_MODES_SUPPORTED = ['vanilla', 'extract_exact_overwrite', '
 export const CONTRACT_MODE = process.env.CONTRACT_MODE || 'vanilla';
 export const NODE_URL = process.env.NODE_URL || 'http://localhost:8545/';
 // Should events for a contract land in the same Kafka partition
-export const EVENTS_IN_SAME_PARTITION = process.env.EVENTS_IN_SAME_PARTITION || false;
+export const EVENTS_IN_SAME_PARTITION = getBoolEnvVariable('EVENTS_IN_SAME_PARTITION', false);
 export const DEFAULT_TIMEOUT = getIntEnvVariable('DEFAULT_TIMEOUT', 10000);
 export const EXTEND_TRANSFERS_WITH_BALANCES = getBoolEnvVariable('EXTEND_TRANSFERS_WITH_BALANCES', true);
 export const MULTICALL_DEPLOY_BLOCK = getIntEnvVariable('MULTICALL_DEPLOY_BLOCK', 12336033);
 export const MULTICALL_BATCH_SIZE = getIntEnvVariable('MULTICALL_BATCH_SIZE', 50);
 export const MAX_CONNECTION_CONCURRENCY = getIntEnvVariable('MAX_CONNECTION_CONCURRENCY', 10);
+export const MULTICALL_ADDRESS = process.env.MULTICALL_ADDRESS || '0x5ba1e12693dc8f9c48aad8770482f4739beed696';
 
 export const CONTRACT_MAPPING_FILE_PATH = (
     process.env.CONTRACT_MAPPING_FILE_PATH ?
@@ -36,5 +37,3 @@ function checkEnvVariables() {
 }
 
 checkEnvVariables();
-
-

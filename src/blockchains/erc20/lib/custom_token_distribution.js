@@ -33,18 +33,35 @@ function getLastRealLogIndexForBlock(transfers, blockNumber) {
 }
 
 function addTransfers(transfers, transfersData) {
-  let addressBalances = fs.readFileSync(path.resolve(__dirname) + '/' + transfersData.file, { encoding: 'utf8' })
+  const fileContent = fs.readFileSync(path.resolve(__dirname) + '/' + transfersData.file, { encoding: 'utf8' });
+  const addressBalances = fileContent
     .split('\n')
-    .filter((line) => line !== 0)
-    .map((line) => line.split(',').map((element) => element.trim()));
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => line.split(',').map((element) => element.trim()))
+    .filter((parts) => parts.length >= 3);
 
   // Starting from last real value reached, increment on every newly generated transfer
   let logIndexReached = getLastRealLogIndexForBlock(transfers, transfersData.blockNumber);
 
   addressBalances.forEach((transfer) => {
-    const [sign, address, amount] = transfer;
+    const [signRaw, address, amountRaw] = transfer;
+    if (!address) {
+      return;
+    }
 
-    if (amount <= 0) {
+    const sign = Number(signRaw);
+    if (!Number.isFinite(sign) || !Number.isInteger(sign) || sign === 0) {
+      return;
+    }
+
+    const amountString = amountRaw.replace(/\s+/g, '');
+    if (!/^-?\d+$/.test(amountString)) {
+      return;
+    }
+
+    const amount = Number(amountString);
+    if (!Number.isFinite(amount) || amount <= 0) {
       return;
     }
 
@@ -75,8 +92,8 @@ function addTransfers(transfers, transfersData) {
       logIndex: logIndexReached,
       from: from,
       to: to,
-      value: amount,
-      valueExactBase36: BigInt(amount).toString(36)
+      value: amountString,
+      valueExactBase36: BigInt(amountString).toString(36)
     });
   });
 }
