@@ -7,6 +7,17 @@ import { Web3Static, Web3Interface } from '../../eth/lib/web3_wrapper';
 import { TimestampsCacheInterface } from './timestamps_cache';
 import { ERC20Transfer } from '../erc20_types';
 
+type RawEvent = {
+  address: string;
+  data: string;
+  topics: string[];
+  blockNumber: number | string;
+  transactionHash?: string;
+  logIndex?: number | string;
+  transactionIndex?: number | string;
+  [key: string]: any;
+};
+
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const MINT_ADDRESS = 'mint';
@@ -25,11 +36,12 @@ function parseHexToBigInt(hexValue: string): bigint {
 }
 
 
-export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCacheInterface, addContract = true): ERC20Transfer {
-  const timestamp = timestampsCache.getBlockTimestamp(event['blockNumber']);
+export function decodeEventBasicInfo(event: RawEvent, timestampsCache: TimestampsCacheInterface, addContract = true): ERC20Transfer {
+  const blockNumber = Number(event['blockNumber']);
+  const timestamp = timestampsCache.getBlockTimestamp(blockNumber);
 
   const decodedEvent: any = {
-    blockNumber: Number(event['blockNumber']),
+    blockNumber,
     timestamp: timestamp,
     transactionHash: event['transactionHash'],
     logIndex: Number(event['logIndex']),
@@ -46,22 +58,23 @@ export function decodeEventBasicInfo(event: any, timestampsCache: TimestampsCach
 /**Transfer(address,address,uint256)
  * Used by all ERC20 tokens
  **/
-function decodeTransferEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
-  if (event['topics'].length !== 3) {
+function decodeTransferEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+  const topics = event.topics;
+  if (topics.length !== 3) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
   // Custom burn event for QNT token
-  const to = decodeAddress(event['topics'][2]);
+  const to = decodeAddress(topics[2]);
   if (to.toLowerCase() === QNT_contract && event['address'].toLowerCase() === QNT_contract) {
     result.to = BURN_ADDRESS;
   } else {
     result.to = to;
   }
 
-  result.from = decodeAddress(event['topics'][1]);
+  result.from = decodeAddress(topics[1]);
   const value = parseHexToBigInt(event['data']);
   result.value = value;
   result.valueExactBase36 = value.toString(36);
@@ -72,14 +85,15 @@ function decodeTransferEvent(event: any, timestampsCache: TimestampsCacheInterfa
 /**Burn(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeBurnEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
-  if (event['topics'].length !== 2) {
+function decodeBurnEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+  const topics = event.topics;
+  if (topics.length !== 2) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
-  result.from = decodeAddress(event['topics'][1]);
+  result.from = decodeAddress(topics[1]);
   result.to = BURN_ADDRESS;
   const value = parseHexToBigInt(event['data']);
   result.value = value;
@@ -91,15 +105,16 @@ function decodeBurnEvent(event: any, timestampsCache: TimestampsCacheInterface):
 /**Mint(address,uint256)
  * We assume only the case where the address is indexed and the value is not
  **/
-function decodeMintEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
-  if (event['topics'].length !== 2) {
+function decodeMintEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+  const topics = event.topics;
+  if (topics.length !== 2) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = MINT_ADDRESS;
-  result.to = decodeAddress(event['topics'][1]);
+  result.to = decodeAddress(topics[1]);
   const value = parseHexToBigInt(event['data']);
   result.value = value;
   result.valueExactBase36 = value.toString(36);
@@ -110,15 +125,15 @@ function decodeMintEvent(event: any, timestampsCache: TimestampsCacheInterface):
 /**Freeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBFreezeEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeBNBFreezeEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== BNB_contract
-    || event['topics'].length !== 2) {
+    || event.topics.length !== 2) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
-  result.from = decodeAddress(event['topics'][1]);
+  result.from = decodeAddress(event.topics[1]);
   result.to = FREEZE_ADDRESS;
   const value = parseHexToBigInt(event['data']);
   result.value = value;
@@ -130,16 +145,16 @@ function decodeBNBFreezeEvent(event: any, timestampsCache: TimestampsCacheInterf
 /**Unfreeze(address indexed,uint256)
  * Only for BNB
  **/
-function decodeBNBUnfreezeEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeBNBUnfreezeEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== BNB_contract
-    || event['topics'].length !== 2) {
+    || event.topics.length !== 2) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = FREEZE_ADDRESS;
-  result.to = decodeAddress(event['topics'][1]);
+  result.to = decodeAddress(event.topics[1]);
   const value = parseHexToBigInt(event['data']);
   result.value = value;
   result.valueExactBase36 = value.toString(36);
@@ -150,16 +165,16 @@ function decodeBNBUnfreezeEvent(event: any, timestampsCache: TimestampsCacheInte
 /**Deposit(address indexed dst, uint wad)
  * Only for WETH
  **/
-function decodeWETHDepositEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeWETHDepositEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== WETH_contract
-    || event['topics'].length !== 2) {
+    || event.topics.length !== 2) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
   result.from = MINT_ADDRESS;
-  result.to = decodeAddress(event['topics'][1]);
+  result.to = decodeAddress(event.topics[1]);
   const value = parseHexToBigInt(event['data']);
   result.value = value;
   result.valueExactBase36 = value.toString(36);
@@ -170,15 +185,15 @@ function decodeWETHDepositEvent(event: any, timestampsCache: TimestampsCacheInte
 /**Withdrawal(address,uint256)
  * Only for WETH
  **/
-function decodeWETHWithdrawalEvent(event: any, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
+function decodeWETHWithdrawalEvent(event: RawEvent, timestampsCache: TimestampsCacheInterface): ERC20Transfer | null {
   if (event['address'].toLowerCase() !== WETH_contract
-    || event['topics'].length !== 2) {
+    || event.topics.length !== 2) {
     return null;
   }
 
   const result = decodeEventBasicInfo(event, timestampsCache);
 
-  result.from = decodeAddress(event['topics'][1]);
+  result.from = decodeAddress(event.topics[1]);
   result.to = BURN_ADDRESS;
   const value = parseHexToBigInt(event['data']);
   result.value = value;
@@ -188,7 +203,9 @@ function decodeWETHWithdrawalEvent(event: any, timestampsCache: TimestampsCacheI
 }
 
 // hashes generated with https://emn178.github.io/online-tools/keccak_256.html
-const decodeFunctionsMap = {
+type DecodeEventFunction = (event: RawEvent, timestampsCache: TimestampsCacheInterface) => ERC20Transfer | null;
+
+const decodeFunctionsMap: Record<string, DecodeEventFunction> = {
   '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': decodeTransferEvent, //Transfer(address,address,uint256)
   '0xcc16f5dbb4873280815c1ee09dbd06736cffcc184412cf7a71a0fdb75d397ca5': decodeBurnEvent, //Burn(address,uint256)
   '0x0f6798a560793a54c3bcfe86a93cde1e73087d944c0ea20544137d4121396885': decodeMintEvent, //Mint(address,uint256)
@@ -201,7 +218,7 @@ const decodeFunctionsMap = {
 
 
 export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number,
-  contractAddress: string, timestampsCache: TimestampsCacheInterface) {
+  contractAddress: string | string[] | null, timestampsCache: TimestampsCacheInterface): Promise<ERC20Transfer[]> {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
   const startTime = Date.now();
   await timestampsCache.waitResponse();
@@ -215,7 +232,7 @@ export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: numbe
 }
 
 
-async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, contractAddress: string) {
+async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, contractAddress: string | string[] | null): Promise<RawEvent[]> {
   let queryObject: any = {
     fromBlock: Web3Static.parseNumberToHex(fromBlock),
     toBlock: Web3Static.parseNumberToHex(toBlock),/*,
@@ -231,7 +248,7 @@ async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlo
   return await web3Wrapper.getPastLogs(queryObject);
 }
 
-export function decodeEvents(events: any, timestampsCache: TimestampsCacheInterface, decodeFunctions: any = decodeFunctionsMap) {
+export function decodeEvents(events: RawEvent[], timestampsCache: TimestampsCacheInterface, decodeFunctions: Record<string, DecodeEventFunction> = decodeFunctionsMap): ERC20Transfer[] {
   const result: ERC20Transfer[] = [];
   for (const event of events) {
     if (event.topics && event.topics[0]) {
@@ -246,8 +263,8 @@ export function decodeEvents(events: any, timestampsCache: TimestampsCacheInterf
   return result;
 }
 
-function filterEvents(events: any[]) {
-  const result: any[] = [];
+function filterEvents(events: ERC20Transfer[]): ERC20Transfer[] {
+  const result: ERC20Transfer[] = [];
   const eventsByTransactionIter = getEventsByTransaction(events);
   for (let curTransactionEvents of eventsByTransactionIter) {
     let curResult = filterTransactionEvents(curTransactionEvents);
@@ -259,12 +276,12 @@ function filterEvents(events: any[]) {
 
 // returns an array of arrays - all events in one transaction are grouped together
 // assumes that all events in one transaction are next to one another in the log
-function* getEventsByTransaction(events: any[]) {
+function* getEventsByTransaction(events: ERC20Transfer[]): Generator<ERC20Transfer[], void, unknown> {
   if (events.length === 0) {
     return;
   }
   let curTransactionHash = events[0].transactionHash;
-  let curTransactionEvents = [];
+  let curTransactionEvents: ERC20Transfer[] = [];
   for (let i = 0; i < events.length; i++) {
     let event = events[i];
     if (event.transactionHash) {
@@ -287,9 +304,9 @@ function* getEventsByTransaction(events: any[]) {
 }
 
 // Within a transaction removes the transfer events from/to the zero address that match a corresponding mint/burn event
-function filterTransactionEvents(eventsInTransaction: any[]) {
-  const mintEvents: any[] = [];
-  const burnEvents: any[] = [];
+function filterTransactionEvents(eventsInTransaction: ERC20Transfer[]): ERC20Transfer[] {
+  const mintEvents: ERC20Transfer[] = [];
+  const burnEvents: ERC20Transfer[] = [];
   eventsInTransaction.forEach((event) => {
     if (event.from === MINT_ADDRESS) {
       mintEvents.push(event);
@@ -299,7 +316,7 @@ function filterTransactionEvents(eventsInTransaction: any[]) {
     }
   });
 
-  const result: any[] = [];
+  const result: ERC20Transfer[] = [];
   eventsInTransaction.forEach((event) => {
     if (event.from === ZERO_ADDRESS) {
       const exists = mintEvents.some((mintEvent) =>

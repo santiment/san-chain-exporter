@@ -1,14 +1,21 @@
-/*jshint esversion: 6 */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const MINT_ADDRESS = 'mint';
 const BURN_ADDRESS = 'burn';
 
+type CustomTransferConfig = {
+  blockNumber: number;
+  timestamp: number;
+  contract: string;
+  file: string;
+  transactionHashPrefix: string;
+};
+
 // The files should be csv with columns: sign, address, amount
 // sign = 1 - minting; sign = -1 - burning
 // !!! If you change the order of the elements in the array (or inside a file) the transfers primary keys will change
-const customTransfersData = [
+const customTransfersData: CustomTransferConfig[] = [
   {
     blockNumber: 4011221,
     timestamp: 1499846591,
@@ -18,9 +25,22 @@ const customTransfersData = [
   }
 ];
 
+type TransferRecord = {
+  blockNumber: number;
+  logIndex: number;
+  contract: string;
+  timestamp: number;
+  transactionHash: string;
+  from: string;
+  to: string;
+  value: bigint;
+  valueExactBase36: string;
+  [key: string]: unknown;
+};
+
 // Log index fields are important for us as they form the primary key of exported Kafka records.
 // Return here the last 'real world' value seen in a transfer.
-function getLastRealLogIndexForBlock(transfers, blockNumber) {
+function getLastRealLogIndexForBlock(transfers: TransferRecord[], blockNumber: number): number {
   let lastLogIndex = 0;
 
   transfers.forEach((transfer) => {
@@ -32,8 +52,8 @@ function getLastRealLogIndexForBlock(transfers, blockNumber) {
   return lastLogIndex;
 }
 
-function addTransfers(transfers, transfersData) {
-  const fileContent = fs.readFileSync(path.resolve(__dirname) + '/' + transfersData.file, { encoding: 'utf8' });
+function addTransfers(transfers: TransferRecord[], transfersData: CustomTransferConfig): void {
+  const fileContent = fs.readFileSync(path.resolve(__dirname, transfersData.file), { encoding: 'utf8' });
   const addressBalances = fileContent
     .split('\n')
     .map((line) => line.trim())
@@ -44,42 +64,42 @@ function addTransfers(transfers, transfersData) {
   // Starting from last real value reached, increment on every newly generated transfer
   let logIndexReached = getLastRealLogIndexForBlock(transfers, transfersData.blockNumber);
 
-  addressBalances.forEach((transfer) => {
+  for (const transfer of addressBalances) {
     const [signRaw, address, amountRaw] = transfer;
     if (!address) {
-      return;
+      continue;
     }
 
     const sign = Number(signRaw);
     if (!Number.isFinite(sign) || !Number.isInteger(sign) || sign === 0) {
-      return;
+      continue;
     }
 
     const amountString = amountRaw.replace(/\s+/g, '');
     if (!/^-?\d+$/.test(amountString)) {
-      return;
+      continue;
     }
 
     const amount = BigInt(amountString);
     if (amount <= 0n) {
-      return;
+      continue;
     }
 
-    let from = null;
-    let to = null;
-    let transactionHash = null;
+    let from: string;
+    let to: string;
+    let transactionHash: string;
     if (sign > 0) {
       from = MINT_ADDRESS;
       to = address;
-      transactionHash = transfersData.transactionHashPrefix + '_' + MINT_ADDRESS + '_' + address;
+      transactionHash = `${transfersData.transactionHashPrefix}_${MINT_ADDRESS}_${address}`;
     }
     else if (sign < 0) {
       from = address;
       to = BURN_ADDRESS;
-      transactionHash = transfersData.transactionHashPrefix + '_' + BURN_ADDRESS + '_' + address;
+      transactionHash = `${transfersData.transactionHashPrefix}_${BURN_ADDRESS}_${address}`;
     }
     else {
-      return;
+      continue;
     }
 
     ++logIndexReached;
@@ -88,22 +108,35 @@ function addTransfers(transfers, transfersData) {
       contract: transfersData.contract,
       blockNumber: transfersData.blockNumber,
       timestamp: transfersData.timestamp,
-      transactionHash: transactionHash,
+      transactionHash,
       logIndex: logIndexReached,
-      from: from,
-      to: to,
+      from,
+      to,
       value: amount,
       valueExactBase36: amount.toString(36)
     });
-  });
+  }
 }
 
-exports.addCustomTokenDistribution = function (transfers, fromBlock, toBlock, contract) {
+export function addCustomTokenDistribution(
+  transfers: TransferRecord[],
+  fromBlock: number,
+  toBlock: number,
+  contract: string | string[] | null
+): void {
+  if (!contract) {
+    return;
+  }
   customTransfersData.forEach((transfersData) => {
-    if (transfersData.blockNumber >= fromBlock
-      && transfersData.blockNumber <= toBlock
-      && transfersData.contract === contract) {
+    const matchesContract = Array.isArray(contract)
+      ? contract.includes(transfersData.contract)
+      : transfersData.contract === contract;
+    if (
+      transfersData.blockNumber >= fromBlock &&
+      transfersData.blockNumber <= toBlock &&
+      matchesContract
+    ) {
       addTransfers(transfers, transfersData);
     }
   });
-};
+}
