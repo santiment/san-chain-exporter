@@ -32,7 +32,7 @@ function parseHexToBigInt(hexValue: string): bigint {
   if (ZERO_HEX_REGEX.test(hexValue)) {
     return 0n;
   }
-  return BigInt(Web3Static.parseHexToNumberString(hexValue));
+  return BigInt(hexValue);
 }
 
 
