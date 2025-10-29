@@ -38,6 +38,9 @@ type TransferRecord = {
   [key: string]: unknown;
 };
 
+const WHITESPACE_REGEX = /\s+/g;
+const INTEGER_STRING_REGEX = /^-?\d+$/;
+
 // Log index fields are important for us as they form the primary key of exported Kafka records.
 // Return here the last 'real world' value seen in a transfer.
 function getLastRealLogIndexForBlock(transfers: TransferRecord[], blockNumber: number): number {
@@ -75,8 +78,8 @@ function addTransfers(transfers: TransferRecord[], transfersData: CustomTransfer
       continue;
     }
 
-    const amountString = amountRaw.replace(/\s+/g, '');
-    if (!/^-?\d+$/.test(amountString)) {
+    const amountString = amountRaw.replace(WHITESPACE_REGEX, '');
+    if (!INTEGER_STRING_REGEX.test(amountString)) {
       continue;
     }
 
