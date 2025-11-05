@@ -30,9 +30,10 @@ describe('Test ERC20 worker', function () {
             'timestamp': 0,
             'transactionHash': '0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb',
             'logIndex': 158,
+            'transactionIndex': 0,
             'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
             'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-            'value': 1.81e+21,
+            'value': 1810000000000000000000n,
             'valueExactBase36': 'alzj4rdbzkcq9s'
         };
 
@@ -42,19 +43,20 @@ describe('Test ERC20 worker', function () {
             'timestamp': 0,
             'transactionHash': '0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb',
             'logIndex': 200,
+            'transactionIndex': 0,
             'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
             'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-            'value': 1.81e+21,
+            'value': 1810000000000000000000n,
             'valueExactBase36': 'alzj4rdbzkcq9s'
         };
 
-        correctedEvent = JSON.parse(JSON.stringify(originalEvent));
+        correctedEvent = helpers.cloneTransfer(originalEvent);
         correctedEvent.contract = CONTRACT_REPLACE;
 
-        originalEventWithPrimaryKey = JSON.parse(JSON.stringify(originalEvent));
+        originalEventWithPrimaryKey = helpers.cloneTransfer(originalEvent);
         helpers.setExpectedEventPrimaryKey(originalEventWithPrimaryKey);
 
-        correctedEventWithPrimaryKey = JSON.parse(JSON.stringify(correctedEvent));
+        correctedEventWithPrimaryKey = helpers.cloneTransfer(correctedEvent);
         helpers.setExpectedEventPrimaryKey(correctedEventWithPrimaryKey);
     });
 
@@ -273,7 +275,7 @@ describe('Test ERC20 worker', function () {
             'logIndex': 10002, // Set a huge log index so that the primary key generation would overflow
             'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
             'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-            'value': 1.81e+21,
+            'value': 1810000000000000000000n,
             'valueExactBase36': 'alzj4rdbzkcq9s'
         };
         const eventNextBlock = {
@@ -284,7 +286,7 @@ describe('Test ERC20 worker', function () {
             'logIndex': 0,
             'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
             'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-            'value': 1.81e+21,
+            'value': 1810000000000000000000n,
             'valueExactBase36': 'alzj4rdbzkcq9s'
         };
 

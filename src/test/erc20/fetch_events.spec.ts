@@ -172,9 +172,10 @@ const decodedEvents = [
     timestamp: 1496241767,
     transactionHash: '0x62901c72c13cc56efe3180b1bc02b02c108ae0a68a76d594161c9a41d0ebcceb',
     logIndex: 8,
+    transactionIndex: 143,
     from: 'mint',
     to: '0xfbfa258b9028c7d4fc52ce28031469214d10daeb',
-    value: 49681657105546240000,
+    value: 49681657105546240000n,
     valueExactBase36: 'ahghhm93wk1ds'
   },
   // bnb freeze
@@ -184,9 +185,10 @@ const decodedEvents = [
     timestamp: 1499265391,
     transactionHash: '0x72af0f55b97b033af3b6e6162463681730c6429d0bc9c6c6ae9ad595aa2fbc57',
     logIndex: 31,
+    transactionIndex: 70,
     from: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
     to: 'freeze',
-    value: 6.4e+25,
+    value: 64000000000000000000000000n,
     valueExactBase36: '81huq41v3rsnftyps'
   },
   // bnb unfreeze
@@ -196,9 +198,10 @@ const decodedEvents = [
     timestamp: 1531930765,
     transactionHash: '0x20b2be5acb83856e56c64429b096c8d0852e1b810356c8fcea9d278aeee094a6',
     logIndex: 78,
+    transactionIndex: 129,
     from: 'freeze',
     to: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
-    value: 1.6e+25,
+    value: 16000000000000000000000000n,
     valueExactBase36: '20dgoj0grxy5uyhog'
   },
   // transfer
@@ -208,9 +211,10 @@ const decodedEvents = [
     timestamp: 1546639212,
     transactionHash: '0x115947f1d988696f49cc56f3b405284db879729bae0365ae49997a8b32ed5131',
     logIndex: 0,
+    transactionIndex: 13,
     from: '0x5e575279bf9f4acf0a130c186861454247394c06',
     to: '0xfd247ccdeb4229aea8f302993eaa80ab52050264',
-    value: 16168549947,
+    value: 16168549947n,
     valueExactBase36: '7fec4zf'
   },
   // mint
@@ -220,9 +224,10 @@ const decodedEvents = [
     timestamp: 1546639212,
     transactionHash: '0xc99489f18de3bf01e1d50d95d1c77073080dac832c4d93695c284423dece286d',
     logIndex: 39,
+    transactionIndex: 53,
     from: 'mint',
     to: '0xfbd95709188b3681fd4d07f25f8d64c3ffa5bf97',
-    value: 1.76e+24,
+    value: 1760000000000000000000000n,
     valueExactBase36: '7ylmuw3a9ura8u0w'
   },
   // transfer which duplicates the mint above
@@ -232,9 +237,10 @@ const decodedEvents = [
     timestamp: 1546639212,
     transactionHash: '0xc99489f18de3bf01e1d50d95d1c77073080dac832c4d93695c284423dece286d',
     logIndex: 40,
+    transactionIndex: 53,
     from: '0x0000000000000000000000000000000000000000',
     to: '0xfbd95709188b3681fd4d07f25f8d64c3ffa5bf97',
-    value: 1.76e+24,
+    value: 1760000000000000000000000n,
     valueExactBase36: '7ylmuw3a9ura8u0w'
   },
   // burn
@@ -244,9 +250,10 @@ const decodedEvents = [
     timestamp: 1549899997,
     transactionHash: '0x33c9e862c220c54cecff48d9eb452db8921fb012695a7c9c2f3d6521e8cec49d',
     logIndex: 11,
+    transactionIndex: 18,
     from: '0x000000000000000000000000000000000000005d',
     to: 'burn',
-    value: 2.924819e+22,
+    value: 29248190000000000000000n,
     valueExactBase36: '4rgm1aauy6roni8'
   },
   // transfer which duplicates the burn above
@@ -256,9 +263,10 @@ const decodedEvents = [
     timestamp: 1549899997,
     transactionHash: '0x33c9e862c220c54cecff48d9eb452db8921fb012695a7c9c2f3d6521e8cec49d',
     logIndex: 12,
+    transactionIndex: 18,
     from: '0x000000000000000000000000000000000000005d',
     to: '0x0000000000000000000000000000000000000000',
-    value: 2.924819e+22,
+    value: 29248190000000000000000n,
     valueExactBase36: '4rgm1aauy6roni8'
   }
 ];
@@ -271,9 +279,10 @@ const filteredEvents = [
     timestamp: 1496241767,
     transactionHash: '0x62901c72c13cc56efe3180b1bc02b02c108ae0a68a76d594161c9a41d0ebcceb',
     logIndex: 8,
+    transactionIndex: 143,
     from: 'mint',
     to: '0xfbfa258b9028c7d4fc52ce28031469214d10daeb',
-    value: 49681657105546240000,
+    value: 49681657105546240000n,
     valueExactBase36: 'ahghhm93wk1ds'
   },
   // bnb freeze
@@ -283,9 +292,10 @@ const filteredEvents = [
     timestamp: 1499265391,
     transactionHash: '0x72af0f55b97b033af3b6e6162463681730c6429d0bc9c6c6ae9ad595aa2fbc57',
     logIndex: 31,
+    transactionIndex: 70,
     from: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
     to: 'freeze',
-    value: 6.4e+25,
+    value: 64000000000000000000000000n,
     valueExactBase36: '81huq41v3rsnftyps'
   },
   // bnb unfreeze
@@ -295,9 +305,10 @@ const filteredEvents = [
     timestamp: 1531930765,
     transactionHash: '0x20b2be5acb83856e56c64429b096c8d0852e1b810356c8fcea9d278aeee094a6',
     logIndex: 78,
+    transactionIndex: 129,
     from: 'freeze',
     to: '0x00c5e04176d95a286fcce0e68c683ca0bfec8454',
-    value: 1.6e+25,
+    value: 16000000000000000000000000n,
     valueExactBase36: '20dgoj0grxy5uyhog'
   },
   // transfer
@@ -307,9 +318,10 @@ const filteredEvents = [
     timestamp: 1546639212,
     transactionHash: '0x115947f1d988696f49cc56f3b405284db879729bae0365ae49997a8b32ed5131',
     logIndex: 0,
+    transactionIndex: 13,
     from: '0x5e575279bf9f4acf0a130c186861454247394c06',
     to: '0xfd247ccdeb4229aea8f302993eaa80ab52050264',
-    value: 16168549947,
+    value: 16168549947n,
     valueExactBase36: '7fec4zf'
   },
   // mint
@@ -319,9 +331,10 @@ const filteredEvents = [
     timestamp: 1546639212,
     transactionHash: '0xc99489f18de3bf01e1d50d95d1c77073080dac832c4d93695c284423dece286d',
     logIndex: 39,
+    transactionIndex: 53,
     from: 'mint',
     to: '0xfbd95709188b3681fd4d07f25f8d64c3ffa5bf97',
-    value: 1.76e+24,
+    value: 1760000000000000000000000n,
     valueExactBase36: '7ylmuw3a9ura8u0w'
   },
   // burn
@@ -331,9 +344,10 @@ const filteredEvents = [
     timestamp: 1549899997,
     transactionHash: '0x33c9e862c220c54cecff48d9eb452db8921fb012695a7c9c2f3d6521e8cec49d',
     logIndex: 11,
+    transactionIndex: 18,
     from: '0x000000000000000000000000000000000000005d',
     to: 'burn',
-    value: 2.924819e+22,
+    value: 29248190000000000000000n,
     valueExactBase36: '4rgm1aauy6roni8'
   }
 ];
@@ -406,9 +420,10 @@ describe('getEventsByTransactionTest', function () {
     'timestamp': 1517479091,
     'transactionHash': '0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3',
     'logIndex': 0,
+    'transactionIndex': 0,
     'from': 'mint',
     'to': '0x97623428a891542df710be9589093c9f3d2b60d3',
-    'value': 500000000000000000000,
+    'value': 500000000000000000000n,
     'valueExactBase36': '2xirk7k6w3mt4w'
   };
 
@@ -418,9 +433,10 @@ describe('getEventsByTransactionTest', function () {
     'timestamp': 1517479091,
     'transactionHash': '0xa32a55989f271a27173a4ec91a4aceadf9cf936a04f84a751d38ac1a816fa1e3',
     'logIndex': 1,
+    'transactionIndex': 0,
     'to': '0x97623428a891542df710be9589093c9f3d2b60d3',
     'from': '0x0000000000000000000000000000000000000000',
-    'value': 500000000000000000000,
+    'value': 500000000000000000000n,
     'valueExactBase36': '2xirk7k6w3mt4w'
   };
 
@@ -430,9 +446,10 @@ describe('getEventsByTransactionTest', function () {
     'timestamp': 1517479091,
     'transactionHash': '0xaab6e97a908f937ffba0690e6ad07053c6a4e822bab08342602204861f66b4b8',
     'logIndex': 3,
+    'transactionIndex': 1,
     'from': 'mint',
     'to': '0xc94698ffa0e74a35707eef8d6f847130c2008df3',
-    'value': 1e+21,
+    'value': 1000000000000000000000n,
     'valueExactBase36': '5v1j4f4ds79m9s'
   };
 
@@ -492,10 +509,11 @@ describe('decodeBrokenEventTest', function () {
       "blockNumber": 7207279,
       "transactionHash": "0xda7953e0b756ddff528c1b9b74d0dff9f51298a6d8bdab8d592b76e9693d6a15",
       "logIndex": 596,
+      "transactionIndex": 142,
       "contract": "0xb9b4856d9dbe659cf16891c735797bbf5b7cc530",
       "to": "0x9876543210987654321098765432109876543210",
       "from": "0x1234567890123456789012345678901234567890",
-      "value": 0,
+      "value": 0n,
       "valueExactBase36": "0",
       "timestamp": 1549899997
     }

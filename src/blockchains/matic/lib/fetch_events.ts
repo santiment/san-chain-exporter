@@ -22,8 +22,9 @@ function decodeTransferEvent(event: any, timestampsCache: TimestampsCacheInterfa
 
   result.from = decodeAddress(event['topics'][2]);
   result.to = decodeAddress(event['topics'][3]);
-  result.value = Number(Web3Static.parseHexToNumber(event['data'].substring(0, 66)));
-  result.valueExactBase36 = Web3Static.parseHexToBase36String(event['data'].substring(0, 66));
+  const valueBigInt = BigInt(Web3Static.parseHexToNumberString(event['data'].substring(0, 66)));
+  result.value = valueBigInt;
+  result.valueExactBase36 = valueBigInt.toString(36);
 
   return result;
 }
@@ -53,4 +54,3 @@ async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlo
 
   return await web3Wrapper.getPastLogs(queryObject);
 }
-

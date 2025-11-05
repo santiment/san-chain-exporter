@@ -10,8 +10,12 @@ function setExpectedEventPrimaryKey(event) {
   event.primaryKey = calculatePrimaryKeyNonOverwrittenEvent(event);
 }
 
+function cloneTransfer(event) {
+  return { ...event };
+}
 
 module.exports = {
   setExpectedEventPrimaryKey,
-  calculatePrimaryKeyNonOverwrittenEvent
+  calculatePrimaryKeyNonOverwrittenEvent,
+  cloneTransfer
 };

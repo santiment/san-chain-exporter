@@ -8,7 +8,7 @@ import { stableSort, readJsonFile } from './lib/util';
 import { BaseWorker } from '../../lib/worker_base';
 import { nextIntervalCalculator, setWorkerSleepTime, analyzeWorkerContext, NO_WORK_SLEEP } from '../eth/lib/next_interval_calculator';
 import { Web3Interface, Web3Wrapper, constructWeb3Wrapper } from '../eth/lib/web3_wrapper';
-import { TimestampsCache } from './lib/timestamps_cache';
+import { TimestampsCache, TimestampsCacheInterface } from './lib/timestamps_cache';
 import { getPastEvents } from './lib/fetch_events';
 import { initBlocksList } from '../../lib/fetch_blocks_list';
 import { HTTPClientInterface } from '../../types';
@@ -37,15 +37,15 @@ function simpleHash(input: string): number {
 export class ERC20Worker extends BaseWorker {
   private web3Wrapper: Web3Interface;
   private ethClient: HTTPClientInterface;
-  private getPastEventsFun: (web3Wrapper: Web3Interface, from: number, to: number, allOldContracts: any,
-    timestampsCache: any) => any = getPastEvents;
-  private contractsOverwriteArray: any;
-  private contractsUnmodified: any;
+  private getPastEventsFun: (web3Wrapper: Web3Interface, from: number, to: number, contractAddresses: string | string[] | null,
+    timestampsCache: TimestampsCacheInterface) => Promise<ERC20Transfer[]> = getPastEvents;
+  private contractsOverwriteArray: ContractOverwrite[];
+  private contractsUnmodified: string[];
   // This field is heavily tested in unit tests. Most probably we should change this and instead assert only the
   // overall logic, not the state of member variables.
-  public blocksList: any;
+  public blocksList: [number, number][];
 
-  private allOldContracts: any;
+  private allOldContracts: string[];
 
 
   constructor(settings: any) {
@@ -58,6 +58,7 @@ export class ERC20Worker extends BaseWorker {
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
     this.allOldContracts = [];
+    this.blocksList = [];
   }
 
   async init(exporter?: Exporter) {
@@ -88,11 +89,11 @@ export class ERC20Worker extends BaseWorker {
       if (exporter === undefined) {
         throw Error('Exporter reference need to be provided for events in same partition')
       }
-      await exporter.initPartitioner((event: any) => simpleHash(event.contract));
+      await exporter.initPartitioner((event: object) => simpleHash((event as ERC20Transfer).contract));
     }
   }
 
-  getBlocksListInterval() {
+  getBlocksListInterval(): { success: true; fromBlock: number; toBlock: number } | { success: false } {
     if (this.lastExportedBlock === -1 && this.blocksList.length > 0) {
       return {
         success: true,
@@ -118,21 +119,33 @@ export class ERC20Worker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const interval = this.settings.EXPORT_BLOCKS_LIST ?
-      this.getBlocksListInterval() :
-      nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
+    let interval: { fromBlock: number; toBlock: number };
+    if (this.settings.EXPORT_BLOCKS_LIST) {
+      const blocksListInterval = this.getBlocksListInterval();
+      if (!blocksListInterval.success) {
+        return [];
+      }
+      interval = {
+        fromBlock: blocksListInterval.fromBlock,
+        toBlock: blocksListInterval.toBlock
+      };
+    }
+    else {
+      interval = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
+    }
 
     logger.info(`Fetching transfer events for interval ${interval.fromBlock}:${interval.toBlock}`);
 
-    let events = [];
-    let overwritten_events: any = [];
+    let events: ERC20Transfer[] = [];
+    let overwritten_events: ERC20Transfer[] = [];
     const timestampsCache = new TimestampsCache(this.ethClient, interval.fromBlock, interval.toBlock);
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
         events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
         if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
           await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
-            this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY);
+            this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
+            this.settings.MULTICALL_ADDRESS);
         }
         changeContractAddresses(events, this.contractsOverwriteArray);
       }
@@ -142,8 +155,9 @@ export class ERC20Worker extends BaseWorker {
           timestampsCache);
 
         if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
-          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
-            this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY);
+          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), rawEvents,
+            this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
+            this.settings.MULTICALL_ADDRESS);
         }
         for (const event of rawEvents) {
           events.push(event);
@@ -154,7 +168,8 @@ export class ERC20Worker extends BaseWorker {
       events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
       if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
         await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
-          this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY);
+          this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
+          this.settings.MULTICALL_ADDRESS);
       }
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
@@ -164,7 +179,11 @@ export class ERC20Worker extends BaseWorker {
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events, overwritten_events);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${interval.fromBlock}:${interval.toBlock}`);
-      this.lastPrimaryKey = events[events.length - 1].primaryKey;
+      const lastPrimaryKey = events[events.length - 1].primaryKey;
+      if (typeof lastPrimaryKey !== 'number') {
+        throw new Error('Primary keys should be set to number before event');
+      }
+      this.lastPrimaryKey = lastPrimaryKey;
     }
 
     this.lastExportedBlock = interval.toBlock;
@@ -190,4 +209,3 @@ export class ERC20Worker extends BaseWorker {
     return resultEvents;
   }
 }
-

@@ -2,7 +2,7 @@
 import assert from 'assert';
 
 import { decodeEvents } from '../../blockchains/erc20/lib/fetch_events';
-import { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount } from '../../blockchains/erc20/lib/contract_overwrite';
+import { ContractOverwrite, extractChangedContractAddresses, editAddressAndAmount, ContractOverwriteConfig } from '../../blockchains/erc20/lib/contract_overwrite';
 import { readJsonFile } from '../../blockchains/erc20/lib/util';
 import { TimestampsCacheInterface } from '../../blockchains/erc20/lib/timestamps_cache';
 import path from "path";
@@ -15,7 +15,7 @@ const SNXContractReplacer = 'snx_contract';
 const rawEventNotSNX = {
   address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
   blockHash: '0x5df3aa774b85a9513d261cc5bd778725e3e0d0944da747dc2f245fecf1e58b63',
-  blockNumber: 10449812n,
+  blockNumber: 10449812,
   data: '0x000000000000000000000000000000000000000000000000000000000623a7c0',
   logIndex: 122,
   removed: false,
@@ -34,7 +34,7 @@ const rawEventNotSNX = {
 const rawEventSNXLegacy = {
   address: SNXContractLegacy,
   blockHash: '0x81c2b371f402764a916d34f8f6ef8c9d60123b1b3e67d2ceabfa45fdc55c45cb',
-  blockNumber: 9785855n,
+  blockNumber: 9785855,
   data: '0x0000000000000000000000000000000000000000000000059dcdf2014551b400',
   logIndex: 70,
   removed: false,
@@ -53,7 +53,7 @@ const rawEventSNXLegacy = {
 const rawEventSNXNew = {
   address: SNXContractNew,
   blockHash: '0x22f94f61168af2e451d9e6e55dda66eb2546c117becaf717a6564278cc0532aa',
-  blockNumber: 10449853n,
+  blockNumber: 10449853,
   data: '0x0000000000000000000000000000000000000000000000621ecbc23581080000',
   logIndex: 158,
   removed: false,
@@ -75,9 +75,10 @@ const decodedEventNotSNX = {
   'timestamp': 0,
   'transactionHash': '0x0bdd08bd9af129373d2b8011775d3d8b0588e30f45b0f3c1b7d85d689d05c42b',
   'logIndex': 122,
+  'transactionIndex': 101,
   'to': '0xd49e06c1ed4925af893a503bfcb9cff947e7679e',
   'from': '0x5a5d5d0cde67e18f00e5d08ad7890858a6ee62bc',
-  'value': 103000000,
+  'value': 103000000n,
   'valueExactBase36': '1pbnb4'
 };
 
@@ -87,14 +88,14 @@ const decodedEventSNXLegacy = {
   'timestamp': 0,
   'transactionHash': '0xfe79891a2150c8acecf0789ef4a20310686651cf0edc2819da7e1e6305bae030',
   'logIndex': 70,
+  'transactionIndex': 83,
   'to': '0xe5379a734c4e6d505634ddefc3f9d0ff8d7bb171',
   'from': '0x20312e96b1a0568ac31c6630844a962383cc66c2',
-  'value': 103604731090000000000,
+  'value': 103604731090000000000n,
   'valueExactBase36': 'lv51o1db8270g'
 };
 
-const correctedEventSNXLegacy = JSON.parse(JSON.stringify(decodedEventSNXLegacy));
-correctedEventSNXLegacy.contract = SNXContractReplacer;
+const correctedEventSNXLegacy = { ...decodedEventSNXLegacy, contract: SNXContractReplacer };
 
 const decodedEventSNXNew = {
   'contract': SNXContractNew,
@@ -102,14 +103,14 @@ const decodedEventSNXNew = {
   'timestamp': 0,
   'transactionHash': '0x246616c3cf211facc802a1f659f64cefe7b6f9be50da1908fcea23625e97d1cb',
   'logIndex': 158,
+  'transactionIndex': 118,
   'to': '0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be',
   'from': '0xea5f6f8167a60f671cc02b074b6ac581153472c9',
-  'value': 1.81e+21,
+  'value': 1810000000000000000000n,
   'valueExactBase36': 'alzj4rdbzkcq9s'
 };
 
-const correctedEventSNXNew = JSON.parse(JSON.stringify(decodedEventSNXNew));
-correctedEventSNXNew.contract = SNXContractReplacer;
+const correctedEventSNXNew = { ...decodedEventSNXNew, contract: SNXContractReplacer };
 
 class TimestampsCacheMock implements TimestampsCacheInterface {
   getBlockTimestamp(): number {
@@ -126,7 +127,9 @@ let contractsOverwriteArray: any = null;
 async function singletonContractsOverwrite() {
   if (!contractsOverwriteArray) {
     const parsedContracts = await readJsonFile(path.join(__dirname, 'contract_mapping', 'contract_mapping.json'));
-    contractsOverwriteArray = parsedContracts.modified_contracts.map((parsedContract: string) => new ContractOverwrite(parsedContract));
+    contractsOverwriteArray = parsedContracts.modified_contracts.map(
+      (parsedContract: ContractOverwriteConfig) => new ContractOverwrite(parsedContract)
+    );
   }
 
   return contractsOverwriteArray;

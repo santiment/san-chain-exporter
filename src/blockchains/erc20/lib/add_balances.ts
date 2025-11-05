@@ -1,18 +1,22 @@
 import { assertIsDefinedLazy } from '../../../lib/utils';
 import { ERC20Transfer } from '../erc20_types';
 import { Web3 } from 'web3';
-import { MULTICALL_ABI, ERC20_ABI, MULTICALL_ADDRESS } from './abis';
+import { MULTICALL_ABI, ERC20_ABI } from './abis';
+import { MULTICALL_ADDRESS } from './constants';
 import * as Utils from './balance_utils';
 import { logger } from '../../../lib/logger';
 
+const stringifyTransfer = (event: ERC20Transfer): string =>
+  JSON.stringify(event, (_key, value) => typeof value === 'bigint' ? value.toString() : value);
 
 type BlockNumberToBalances = Map<number, Utils.AddressContractToBalance>;
 type BlockNumberToAffectedAddresses = Map<number, Utils.AddressContractStore>;
 
 export const MULTICALL_FAILURE = "multicall_failure"
 
-async function doMulticall(web3: Web3, blockNumber: number, addressContract: Utils.AddressContract[]): Promise<any[]> {
-  const multicall = new web3.eth.Contract(MULTICALL_ABI, MULTICALL_ADDRESS);
+async function doMulticall(web3: Web3, blockNumber: number, addressContract: Utils.AddressContract[],
+  multicallAddress: string = MULTICALL_ADDRESS): Promise<any[]> {
+  const multicall = new web3.eth.Contract(MULTICALL_ABI, multicallAddress);
 
   const calls = addressContract.map(([address, contractAddress]) => {
     const contract = new web3.eth.Contract(ERC20_ABI, contractAddress);
@@ -49,10 +53,11 @@ function decodeMulticallResult(addressContractToMulticallResult: Utils.AddressCo
   return [blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]
 }
 
-async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number)
+async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number,
+  multicallAddress: string = MULTICALL_ADDRESS)
   : Promise<Utils.AddressContractToMulticallResult[]> {
   const allSettled = await Promise.allSettled(addressContracts.flatMap(addressContract =>
-    doMulticall(web3, blockNumber, [addressContract])
+    doMulticall(web3, blockNumber, [addressContract], multicallAddress)
   ))
 
   if (allSettled.length !== addressContracts.length) {
@@ -98,9 +103,10 @@ async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.Addr
   })
 }
 
-async function executeBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number)
+async function executeBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number,
+  multicallAddress: string = MULTICALL_ADDRESS)
   : Promise<Utils.AddressContractToMulticallResult[]> {
-  const multicallResult = await doMulticall(web3, blockNumber, addressContracts)
+  const multicallResult = await doMulticall(web3, blockNumber, addressContracts, multicallAddress)
   if (multicallResult.length !== addressContracts.length) {
     throw new Error(`Multicall response size does not match at block ${blockNumber}`);
   }
@@ -108,19 +114,20 @@ async function executeBatchMulticall(web3: Web3, addressContracts: Utils.Address
   return addressContracts.map((addressContract, index) => [addressContract, multicallResult[index]]);
 }
 
-async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number)
+async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number,
+  multicallAddress: string = MULTICALL_ADDRESS)
   : Promise<Utils.BlockNumberAddressContractBalance[]> {
 
   let rawMulticallResult: Utils.AddressContractToMulticallResult[] = []
   try {
-    rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber)
+    rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber, multicallAddress)
   }
   catch (error: any) {
     logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
   }
 
   if (rawMulticallResult.length === 0) {
-    rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber)
+    rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber, multicallAddress)
     return rawMulticallResult.map((rawResult: Utils.AddressContractToMulticallResult) => {
       if (rawResult[1] === MULTICALL_FAILURE) {
         // The balance call for this address-contract pair has failed. We would mark it as failure without decoding
@@ -155,18 +162,20 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
 
 // Build a balance map for all addresses involved in transactions
 async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][],
-  maxConnectionConcurrency: number): Promise<BlockNumberToBalances> {
+  maxConnectionConcurrency: number | undefined, multicallAddress: string = MULTICALL_ADDRESS): Promise<BlockNumberToBalances> {
   const results: Utils.BlockNumberAddressContractBalance[] = []
 
   let concurrentRequests: Promise<Utils.BlockNumberAddressContractBalance[]>[] = []
   let countConcurrent = 0
+  const concurrencyLimit = maxConnectionConcurrency ?? Number.POSITIVE_INFINITY
 
   for (const blockNumberAddress of batchedAddresses) {
-    concurrentRequests.push(getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0]))
+    concurrentRequests.push(getBalancesPerBlock(web3, blockNumberAddress[1], blockNumberAddress[0], multicallAddress))
     countConcurrent += 1
-    if (countConcurrent >= maxConnectionConcurrency) {
+    if (countConcurrent >= concurrencyLimit) {
       results.push(... (await Promise.all(concurrentRequests)).flat())
       countConcurrent = 0
+      concurrentRequests = []
     }
   }
   if (countConcurrent > 0) {
@@ -189,7 +198,7 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
 }
 
 export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number,
-  maxConnectionConcurrency: number) {
+  maxConnectionConcurrency?: number, multicallAddress: string = MULTICALL_ADDRESS) {
   const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
   const batchedAddresses: [number, Utils.AddressContract[]][] = [];
@@ -204,19 +213,16 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
     })
   }
 
-  const balanceMap = await buildBalancesMap(web3, batchedAddresses, maxConnectionConcurrency);
+  const balanceMap = await buildBalancesMap(web3, batchedAddresses, maxConnectionConcurrency, multicallAddress);
   for (const event of events) {
     if (Utils.isAddressEligableForBalance(event.from, event.contract)) {
       event.fromBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.from, event.contract))
-      assertIsDefinedLazy(event.fromBalance, () => `'from' balance should have been resovled for event ${JSON.stringify(event)}`)
+      assertIsDefinedLazy(event.fromBalance, () => `'from' balance should have been resovled for event ${stringifyTransfer(event)}`)
     }
 
     if (Utils.isAddressEligableForBalance(event.to, event.contract)) {
       event.toBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.to, event.contract))
-      assertIsDefinedLazy(event.toBalance, () => `'to' balance should have been resovled for event ${JSON.stringify(event)}`)
+      assertIsDefinedLazy(event.toBalance, () => `'to' balance should have been resovled for event ${stringifyTransfer(event)}`)
     }
   }
 }
-
-
-
