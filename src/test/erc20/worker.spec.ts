@@ -192,6 +192,45 @@ describe('Test ERC20 worker', function () {
         assert.deepStrictEqual(result, [originalEvent, correctedEventWithPrimaryKey, originalEvent2]);
     });
 
+    it('chunks getPastEvents calls by block range when interval exceeds batch size', async function () {
+        const constantsEdit = { ...constants };
+        constantsEdit.CONTRACT_MODE = 'extract_exact_overwrite';
+        constantsEdit.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
+        constantsEdit.MAX_CONNECTION_CONCURRENCY = 2;
+        constantsEdit.EXTEND_TRANSFERS_WITH_BALANCES = false;
+        constantsEdit.BLOCK_INTERVAL = 5;
+
+        const worker = new ERC20Worker(constantsEdit);
+        sinon.stub(worker, 'web3Wrapper').value(new MockWeb3Wrapper(10))
+        sinon.stub(worker, 'ethClient').value(new MockEthClient())
+        await worker.init(undefined);
+
+        sinon.stub(worker, 'allOldContracts').value(['0x01']);
+        sinon.stub(worker, 'contractsOverwriteArray').value([]);
+        sinon.stub(worker, 'contractsUnmodified').value([]);
+
+        worker.lastConfirmedBlock = 5;
+        worker.lastExportedBlock = 0;
+
+        const capturedRanges: Array<[number, number]> = [];
+        const getPastEventsStub = sinon.stub(worker, 'getPastEventsFun').callsFake(async (_web3: any, fromBlock: number, toBlock: number) => {
+            capturedRanges.push([fromBlock, toBlock]);
+            const clonedEvent = helpers.cloneTransfer(originalEvent);
+            clonedEvent.blockNumber = fromBlock;
+            clonedEvent.transactionHash = `${fromBlock}-${toBlock}`;
+            clonedEvent.logIndex = 0;
+            return [clonedEvent] as ERC20Transfer[];
+        });
+
+        const result = await worker.work();
+
+        assert.strictEqual(getPastEventsStub.callCount, 3);
+        assert.deepStrictEqual(capturedRanges, [[1, 2], [3, 4], [5, 5]]);
+        assert.strictEqual(result.length, 3);
+        const sortedBlocks = result.map(event => event.blockNumber).sort();
+        assert.deepStrictEqual(sortedBlocks, [1, 3, 5]);
+    });
+
     it('test getBlocksListInterval when ZK position not defined', async function () {
         const constantsEdit = { ...constants };
         constantsEdit.EXPORT_BLOCKS_LIST = true;
