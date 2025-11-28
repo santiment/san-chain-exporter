@@ -221,8 +221,10 @@ export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: numbe
   contractAddress: string | string[] | null, timestampsCache: TimestampsCacheInterface): Promise<ERC20Transfer[]> {
   const events = await getRawEvents(web3Wrapper, fromBlock, toBlock, contractAddress);
   const startTime = Date.now();
-  await timestampsCache.waitResponse();
-  logger.debug(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
+  const resolvedNow = await timestampsCache.waitResponse();
+  if (resolvedNow) {
+    logger.debug(`Block timestamps resolved in ${Date.now() - startTime} msecs`);
+  }
   const decodedEvents = decodeEvents(events, timestampsCache);
   const result = filterEvents(decodedEvents);
 

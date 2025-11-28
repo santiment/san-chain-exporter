@@ -141,7 +141,7 @@ export class ERC20Worker extends BaseWorker {
     const timestampsCache = new TimestampsCache(this.ethClient, interval.fromBlock, interval.toBlock);
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
       if (this.allOldContracts.length > 0) {
-        events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
+        events = await this.fetchPastEvents(interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
         if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
           await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
             this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
@@ -151,7 +151,7 @@ export class ERC20Worker extends BaseWorker {
       }
 
       if (this.contractsUnmodified.length > 0) {
-        const rawEvents = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, this.contractsUnmodified,
+        const rawEvents = await this.fetchPastEvents(interval.fromBlock, interval.toBlock, this.contractsUnmodified,
           timestampsCache);
 
         if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
@@ -165,7 +165,7 @@ export class ERC20Worker extends BaseWorker {
       }
     }
     else {
-      events = await this.getPastEventsFun(this.web3Wrapper, interval.fromBlock, interval.toBlock, null, timestampsCache);
+      events = await this.fetchPastEvents(interval.fromBlock, interval.toBlock, null, timestampsCache);
       if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
         await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
           this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
@@ -207,5 +207,54 @@ export class ERC20Worker extends BaseWorker {
     }
 
     return resultEvents;
+  }
+
+  private async fetchPastEvents(fromBlock: number, toBlock: number, contractAddresses: string | string[] | null,
+    timestampsCache: TimestampsCacheInterface): Promise<ERC20Transfer[]> {
+    if (Array.isArray(contractAddresses) && contractAddresses.length === 0) {
+      return [];
+    }
+
+    if (fromBlock > toBlock) {
+      return [];
+    }
+
+    const totalRange = toBlock - fromBlock + 1;
+    const concurrencySetting = this.settings.MAX_CONNECTION_CONCURRENCY;
+    const concurrencyLimit = Math.max(1, Number.isFinite(concurrencySetting) ? concurrencySetting : 1);
+    const configuredChunkSize = Math.floor(this.settings.BLOCK_INTERVAL / concurrencyLimit);
+    const chunkSize = Math.max(1, Math.min(totalRange, configuredChunkSize || totalRange));
+
+    if (totalRange <= chunkSize) {
+      return this.getPastEventsFun(this.web3Wrapper, fromBlock, toBlock, contractAddresses, timestampsCache);
+    }
+
+    const blockChunks = this.buildBlockChunks(fromBlock, toBlock, chunkSize);
+
+    const aggregatedEvents: ERC20Transfer[] = [];
+    let inflight: Promise<ERC20Transfer[]>[] = [];
+
+    for (const [chunkFrom, chunkTo] of blockChunks) {
+      inflight.push(this.getPastEventsFun(this.web3Wrapper, chunkFrom, chunkTo, contractAddresses, timestampsCache));
+      if (inflight.length >= concurrencyLimit) {
+        aggregatedEvents.push(...(await Promise.all(inflight)).flat());
+        inflight = [];
+      }
+    }
+
+    if (inflight.length > 0) {
+      aggregatedEvents.push(...(await Promise.all(inflight)).flat());
+    }
+
+    return aggregatedEvents;
+  }
+
+  private buildBlockChunks(fromBlock: number, toBlock: number, chunkSize: number): [number, number][] {
+    const chunks: [number, number][] = [];
+    for (let start = fromBlock; start <= toBlock; start += chunkSize) {
+      const end = Math.min(start + chunkSize - 1, toBlock);
+      chunks.push([start, end]);
+    }
+    return chunks;
   }
 }

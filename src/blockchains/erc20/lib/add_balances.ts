@@ -199,6 +199,7 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
 
 export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number,
   maxConnectionConcurrency?: number, multicallAddress: string = MULTICALL_ADDRESS) {
+  logger.info(`Enriching ${events.length} events with balances `);
   const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
   const batchedAddresses: [number, Utils.AddressContract[]][] = [];
