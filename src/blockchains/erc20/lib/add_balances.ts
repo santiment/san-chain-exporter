@@ -163,17 +163,13 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
 
 // Build a balance map for all addresses involved in transactions
 async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][],
-  maxConnectionConcurrency: number | undefined, multicallAddress: string = MULTICALL_ADDRESS): Promise<BlockNumberToBalances> {
+  maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS): Promise<BlockNumberToBalances> {
   const results: Utils.BlockNumberAddressContractBalance[] = []
   if (batchedAddresses.length === 0) {
     return new Map() as BlockNumberToBalances
   }
 
-  const configuredLimit = maxConnectionConcurrency ?? Number.POSITIVE_INFINITY
-  const normalizedLimit = Number.isFinite(configuredLimit)
-    ? Math.max(1, Math.floor(configuredLimit))
-    : batchedAddresses.length
-  const chunkCount = Math.min(normalizedLimit, batchedAddresses.length)
+  const chunkCount = Math.min(maxConnectionConcurrency, batchedAddresses.length)
   const chunkSize = Math.ceil(batchedAddresses.length / chunkCount)
   const indexChunks = buildInclusiveChunks(0, batchedAddresses.length - 1, chunkSize)
 
@@ -206,7 +202,7 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
 }
 
 export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number,
-  maxConnectionConcurrency?: number, multicallAddress: string = MULTICALL_ADDRESS) {
+  maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS) {
   logger.info(`Enriching ${events.length} events with balances `);
   const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
