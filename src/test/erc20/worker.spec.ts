@@ -224,11 +224,11 @@ describe('Test ERC20 worker', function () {
 
         const result = await worker.work();
 
-        assert.strictEqual(getPastEventsStub.callCount, 3);
-        assert.deepStrictEqual(capturedRanges, [[1, 2], [3, 4], [5, 5]]);
-        assert.strictEqual(result.length, 3);
+        assert.strictEqual(getPastEventsStub.callCount, 2);
+        assert.deepStrictEqual(capturedRanges, [[1, 3], [4, 5]]);
+        assert.strictEqual(result.length, 2);
         const sortedBlocks = result.map(event => event.blockNumber).sort();
-        assert.deepStrictEqual(sortedBlocks, [1, 3, 5]);
+        assert.deepStrictEqual(sortedBlocks, [1, 4]);
     });
 
     it('test getBlocksListInterval when ZK position not defined', async function () {

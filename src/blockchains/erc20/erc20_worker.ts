@@ -14,6 +14,7 @@ import { initBlocksList } from '../../lib/fetch_blocks_list';
 import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
 import { extendTransfersWithBalances } from './lib/add_balances'
+import { buildInclusiveChunks } from './lib/chunk_utils';
 
 
 /**
@@ -139,34 +140,58 @@ export class ERC20Worker extends BaseWorker {
     let events: ERC20Transfer[] = [];
     let overwritten_events: ERC20Transfer[] = [];
     const timestampsCache = new TimestampsCache(this.ethClient, interval.fromBlock, interval.toBlock);
+    const shouldExtendWithBalances = this.settings.EXTEND_TRANSFERS_WITH_BALANCES
+      && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK;
     if ('extract_exact_overwrite' === this.settings.CONTRACT_MODE) {
-      if (this.allOldContracts.length > 0) {
-        events = await this.fetchPastEvents(interval.fromBlock, interval.toBlock, this.allOldContracts, timestampsCache);
-        if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
-          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
-            this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
-            this.settings.MULTICALL_ADDRESS);
-        }
-        changeContractAddresses(events, this.contractsOverwriteArray);
-      }
+      const oldContractsPromise = this.allOldContracts.length > 0
+        ? (async () => {
+          const oldEvents = await this.fetchPastEvents(
+            interval.fromBlock,
+            interval.toBlock,
+            this.allOldContracts,
+            timestampsCache
+          );
+          if (shouldExtendWithBalances) {
+            await extendTransfersWithBalances(
+              (this.web3Wrapper as Web3Wrapper).getWeb3(),
+              oldEvents,
+              this.settings.MULTICALL_BATCH_SIZE,
+              this.settings.MAX_CONNECTION_CONCURRENCY,
+              this.settings.MULTICALL_ADDRESS
+            );
+          }
+          changeContractAddresses(oldEvents, this.contractsOverwriteArray);
+          return oldEvents;
+        })()
+        : Promise.resolve<ERC20Transfer[]>([]);
 
-      if (this.contractsUnmodified.length > 0) {
-        const rawEvents = await this.fetchPastEvents(interval.fromBlock, interval.toBlock, this.contractsUnmodified,
-          timestampsCache);
+      const unmodifiedContractsPromise = this.contractsUnmodified.length > 0
+        ? (async () => {
+          const rawEvents = await this.fetchPastEvents(
+            interval.fromBlock,
+            interval.toBlock,
+            this.contractsUnmodified,
+            timestampsCache
+          );
+          if (shouldExtendWithBalances) {
+            await extendTransfersWithBalances(
+              (this.web3Wrapper as Web3Wrapper).getWeb3(),
+              rawEvents,
+              this.settings.MULTICALL_BATCH_SIZE,
+              this.settings.MAX_CONNECTION_CONCURRENCY,
+              this.settings.MULTICALL_ADDRESS
+            );
+          }
+          return rawEvents;
+        })()
+        : Promise.resolve<ERC20Transfer[]>([]);
 
-        if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
-          await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), rawEvents,
-            this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
-            this.settings.MULTICALL_ADDRESS);
-        }
-        for (const event of rawEvents) {
-          events.push(event);
-        }
-      }
+      const [oldEvents, unmodifiedEvents] = await Promise.all([oldContractsPromise, unmodifiedContractsPromise]);
+      events = oldEvents.concat(unmodifiedEvents);
     }
     else {
       events = await this.fetchPastEvents(interval.fromBlock, interval.toBlock, null, timestampsCache);
-      if (this.settings.EXTEND_TRANSFERS_WITH_BALANCES && interval.fromBlock > this.settings.MULTICALL_DEPLOY_BLOCK) {
+      if (shouldExtendWithBalances) {
         await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
           this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
           this.settings.MULTICALL_ADDRESS);
@@ -220,41 +245,21 @@ export class ERC20Worker extends BaseWorker {
     }
 
     const totalRange = toBlock - fromBlock + 1;
+    if (totalRange <= 0) {
+      return [];
+    }
     const concurrencySetting = this.settings.MAX_CONNECTION_CONCURRENCY;
-    const concurrencyLimit = Math.max(1, Number.isFinite(concurrencySetting) ? concurrencySetting : 1);
-    const configuredChunkSize = Math.floor(this.settings.BLOCK_INTERVAL / concurrencyLimit);
-    const chunkSize = Math.max(1, Math.min(totalRange, configuredChunkSize || totalRange));
+    const concurrencyLimit = Math.max(1, Number.isFinite(concurrencySetting) ? Math.floor(concurrencySetting) : 1);
 
-    if (totalRange <= chunkSize) {
-      return this.getPastEventsFun(this.web3Wrapper, fromBlock, toBlock, contractAddresses, timestampsCache);
-    }
+    const chunkCount = Math.min(concurrencyLimit, totalRange);
+    const chunkSize = Math.ceil(totalRange / chunkCount);
+    const blockChunks = buildInclusiveChunks(fromBlock, toBlock, chunkSize);
 
-    const blockChunks = this.buildBlockChunks(fromBlock, toBlock, chunkSize);
+    const chunkPromises = blockChunks.map(([chunkFrom, chunkTo]) =>
+      this.getPastEventsFun(this.web3Wrapper, chunkFrom, chunkTo, contractAddresses, timestampsCache)
+    );
 
-    const aggregatedEvents: ERC20Transfer[] = [];
-    let inflight: Promise<ERC20Transfer[]>[] = [];
-
-    for (const [chunkFrom, chunkTo] of blockChunks) {
-      inflight.push(this.getPastEventsFun(this.web3Wrapper, chunkFrom, chunkTo, contractAddresses, timestampsCache));
-      if (inflight.length >= concurrencyLimit) {
-        aggregatedEvents.push(...(await Promise.all(inflight)).flat());
-        inflight = [];
-      }
-    }
-
-    if (inflight.length > 0) {
-      aggregatedEvents.push(...(await Promise.all(inflight)).flat());
-    }
-
-    return aggregatedEvents;
-  }
-
-  private buildBlockChunks(fromBlock: number, toBlock: number, chunkSize: number): [number, number][] {
-    const chunks: [number, number][] = [];
-    for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-      const end = Math.min(start + chunkSize - 1, toBlock);
-      chunks.push([start, end]);
-    }
-    return chunks;
+    const results = await Promise.all(chunkPromises);
+    return results.flat();
   }
 }
