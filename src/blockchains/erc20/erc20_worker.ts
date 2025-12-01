@@ -248,8 +248,7 @@ export class ERC20Worker extends BaseWorker {
     if (totalRange <= 0) {
       return [];
     }
-    const concurrencySetting = this.settings.MAX_CONNECTION_CONCURRENCY;
-    const concurrencyLimit = Math.max(1, Number.isFinite(concurrencySetting) ? Math.floor(concurrencySetting) : 1);
+    const concurrencyLimit = this.settings.MAX_CONNECTION_CONCURRENCY;
 
     const chunkCount = Math.min(concurrencyLimit, totalRange);
     const chunkSize = Math.ceil(totalRange / chunkCount);

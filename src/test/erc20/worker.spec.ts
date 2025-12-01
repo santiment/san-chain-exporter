@@ -192,7 +192,7 @@ describe('Test ERC20 worker', function () {
         assert.deepStrictEqual(result, [originalEvent, correctedEventWithPrimaryKey, originalEvent2]);
     });
 
-    it('chunks getPastEvents calls by block range when interval exceeds batch size', async function () {
+    it('tests getPastEvents calls with correct chunk interval', async function () {
         const constantsEdit = { ...constants };
         constantsEdit.CONTRACT_MODE = 'extract_exact_overwrite';
         constantsEdit.CONTRACT_MAPPING_FILE_PATH = path.join(__dirname, 'contract_mapping', 'contract_mapping.json');
