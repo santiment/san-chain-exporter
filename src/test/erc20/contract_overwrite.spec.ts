@@ -117,8 +117,12 @@ class TimestampsCacheMock implements TimestampsCacheInterface {
     return 0;
   }
 
-  waitResponse(): Promise<void> {
-    return Promise.resolve();
+  waitResponse(): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  isResolved(): boolean {
+    return true;
   }
 }
 

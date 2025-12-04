@@ -45,7 +45,7 @@ describe('test extendTransfersWithBalances', function () {
 
     const extendBalances = add_balances_rewired.__get__('extendTransfersWithBalances')
 
-    await extendBalances(null, [transfer], 50);
+    await extendBalances(null, [transfer], 50, 2);
 
     const transferExpected = {
       'contract': '0xfd89ea92f6ec07d955e2adbba2400ca1a6369028',
@@ -105,7 +105,7 @@ describe('test extendTransfersWithBalances', function () {
 
     const extendBalances = add_balances_rewired.__get__('extendTransfersWithBalances')
 
-    await extendBalances(null, [transfer1, transfer2], 50);
+    await extendBalances(null, [transfer1, transfer2], 50, 2);
 
     const transfer1Expected = {
       'contract': '0xfd89ea92f6ec07d955e2adbba2400ca1a6369028',
@@ -166,7 +166,7 @@ describe('test extendTransfersWithBalances', function () {
 
     const extendBalances = add_balances_rewired.__get__('extendTransfersWithBalances')
 
-    await extendBalances(null, [transfer], 50);
+    await extendBalances(null, [transfer], 50, 2);
 
     const transferExpected = {
       'contract': '0xfd89ea92f6ec07d955e2adbba2400ca1a6369028',
@@ -211,7 +211,7 @@ describe('test extendTransfersWithBalances', function () {
     const extendBalances = add_balances_rewired.__get__('extendTransfersWithBalances')
 
     assert.rejects(async () => {
-      await extendBalances(null, [transfer], 50);
+      await extendBalances(null, [transfer], 50, 2);
     }, Error)
   });
 
