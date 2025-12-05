@@ -361,4 +361,42 @@ describe('Test ERC20 worker', function () {
         assert.deepStrictEqual(result.map(transfer => transfer.primaryKey), primaryKeySequence)
 
     });
+
+    it('tracks and resets node requests count', function () {
+        const constantsEdit = { ...constants };
+        const worker = new ERC20Worker(constantsEdit);
+        const workerAny = worker as any;
+
+        workerAny.recordNodeRequests(2);
+        assert.strictEqual(worker.getNewRequestsCount(), 2);
+
+        workerAny.recordNodeRequests(1);
+        assert.strictEqual(worker.getNewRequestsCount(), 1);
+        assert.strictEqual(worker.getNewRequestsCount(), 0);
+    });
+
+    it('counts provider calls including batches', function () {
+        const constantsEdit = { ...constants };
+        const worker = new ERC20Worker(constantsEdit);
+        const workerAny = worker as any;
+        worker.getNewRequestsCount();
+
+        const fakeProvider: any = {
+            send(_payload: any) {
+                return null;
+            }
+        };
+        const fakeWrapper: any = {
+            getWeb3() {
+                return { currentProvider: fakeProvider };
+            }
+        };
+
+        workerAny.attachWeb3RequestTracker(fakeWrapper);
+
+        fakeProvider.send({ id: 1 });
+        fakeProvider.send([{ id: 2 }, { id: 3 }]);
+
+        assert.strictEqual(worker.getNewRequestsCount(), 3);
+    });
 });

@@ -35,6 +35,33 @@ function simpleHash(input: string): number {
   return Math.abs(hash);
 }
 
+type RequestRecorder = (count: number) => void;
+
+class TrackingHttpClient implements HTTPClientInterface {
+  private client: HTTPClientInterface;
+  private recordRequest: RequestRecorder;
+
+  constructor(client: HTTPClientInterface, recordRequest: RequestRecorder) {
+    this.client = client;
+    this.recordRequest = recordRequest;
+  }
+
+  request(method: string, params: any[], id?: string | number): Promise<any> {
+    this.recordRequest(1);
+    return this.client.request(method, params, id);
+  }
+
+  requestBulk(requests: any[]): Promise<any> {
+    const batchSize = Array.isArray(requests) ? requests.length : 1;
+    this.recordRequest(batchSize);
+    return this.client.requestBulk(requests);
+  }
+
+  generateRequest(method: string, params: any[]): any {
+    return this.client.generateRequest(method, params);
+  }
+}
+
 export class ERC20Worker extends BaseWorker {
   private web3Wrapper: Web3Interface;
   private ethClient: HTTPClientInterface;
@@ -47,15 +74,20 @@ export class ERC20Worker extends BaseWorker {
   public blocksList: [number, number][];
 
   private allOldContracts: string[];
+  private requestsSinceLastReport: number;
 
 
   constructor(settings: any) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    this.web3Wrapper = constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD);
-    this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
+    this.requestsSinceLastReport = 0;
+    this.web3Wrapper = this.attachWeb3RequestTracker(
+      constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD)
+    );
+    const rawEthClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
       settings.DEFAULT_TIMEOUT);
+    this.ethClient = new TrackingHttpClient(rawEthClient, (count: number) => this.recordNodeRequests(count));
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
     this.allOldContracts = [];
@@ -92,6 +124,8 @@ export class ERC20Worker extends BaseWorker {
       }
       await exporter.initPartitioner((event: object) => simpleHash((event as ERC20Transfer).contract));
     }
+
+    this.resetNodeRequestsCounter();
   }
 
   getBlocksListInterval(): { success: true; fromBlock: number; toBlock: number } | { success: false } {
@@ -234,6 +268,12 @@ export class ERC20Worker extends BaseWorker {
     return resultEvents;
   }
 
+  getNewRequestsCount(): number {
+    const requests = this.requestsSinceLastReport;
+    this.requestsSinceLastReport = 0;
+    return requests;
+  }
+
   private async fetchPastEvents(fromBlock: number, toBlock: number, contractAddresses: string | string[] | null,
     timestampsCache: TimestampsCacheInterface): Promise<ERC20Transfer[]> {
     if (Array.isArray(contractAddresses) && contractAddresses.length === 0) {
@@ -260,5 +300,61 @@ export class ERC20Worker extends BaseWorker {
 
     const results = await Promise.all(chunkPromises);
     return results.flat();
+  }
+
+  private attachWeb3RequestTracker(web3Wrapper: Web3Interface): Web3Interface {
+    const candidate = web3Wrapper as Web3Wrapper;
+    if (typeof candidate.getWeb3 !== 'function') {
+      logger.warn('Web3 wrapper does not expose getWeb3(); RPC requests from Web3 may not be tracked.');
+      return web3Wrapper;
+    }
+
+    const web3 = candidate.getWeb3();
+    if (!web3) {
+      logger.warn('Web3 instance is missing; RPC requests from Web3 may not be tracked.');
+      return web3Wrapper;
+    }
+
+    const provider: any = (web3 as any).currentProvider || (web3 as any).provider;
+    if (!provider || typeof provider !== 'object') {
+      logger.warn('Web3 provider is missing or invalid; RPC requests from Web3 may not be tracked.');
+      return web3Wrapper;
+    }
+
+    this.patchProviderMethod(provider, 'request');
+    this.patchProviderMethod(provider, 'send');
+    this.patchProviderMethod(provider, 'sendAsync');
+
+    return web3Wrapper;
+  }
+
+  private patchProviderMethod(provider: any, methodName: 'request' | 'send' | 'sendAsync') {
+    const current = provider[methodName];
+    if (typeof current !== 'function' || current.__sanRequestTrackerPatched) {
+      return;
+    }
+
+    const boundOriginal = current.bind(provider);
+    const worker = this;
+    const tracked = function (payload: any, ...args: any[]) {
+      const batchSize = Array.isArray(payload) ? payload.length : 1;
+      worker.recordNodeRequests(batchSize);
+      return boundOriginal(payload, ...args);
+    };
+    const trackedWithFlag = tracked as any;
+    trackedWithFlag.__sanRequestTrackerPatched = true;
+    provider[methodName] = trackedWithFlag;
+  }
+
+  private recordNodeRequests(count: number) {
+    if (count <= 0) {
+      logger.error(`Attempted to record non-positive node request count: ${count}`);
+      return;
+    }
+    this.requestsSinceLastReport += count;
+  }
+
+  private resetNodeRequestsCounter() {
+    this.requestsSinceLastReport = 0;
   }
 }
