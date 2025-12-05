@@ -15,6 +15,7 @@ import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
 import { extendTransfersWithBalances } from './lib/add_balances'
 import { buildInclusiveChunks } from './lib/chunk_utils';
+import { TrackingHttpClient, attachWeb3RequestTracker } from '../lib/request_tracking';
 
 
 /**
@@ -47,15 +48,22 @@ export class ERC20Worker extends BaseWorker {
   public blocksList: [number, number][];
 
   private allOldContracts: string[];
+  private requestsSinceLastReport: number;
 
 
   constructor(settings: any) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    this.web3Wrapper = constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD);
-    this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
+    this.requestsSinceLastReport = 0;
+    this.web3Wrapper = attachWeb3RequestTracker(
+      constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD),
+      (count: number) => this.recordNodeRequests(count),
+      logger
+    );
+    const rawEthClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
       settings.DEFAULT_TIMEOUT);
+    this.ethClient = new TrackingHttpClient(rawEthClient, (count: number) => this.recordNodeRequests(count));
     this.contractsOverwriteArray = [];
     this.contractsUnmodified = [];
     this.allOldContracts = [];
@@ -234,6 +242,12 @@ export class ERC20Worker extends BaseWorker {
     return resultEvents;
   }
 
+  getNewRequestsCount(): number {
+    const requests = this.requestsSinceLastReport;
+    this.requestsSinceLastReport = 0;
+    return requests;
+  }
+
   private async fetchPastEvents(fromBlock: number, toBlock: number, contractAddresses: string | string[] | null,
     timestampsCache: TimestampsCacheInterface): Promise<ERC20Transfer[]> {
     if (Array.isArray(contractAddresses) && contractAddresses.length === 0) {
@@ -261,4 +275,13 @@ export class ERC20Worker extends BaseWorker {
     const results = await Promise.all(chunkPromises);
     return results.flat();
   }
+
+  private recordNodeRequests(count: number) {
+    if (count <= 0) {
+      logger.error(`Attempted to record non-positive node request count: ${count}`);
+      return;
+    }
+    this.requestsSinceLastReport += count;
+  }
+
 }
