@@ -15,6 +15,7 @@ import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
 import { extendTransfersWithBalances } from './lib/add_balances'
 import { buildInclusiveChunks } from './lib/chunk_utils';
+import { TrackingHttpClient, attachWeb3RequestTracker } from '../lib/request_tracking';
 
 
 /**
@@ -33,33 +34,6 @@ function simpleHash(input: string): number {
     hash |= 0; // Convert to 32bit integer
   }
   return Math.abs(hash);
-}
-
-type RequestRecorder = (count: number) => void;
-
-class TrackingHttpClient implements HTTPClientInterface {
-  private client: HTTPClientInterface;
-  private recordRequest: RequestRecorder;
-
-  constructor(client: HTTPClientInterface, recordRequest: RequestRecorder) {
-    this.client = client;
-    this.recordRequest = recordRequest;
-  }
-
-  request(method: string, params: any[], id?: string | number): Promise<any> {
-    this.recordRequest(1);
-    return this.client.request(method, params, id);
-  }
-
-  requestBulk(requests: any[]): Promise<any> {
-    const batchSize = Array.isArray(requests) ? requests.length : 1;
-    this.recordRequest(batchSize);
-    return this.client.requestBulk(requests);
-  }
-
-  generateRequest(method: string, params: any[]): any {
-    return this.client.generateRequest(method, params);
-  }
 }
 
 export class ERC20Worker extends BaseWorker {
@@ -82,8 +56,10 @@ export class ERC20Worker extends BaseWorker {
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     this.requestsSinceLastReport = 0;
-    this.web3Wrapper = this.attachWeb3RequestTracker(
-      constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD)
+    this.web3Wrapper = attachWeb3RequestTracker(
+      constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD),
+      (count: number) => this.recordNodeRequests(count),
+      logger
     );
     const rawEthClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
       settings.DEFAULT_TIMEOUT);
@@ -124,8 +100,6 @@ export class ERC20Worker extends BaseWorker {
       }
       await exporter.initPartitioner((event: object) => simpleHash((event as ERC20Transfer).contract));
     }
-
-    this.resetNodeRequestsCounter();
   }
 
   getBlocksListInterval(): { success: true; fromBlock: number; toBlock: number } | { success: false } {
@@ -302,50 +276,6 @@ export class ERC20Worker extends BaseWorker {
     return results.flat();
   }
 
-  private attachWeb3RequestTracker(web3Wrapper: Web3Interface): Web3Interface {
-    const candidate = web3Wrapper as Web3Wrapper;
-    if (typeof candidate.getWeb3 !== 'function') {
-      logger.warn('Web3 wrapper does not expose getWeb3(); RPC requests from Web3 may not be tracked.');
-      return web3Wrapper;
-    }
-
-    const web3 = candidate.getWeb3();
-    if (!web3) {
-      logger.warn('Web3 instance is missing; RPC requests from Web3 may not be tracked.');
-      return web3Wrapper;
-    }
-
-    const provider: any = (web3 as any).currentProvider || (web3 as any).provider;
-    if (!provider || typeof provider !== 'object') {
-      logger.warn('Web3 provider is missing or invalid; RPC requests from Web3 may not be tracked.');
-      return web3Wrapper;
-    }
-
-    this.patchProviderMethod(provider, 'request');
-    this.patchProviderMethod(provider, 'send');
-    this.patchProviderMethod(provider, 'sendAsync');
-
-    return web3Wrapper;
-  }
-
-  private patchProviderMethod(provider: any, methodName: 'request' | 'send' | 'sendAsync') {
-    const current = provider[methodName];
-    if (typeof current !== 'function' || current.__sanRequestTrackerPatched) {
-      return;
-    }
-
-    const boundOriginal = current.bind(provider);
-    const worker = this;
-    const tracked = function (payload: any, ...args: any[]) {
-      const batchSize = Array.isArray(payload) ? payload.length : 1;
-      worker.recordNodeRequests(batchSize);
-      return boundOriginal(payload, ...args);
-    };
-    const trackedWithFlag = tracked as any;
-    trackedWithFlag.__sanRequestTrackerPatched = true;
-    provider[methodName] = trackedWithFlag;
-  }
-
   private recordNodeRequests(count: number) {
     if (count <= 0) {
       logger.error(`Attempted to record non-positive node request count: ${count}`);
@@ -354,7 +284,4 @@ export class ERC20Worker extends BaseWorker {
     this.requestsSinceLastReport += count;
   }
 
-  private resetNodeRequestsCounter() {
-    this.requestsSinceLastReport = 0;
-  }
 }

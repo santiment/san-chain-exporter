@@ -7,6 +7,7 @@ import { ContractOverwrite } from '../../blockchains/erc20/lib/contract_overwrit
 import helpers from './helpers';
 import { ERC20Transfer } from '../../blockchains/erc20/erc20_types';
 import { MockWeb3Wrapper, MockEthClient } from '../eth/mock_web3_wrapper';
+import { attachWeb3RequestTracker } from '../../blockchains/lib/request_tracking';
 
 
 
@@ -392,7 +393,8 @@ describe('Test ERC20 worker', function () {
             }
         };
 
-        workerAny.attachWeb3RequestTracker(fakeWrapper);
+        const noopLogger = { warn() { }, info() { }, error() { }, debug() { } } as any;
+        attachWeb3RequestTracker(fakeWrapper, (count: number) => workerAny.recordNodeRequests(count), noopLogger);
 
         fakeProvider.send({ id: 1 });
         fakeProvider.send([{ id: 2 }, { id: 3 }]);
