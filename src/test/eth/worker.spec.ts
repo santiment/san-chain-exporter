@@ -4,6 +4,7 @@ import { EOB } from '../../blockchains/eth/lib/end_of_block';
 import * as constants from '../../blockchains/eth/lib/constants';
 import { ETHBlock, ETHTransfer } from '../../blockchains/eth/eth_types';
 import { expect } from 'earl'
+import { attachWeb3RequestTracker } from '../../blockchains/lib/request_tracking';
 
 describe('Test worker', function () {
     let feeResultBlock5711191: ETHTransfer;
@@ -95,6 +96,42 @@ describe('Test worker', function () {
         const types = result.map((value) => value.type);
         expect(blocks).toEqual([5711191, 5711191, 5711192, 5711192, 5711193, 5711193, 5711193]);
         expect(types).toEqual(["fee", "EOB", "fee", "EOB", "fee", "call", "EOB"]);
+    })
+
+    it('tracks and resets node requests count', function () {
+        const worker = new ETHWorker(constants);
+        const workerAny = worker as any;
+
+        workerAny.recordNodeRequests(2);
+        expect(worker.getNewRequestsCount()).toEqual(2);
+
+        workerAny.recordNodeRequests(3);
+        expect(worker.getNewRequestsCount()).toEqual(3);
+        expect(worker.getNewRequestsCount()).toEqual(0);
+    })
+
+    it('counts provider calls including batches', function () {
+        const worker = new ETHWorker(constants);
+        const workerAny = worker as any;
+        worker.getNewRequestsCount();
+
+        const fakeProvider: any = {
+            send(_payload: any) {
+                return null;
+            }
+        };
+        const fakeWrapper: any = {
+            getWeb3() {
+                return { currentProvider: fakeProvider };
+            }
+        };
+        const noopLogger = { warn() { }, info() { }, error() { }, debug() { } } as any;
+        attachWeb3RequestTracker(fakeWrapper, (count: number) => workerAny.recordNodeRequests(count), noopLogger);
+
+        fakeProvider.send({ id: 1 });
+        fakeProvider.send([{ id: 2 }, { id: 3 }, { id: 4 }]);
+
+        expect(worker.getNewRequestsCount()).toEqual(4);
     })
 
 });

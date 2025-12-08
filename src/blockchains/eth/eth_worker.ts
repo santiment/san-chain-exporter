@@ -13,6 +13,7 @@ import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_dat
 import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
 import { EOB, collectEndOfBlocks } from './lib/end_of_block';
+import { TrackingHttpClient, attachWeb3RequestTracker } from '../lib/request_tracking';
 
 
 export class ETHWorker extends BaseWorker {
@@ -21,18 +22,26 @@ export class ETHWorker extends BaseWorker {
   private feesDecoder: FeesDecoder;
   private withdrawalsDecoder: WithdrawalsDecoder;
   private ethClientVerification: HTTPClientInterface | undefined
+  private requestsSinceLastReport: number;
 
   constructor(settings: any) {
     super(settings);
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
-    this.web3Wrapper = constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD);
-    this.ethClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
-      settings.DEFAULT_TIMEOUT)
+    this.requestsSinceLastReport = 0;
+    this.web3Wrapper = attachWeb3RequestTracker(
+      constructWeb3Wrapper(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD),
+      (count: number) => this.recordNodeRequests(count),
+      logger
+    );
+    const rawEthClient = constructRPCClient(settings.NODE_URL, settings.RPC_USERNAME, settings.RPC_PASSWORD,
+      settings.DEFAULT_TIMEOUT);
+    this.ethClient = new TrackingHttpClient(rawEthClient, (count: number) => this.recordNodeRequests(count));
 
     if (settings.VERIFICATION_NODE) {
-      this.ethClientVerification = constructRPCClient(settings.VERIFICATION_NODE, settings.VERIFICATION_NODE_USERNAME,
-        settings.VERIFICATION_NODE_PASSWORD, settings.DEFAULT_TIMEOUT)
+      const verificationClient = constructRPCClient(settings.VERIFICATION_NODE, settings.VERIFICATION_NODE_USERNAME,
+        settings.VERIFICATION_NODE_PASSWORD, settings.DEFAULT_TIMEOUT);
+      this.ethClientVerification = new TrackingHttpClient(verificationClient, (count: number) => this.recordNodeRequests(count));
     }
 
     this.feesDecoder = new FeesDecoder();
@@ -134,6 +143,21 @@ export class ETHWorker extends BaseWorker {
   async init(): Promise<void> {
     this.lastConfirmedBlock = await this.web3Wrapper.getBlockNumber() - this.settings.CONFIRMATIONS
   }
+
+  getNewRequestsCount(): number {
+    const requests = this.requestsSinceLastReport;
+    this.requestsSinceLastReport = 0;
+    return requests;
+  }
+
+  private recordNodeRequests(count: number) {
+    if (count <= 0) {
+      logger.error(`Attempted to record non-positive node request count: ${count}`);
+      return;
+    }
+    this.requestsSinceLastReport += count;
+  }
+
 }
 
 export function extendEventsWithPrimaryKey<T extends { primaryKey?: number }>(events: T[], lastPrimaryKey: number) {
@@ -141,4 +165,3 @@ export function extendEventsWithPrimaryKey<T extends { primaryKey?: number }>(ev
     events[i].primaryKey = lastPrimaryKey + i + 1;
   }
 }
-
