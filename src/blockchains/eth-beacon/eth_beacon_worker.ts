@@ -30,6 +30,8 @@ export class BeaconWorker extends BaseWorker {
   private lastBalanceDatetime = new Map<string, string>();
   private balancesPreloaded = false;
 
+  private readonly MAX_CONCURRENT_SLOTS: number;
+
   constructor(settings: any) {
     super(settings);
     this.client = new BeaconHttpClient(
@@ -37,6 +39,7 @@ export class BeaconWorker extends BaseWorker {
     );
     this.LOOP_INTERVAL_CURRENT_MODE_SEC =
       settings.LOOP_INTERVAL_CURRENT_MODE_SEC ?? 30;
+    this.MAX_CONCURRENT_SLOTS = settings.MAX_CONCURRENT_SLOTS ?? 16;  
   }
 
   private async preloadLastBalances(slot: number): Promise<void> {
@@ -182,22 +185,26 @@ export class BeaconWorker extends BaseWorker {
     this.sleepTimeMsec = 0;
     this.lastConfirmedBlock = latestSlot;
 
-    const nextSlot = this.lastExportedBlock + 1;
-
-    if (nextSlot > latestSlot) {
-      return [];
-    }
-
+    const slotsAvailable = this.lastConfirmedBlock - this.lastExportedBlock;
+    if (slotsAvailable <= 0) return []; 
+    const numSlots = Math.min( this.MAX_CONCURRENT_SLOTS, slotsAvailable ); 
+    const slots = Array.from( 
+      { length: numSlots },
+      (_, i) => this.lastExportedBlock + 1 + i 
+    ); 
     let allBalances: BeaconBalance[] = [];
 
-    if (nextSlot % 16 === 0) {
-      const changedBalances = await this.processSlot(nextSlot);
-      if (changedBalances.length > 0) {
-        allBalances.push(...changedBalances);
-      }
+    for (const slot of slots) { 
+      if (slot % 16 !== 0) { 
+        this.lastExportedBlock = slot; 
+        continue; 
+      } 
+      const changedBalances = await this.processSlot(slot); 
+      if (changedBalances.length > 0) { 
+        allBalances.push(...changedBalances); 
+      } 
+      this.lastExportedBlock = slot; 
     }
-
-    this.lastExportedBlock = nextSlot;
 
     this.lastExportTime = Date.now();
     this.lastPrimaryKey += allBalances.length;
