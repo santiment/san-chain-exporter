@@ -121,57 +121,42 @@ export class BeaconWorker extends BaseWorker {
     const validatorsRes = await this.client.getValidators(slot);
     const balancesRes = await this.client.getValidatorBalances(slot);
 
-    const totalValidators = validatorsRes.data.length;
-
     for (const v of validatorsRes.data) {
-      const existing = this.indexToPubkey.get(v.index);
-      if (!existing) {
+      if (!this.indexToPubkey.has(v.index)) {
         this.indexToPubkey.set(v.index, v.validator.pubkey);
       }
     }
 
-    const newBalances: BeaconBalance[] = [];
+    const records: BeaconBalance[] = [];
 
     for (const b of balancesRes.data) {
       const pubkey = this.indexToPubkey.get(b.index);
       if (!pubkey) continue;
 
-      const previousBalance = this.lastBalances.get(pubkey) ?? 0;
-      const currentBalnce = Number(b.balance);
-      if (slot > 0 && previousBalance === currentBalnce) continue;
-
-      const oldDt = this.lastBalanceDatetime.get(pubkey) ?? null;
-      const dt = datetime;
-
-      const record: BeaconBalance = {
+      records.push({
         slot,
-        dt,
-        balance: currentBalnce,
-        oldDt,
-        oldBalance: previousBalance,
+        dt: datetime,
+        balance: Number(b.balance),
+        oldDt: null,
+        oldBalance: null,
         pubkey,
-      };
-
-      newBalances.push(record);
-      this.lastBalances.set(pubkey, currentBalnce);
-      this.lastBalanceDatetime.set(pubkey, dt);
+      });
     }
 
     logger.info(
-      `[Beacon] slot=${slot} validators=${totalValidators} inserted=${newBalances.length}`
+      `[Beacon] slot=${slot} fetched=${records.length}`
     );
 
-    return newBalances;
+    return records;
   }
+
 
   async work(): Promise<BeaconBalance[]> {
     if (!this.balancesPreloaded) {
       const preloadSlot = this.lastExportedBlock;
-
       if (preloadSlot > 0) {
         await this.preloadLastBalances(preloadSlot);
       }
-
       this.balancesPreloaded = true;
     }
 
@@ -186,28 +171,47 @@ export class BeaconWorker extends BaseWorker {
     this.lastConfirmedBlock = latestSlot;
 
     const slotsAvailable = this.lastConfirmedBlock - this.lastExportedBlock;
-    if (slotsAvailable <= 0) return []; 
-    const numSlots = Math.min( this.MAX_CONCURRENT_SLOTS, slotsAvailable ); 
-    const slots = Array.from( 
-      { length: numSlots },
-      (_, i) => this.lastExportedBlock + 1 + i 
-    ); 
-    let allBalances: BeaconBalance[] = [];
+    if (slotsAvailable <= 0) return [];
 
-    for (const slot of slots) { 
-      if (slot % 16 !== 0) { 
-        this.lastExportedBlock = slot; 
-        continue; 
-      } 
-      const changedBalances = await this.processSlot(slot); 
-      if (changedBalances.length > 0) { 
-        allBalances.push(...changedBalances); 
-      } 
-      this.lastExportedBlock = slot; 
+    const candidateSlots = [];
+    for (let s = this.lastExportedBlock + 1; s <= this.lastConfirmedBlock; s++) {
+      if (s % 16 === 0) candidateSlots.push(s);
     }
 
+    const slotsToProcess = candidateSlots.slice(0, 10);
+
+    const slotResults = await Promise.all(
+      slotsToProcess.map((slot) => this.processSlot(slot))
+    );
+
+    const allRecords: BeaconBalance[] = slotResults.flat();
+    allRecords.sort((a, b) => a.slot - b.slot);
+
+    const allBalances: BeaconBalance[] = [];
+
+    for (const r of allRecords) {
+      const prevBalance = this.lastBalances.get(r.pubkey) ?? 0;
+      if (prevBalance === r.balance) continue;
+
+      const oldDt = this.lastBalanceDatetime.get(r.pubkey) ?? null;
+
+      allBalances.push({
+        ...r,
+        oldBalance: prevBalance,
+        oldDt,
+      });
+
+      this.lastBalances.set(r.pubkey, r.balance);
+      this.lastBalanceDatetime.set(r.pubkey, r.dt);
+    }
+
+    this.lastExportedBlock = slotsToProcess.at(-1)!;
     this.lastExportTime = Date.now();
     this.lastPrimaryKey += allBalances.length;
+
+    logger.info(
+      `[Beacon] slots=${slotsToProcess.join(',')} changes=${allBalances.length}`
+    );
 
     return allBalances;
   }
