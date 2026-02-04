@@ -173,12 +173,14 @@ export class BeaconWorker extends BaseWorker {
     const slotsAvailable = this.lastConfirmedBlock - this.lastExportedBlock;
     if (slotsAvailable <= 0) return [];
 
-    const candidateSlots = [];
-    for (let s = this.lastExportedBlock + 1; s <= this.lastConfirmedBlock; s++) {
-      if (s % 16 === 0) candidateSlots.push(s);
-    }
+    const slotsToProcess: number[] = [];
 
-    const slotsToProcess = candidateSlots.slice(0, 10);
+    let slot = this.lastExportedBlock + (16 - (this.lastExportedBlock % 16 || 16));
+
+    while (slot <= this.lastConfirmedBlock && slotsToProcess.length < this.MAX_CONCURRENT_SLOTS) {
+      slotsToProcess.push(slot);
+      slot += 16;
+    }
 
     const slotResults = await Promise.all(
       slotsToProcess.map((slot) => this.processSlot(slot))
