@@ -39,7 +39,7 @@ export class BeaconWorker extends BaseWorker {
     );
     this.LOOP_INTERVAL_CURRENT_MODE_SEC =
       settings.LOOP_INTERVAL_CURRENT_MODE_SEC ?? 30;
-    this.MAX_CONCURRENT_SLOTS = settings.MAX_CONCURRENT_SLOTS ?? 16;  
+    this.MAX_CONCURRENT_SLOTS = settings.MAX_CONCURRENT_SLOTS ?? 8;  
   }
 
   private async preloadLastBalances(slot: number): Promise<void> {
