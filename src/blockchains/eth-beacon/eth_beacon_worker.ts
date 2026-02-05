@@ -4,6 +4,9 @@ import { logger } from '../../lib/logger';
 
 const BEACON_API = 'https://ethereum-beacon.santiment.net';
 const SECONDS_PER_SLOT = 12;
+const SECONDS_PER_DAY = 86400;
+const SLOTS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_SLOT; // 7200
+
 
 type GenesisResponse = {
   data: {
@@ -76,6 +79,12 @@ export class BeaconWorker extends BaseWorker {
     this.lastConfirmedBlock = await this.getLatestSlot();
   }
 
+private getLastDailySlot(dayIndex: number): number {
+  const dayEndSlot = (dayIndex + 1) * SLOTS_PER_DAY - 1;
+  return dayEndSlot - (dayEndSlot % 32);
+}
+
+
   private async fetchJSON<T>(url: string): Promise<T> {
     const res = await fetch(url, {
       headers: { accept: 'application/json' },
@@ -86,13 +95,6 @@ export class BeaconWorker extends BaseWorker {
     }
 
     return res.json() as Promise<T>;
-  }
-
-  private withdrawalCredentialsToAddress(
-    creds: string
-  ): string | null {
-    if (!creds.startsWith('0x01')) return null;
-    return '0x' + creds.slice(-40);
   }
 
   private async getGenesisTime(): Promise<number> {
@@ -161,37 +163,23 @@ export class BeaconWorker extends BaseWorker {
     }
 
     const latestSlot = await this.client.getHeadSlot();
+    this.lastConfirmedBlock = latestSlot;
 
-    if (latestSlot === this.lastConfirmedBlock) {
+    const nextDayIndex =
+      Math.floor(this.lastExportedBlock / SLOTS_PER_DAY) + 1;
+
+    const exportSlot = this.getLastDailySlot(nextDayIndex);
+
+    if (exportSlot > latestSlot || exportSlot <= this.lastExportedBlock) {
       this.sleepTimeMsec = this.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
       return [];
     }
 
-    this.sleepTimeMsec = 0;
-    this.lastConfirmedBlock = latestSlot;
-
-    const slotsAvailable = this.lastConfirmedBlock - this.lastExportedBlock;
-    if (slotsAvailable <= 0) return [];
-
-    const slotsToProcess: number[] = [];
-
-    let slot = this.lastExportedBlock + (16 - (this.lastExportedBlock % 16 || 16));
-
-    while (slot <= this.lastConfirmedBlock && slotsToProcess.length < this.MAX_CONCURRENT_SLOTS) {
-      slotsToProcess.push(slot);
-      slot += 16;
-    }
-
-    const slotResults = await Promise.all(
-      slotsToProcess.map((slot) => this.processSlot(slot))
-    );
-
-    const allRecords: BeaconBalance[] = slotResults.flat();
-    allRecords.sort((a, b) => a.slot - b.slot);
+    const records = await this.processSlot(exportSlot);
 
     const allBalances: BeaconBalance[] = [];
 
-    for (const r of allRecords) {
+    for (const r of records) {
       const prevBalance = this.lastBalances.get(r.pubkey) ?? 0;
       if (prevBalance === r.balance) continue;
 
@@ -207,12 +195,12 @@ export class BeaconWorker extends BaseWorker {
       this.lastBalanceDatetime.set(r.pubkey, r.dt);
     }
 
-    this.lastExportedBlock = slotsToProcess.at(-1)!;
+    this.lastExportedBlock = exportSlot;
     this.lastExportTime = Date.now();
     this.lastPrimaryKey += allBalances.length;
 
     logger.info(
-      `[Beacon] slots=${slotsToProcess.join(',')} changes=${allBalances.length}`
+      `[Beacon] daily slot=${exportSlot} changes=${allBalances.length}`
     );
 
     return allBalances;
