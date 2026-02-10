@@ -11,7 +11,7 @@ import { UTXOWorker } from './utxo/utxo_worker';
 import { XRPWorker } from './xrp/xrp_worker';
 import { ICPWorker } from './icp/icp_worker';
 import { ICRCWorker } from './icrc/icrc_worker';
-import { BeaconWorker } from './eth-beacon/eth_beacon_worker'
+import { BeaconWorker } from './eth_beacon/eth_beacon_worker'
 
 export function constructWorker(blockchain: string, settings: any): BaseWorker {
   switch (blockchain) {
@@ -37,7 +37,7 @@ export function constructWorker(blockchain: string, settings: any): BaseWorker {
       return new ICPWorker(settings);
     case 'icrc':
       return new ICRCWorker(settings);
-    case 'eth-beacon':
+    case 'eth_beacon':
       return new BeaconWorker(settings);
     default:
       throw Error(`Blockchain type '${blockchain}' is not recognized`);

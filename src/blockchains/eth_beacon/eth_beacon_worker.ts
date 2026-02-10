@@ -1,28 +1,13 @@
 import { BeaconHttpClient } from './lib/beacon_http_client';
 import { BaseWorker } from '../../lib/worker_base';
 import { logger } from '../../lib/logger';
+import { BeaconBalance, GenesisResponse } from './beacon_types';
 
 const BEACON_API = 'https://ethereum-beacon.santiment.net';
 const SECONDS_PER_SLOT = 12;
 const SECONDS_PER_DAY = 86400;
 const SLOTS_PER_DAY = SECONDS_PER_DAY / SECONDS_PER_SLOT; 
 const MAX_KAFKA_MESSAGES = 140_000;
-
-
-type GenesisResponse = {
-  data: {
-    genesis_time: string;
-  };
-};
-
-export type BeaconBalance = {
-  slot: number;
-  dt: string;
-  balance: number;
-  oldDt: string | null;
-  oldBalance: number | null;
-  pubkey: string;
-};
 
 export class BeaconWorker extends BaseWorker {
   private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
@@ -31,12 +16,10 @@ export class BeaconWorker extends BaseWorker {
   private genesisTime!: number;
   private lastBalances = new Map<string, number>();
   private indexToPubkey = new Map<string, string>();
-  private lastBalanceDatetime = new Map<string, string>();
+  private lastBalanceTimestamp = new Map<string, number>();
   private balancesPreloaded = false;
   private currentDailySlot: number | null = null;
   private lastProcessedValidatorIndex: number | null = null;
-
-  private readonly MAX_CONCURRENT_SLOTS: number;
 
   constructor(settings: any) {
     super(settings);
@@ -45,7 +28,6 @@ export class BeaconWorker extends BaseWorker {
     );
     this.LOOP_INTERVAL_CURRENT_MODE_SEC =
       settings.LOOP_INTERVAL_CURRENT_MODE_SEC ?? 30;
-    this.MAX_CONCURRENT_SLOTS = settings.MAX_CONCURRENT_SLOTS ?? 8;  
   }
 
   private async preloadLastBalances(slot: number): Promise<void> {
@@ -114,14 +96,15 @@ private getLastDailySlot(dayIndex: number): number {
     return Number(head.data.header.message.slot);
   }
 
-  private slotToDatetime(slot: number): string {
-    const ts =
-      this.genesisTime + slot * SECONDS_PER_SLOT;
-    return new Date(ts * 1000).toISOString();
+  private slotToTimestamp(slot: number): number {
+    return this.genesisTime + slot * SECONDS_PER_SLOT;
   }
 
-async processSlot(slot: number): Promise<Array<BeaconBalance & { index: number }>> {
-    const datetime = this.slotToDatetime(slot);
+
+  async processSlot(
+    slot: number
+  ): Promise<Array<BeaconBalance & { index: number }>> {
+    const timestamp = this.slotToTimestamp(slot);
 
     const validatorsRes = await this.client.getValidators(slot);
     const balancesRes = await this.client.getValidatorBalances(slot);
@@ -132,26 +115,24 @@ async processSlot(slot: number): Promise<Array<BeaconBalance & { index: number }
       }
     }
 
-  return balancesRes.data
-    .sort((a, b) => Number(a.index) - Number(b.index))
-    .map((b) => {
-      const pubkey = this.indexToPubkey.get(b.index);
-      if (!pubkey) return null;
+    return balancesRes.data
+      .sort((a, b) => Number(a.index) - Number(b.index))
+      .map((b) => {
+        const pubkey = this.indexToPubkey.get(b.index);
+        if (!pubkey) return null;
 
-      return {
-        index: Number(b.index), // ✅ FIX HERE
-        slot,
-        dt: datetime,
-        balance: Number(b.balance),
-        oldDt: null,
-        oldBalance: null,
-        pubkey,
-      };
-    })
-    .filter(Boolean) as Array<BeaconBalance & { index: number }>;
+        return {
+          index: Number(b.index),
+          slot,
+          timestamp,
+          balance: Number(b.balance),
+          oldTimestamp: null,
+          oldBalance: null,
+          pubkey,
+        };
+      })
+      .filter(Boolean) as Array<BeaconBalance & { index: number }>;
   }
-
-
 
   async work(): Promise<BeaconBalance[]> {
     if (!this.balancesPreloaded) {
@@ -195,19 +176,20 @@ async processSlot(slot: number): Promise<Array<BeaconBalance & { index: number }
       const prevBalance = this.lastBalances.get(r.pubkey) ?? 0;
       if (prevBalance === r.balance) continue;
 
-      const oldDt = this.lastBalanceDatetime.get(r.pubkey) ?? null;
+      const oldTimestamp =
+        this.lastBalanceTimestamp.get(r.pubkey) ?? null;
 
       allBalances.push({
         slot: r.slot,
-        dt: r.dt,
+        timestamp: r.timestamp,
         balance: r.balance,
         oldBalance: prevBalance,
-        oldDt,
+        oldTimestamp,
         pubkey: r.pubkey,
       });
 
       this.lastBalances.set(r.pubkey, r.balance);
-      this.lastBalanceDatetime.set(r.pubkey, r.dt);
+      this.lastBalanceTimestamp.set(r.pubkey, r.timestamp);
 
       this.lastProcessedValidatorIndex = r.index;
       emitted++;
