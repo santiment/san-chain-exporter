@@ -212,11 +212,17 @@ export class ERC20Worker extends BaseWorker {
     if (events.length > 0) {
       extendEventsWithPrimaryKey(events, overwritten_events);
       logger.info(`Setting primary keys ${events.length} messages for blocks ${interval.fromBlock}:${interval.toBlock}`);
-      const lastPrimaryKey = events[events.length - 1].primaryKey;
-      if (typeof lastPrimaryKey !== 'number') {
-        throw new Error('Primary keys should be set to number before event');
+      let maxPrimaryKey = -1;
+      // Discover the last primary key used.
+      for (const event of events) {
+        if (typeof event.primaryKey !== 'number') {
+          throw new Error('Primary keys should be set to number before event');
+        }
+        if (event.primaryKey > maxPrimaryKey) {
+          maxPrimaryKey = event.primaryKey;
+        }
       }
-      this.lastPrimaryKey = lastPrimaryKey;
+      this.lastPrimaryKey = maxPrimaryKey;
     }
 
     this.lastExportedBlock = interval.toBlock;
@@ -228,6 +234,12 @@ export class ERC20Worker extends BaseWorker {
         const blockDif = a.blockNumber - b.blockNumber;
         if (blockDif !== 0) {
           return blockDif;
+        }
+        const aTxIndex = typeof a.transactionIndex === 'number' ? a.transactionIndex : -1;
+        const bTxIndex = typeof b.transactionIndex === 'number' ? b.transactionIndex : -1;
+        const txIndexDiff = aTxIndex - bTxIndex;
+        if (txIndexDiff !== 0) {
+          return txIndexDiff;
         }
         else if (a.logIndex !== b.logIndex) {
           return a.logIndex - b.logIndex;
