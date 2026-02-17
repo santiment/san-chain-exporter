@@ -1,12 +1,17 @@
 import { BeaconHttpClient } from './lib/beacon_http_client';
 import { BaseWorker } from '../../lib/worker_base';
 import { logger } from '../../lib/logger';
-import { BeaconBalance, GenesisResponse } from './beacon_types';
+import { BeaconBalance } from './beacon_types';
 
 const BEACON_API = 'https://ethereum-beacon.santiment.net';
 const SECONDS_PER_SLOT = 12;
 const SECONDS_PER_DAY = 86400;
 const MAX_KAFKA_MESSAGES = 140_000;
+
+type BalanceState = {
+  balance: number;
+  timestamp: number;
+};
 
 export class BeaconWorker extends BaseWorker {
   private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
@@ -14,14 +19,12 @@ export class BeaconWorker extends BaseWorker {
 
   private genesisTime!: number;
 
-  private lastBalances = new Map<string, number>();
-  private lastBalanceTimestamp = new Map<string, number>();
-  private indexToPubkey = new Map<string, string>();
+  private lastState = new Map<number, BalanceState>();
 
   private balancesPreloaded = false;
-
   private currentDailySlot: number | null = null;
-  private lastProcessedValidatorIndex: number | null = null;
+
+  private pendingBatches: BeaconBalance[][] = [];
 
   constructor(settings: any) {
     super(settings);
@@ -49,7 +52,7 @@ export class BeaconWorker extends BaseWorker {
   }
 
   private async getGenesisTime(): Promise<number> {
-    const genesis = await this.fetchJSON<GenesisResponse>(
+    const genesis = await this.fetchJSON<any>(
       `${BEACON_API}/eth/v1/beacon/genesis`
     );
     return Number(genesis.data.genesis_time);
@@ -77,51 +80,26 @@ export class BeaconWorker extends BaseWorker {
   private async preloadLastBalances(slot: number): Promise<void> {
     logger.info(`[Beacon] Preloading balances at slot ${slot}`);
 
-    const validatorsRes = await this.client.getValidators(slot);
     const balancesRes = await this.client.getValidatorBalances(slot);
-
-    for (const v of validatorsRes.data) {
-      this.indexToPubkey.set(v.index, v.validator.pubkey);
-    }
+    const ts = this.slotToTimestamp(slot);
 
     for (const b of balancesRes.data) {
-      const pubkey = this.indexToPubkey.get(b.index);
-      if (pubkey) {
-        this.lastBalances.set(pubkey, Number(b.balance));
+      const index = Number(b.index);
+      const balance = Number(b.balance);
+
+      if (balance > 0) {
+        this.lastState.set(index, {
+          balance,
+          timestamp: ts,
+        });
       }
     }
   }
 
-  async processSlot(
-    slot: number
-  ): Promise<Array<{ index: number; pubkey: string; balance: number }>> {
-    const validatorsRes = await this.client.getValidators(slot);
-    const balancesRes = await this.client.getValidatorBalances(slot);
-
-    for (const v of validatorsRes.data) {
-      this.indexToPubkey.set(v.index, v.validator.pubkey);
-    }
-
-    return balancesRes.data
-      .sort((a, b) => Number(a.index) - Number(b.index))
-      .map((b) => {
-        const pubkey = this.indexToPubkey.get(b.index);
-        if (!pubkey) return null;
-        return {
-          index: Number(b.index),
-          pubkey,
-          balance: Number(b.balance),
-        };
-      })
-      .filter(Boolean) as Array<{
-      index: number;
-      pubkey: string;
-      balance: number;
-    }>;
-  }
-
   async work(): Promise<BeaconBalance[]> {
-    let exportedDailySlot: number | null = null;
+    if (this.pendingBatches.length > 0) {
+      return this.pendingBatches.shift()!;
+    }
 
     if (!this.balancesPreloaded) {
       if (this.lastExportedBlock > 0) {
@@ -155,65 +133,61 @@ export class BeaconWorker extends BaseWorker {
       }
 
       this.currentDailySlot = slot;
-      this.lastProcessedValidatorIndex = null;
     }
 
-    exportedDailySlot = this.currentDailySlot;
+    const dailySlot = this.currentDailySlot;
+    const dailyTimestamp = this.slotToTimestamp(dailySlot);
 
-    const dailyTimestamp = this.slotToTimestamp(exportedDailySlot);
-    const records = await this.processSlot(exportedDailySlot);
+    const balancesRes =
+      await this.client.getValidatorBalances(dailySlot);
 
-    const allBalances: BeaconBalance[] = [];
-    let emitted = 0;
+    const dayChanges: BeaconBalance[] = [];
 
-    for (const r of records) {
-      if (
-        this.lastProcessedValidatorIndex !== null &&
-        r.index <= this.lastProcessedValidatorIndex
-      ) {
+    for (const b of balancesRes.data) {
+      const index = Number(b.index);
+      const balance = Number(b.balance);
+
+      const prev = this.lastState.get(index);
+
+      if (prev && prev.balance === balance) {
         continue;
       }
 
-      const prevBalance = this.lastBalances.get(r.pubkey) ?? 0;
-      if (prevBalance === r.balance) continue;
-
-      const oldTimestamp =
-        this.lastBalanceTimestamp.get(r.pubkey) ?? null;
-
-      allBalances.push({
-        slot: exportedDailySlot,
+      dayChanges.push({
+        slot: dailySlot,
         timestamp: dailyTimestamp,
-        balance: r.balance,
-        oldBalance: prevBalance,
-        oldTimestamp,
-        pubkey: r.pubkey,
+        balance,
+        oldBalance: prev?.balance ?? 0,
+        oldTimestamp: prev?.timestamp ?? null,
+        validatorIndex: index,
       });
 
-      this.lastBalances.set(r.pubkey, r.balance);
-      this.lastBalanceTimestamp.set(r.pubkey, dailyTimestamp);
-
-      this.lastProcessedValidatorIndex = r.index;
-      emitted++;
-
-      if (emitted >= MAX_KAFKA_MESSAGES) break;
+      if (balance === 0) {
+        this.lastState.delete(index);
+      } else {
+        this.lastState.set(index, {
+          balance,
+          timestamp: dailyTimestamp,
+        });
+      }
     }
 
-    if (
-      this.lastProcessedValidatorIndex ===
-      records.at(-1)?.index
-    ) {
-      this.lastExportedBlock = exportedDailySlot;
-      this.currentDailySlot = null;
-      this.lastProcessedValidatorIndex = null;
+    for (let i = 0; i < dayChanges.length; i += MAX_KAFKA_MESSAGES) {
+      this.pendingBatches.push(
+        dayChanges.slice(i, i + MAX_KAFKA_MESSAGES)
+      );
     }
+
+    this.lastExportedBlock = dailySlot;
+    this.currentDailySlot = null;
 
     this.lastExportTime = Date.now();
-    this.lastPrimaryKey += allBalances.length;
+    this.lastPrimaryKey += dayChanges.length;
 
     logger.info(
-      `[Beacon] UTC daily slot=${exportedDailySlot} emitted=${allBalances.length}`
+      `[Beacon] UTC daily slot=${dailySlot} total_changes=${dayChanges.length} batches=${this.pendingBatches.length}`
     );
 
-    return allBalances;
+    return this.pendingBatches.shift() ?? [];
   }
 }
