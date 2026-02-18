@@ -53,6 +53,66 @@ describe('assignPrimaryKeys', function () {
     assert.deepEqual(inputEvent1, expectedEvent);
   });
 
+  it('sorts events by block number, transaction index, log index', async function () {
+    const eventA = {
+      blockNumber: 100,
+      transactionIndex: 5,
+      logIndex: 20,
+      timestamp: 0,
+      transactionHash: '0xaaa',
+      contract: '0x1',
+      from: '0x2',
+      to: '0x3',
+      value: 1n,
+      valueExactBase36: '1'
+    };
+    const eventB = {
+      blockNumber: 100,
+      transactionIndex: 3,
+      logIndex: 50,
+      timestamp: 0,
+      transactionHash: '0xbbb',
+      contract: '0x1',
+      from: '0x2',
+      to: '0x3',
+      value: 1n,
+      valueExactBase36: '1'
+    };
+    const eventC = {
+      blockNumber: 100,
+      transactionIndex: 5,
+      logIndex: 10,
+      timestamp: 0,
+      transactionHash: '0xccc',
+      contract: '0x1',
+      from: '0x2',
+      to: '0x3',
+      value: 1n,
+      valueExactBase36: '1'
+    };
+    const eventD = {
+      blockNumber: 101,
+      transactionIndex: 0,
+      logIndex: 0,
+      timestamp: 0,
+      transactionHash: '0xddd',
+      contract: '0x1',
+      from: '0x2',
+      to: '0x3',
+      value: 1n,
+      valueExactBase36: '1'
+    };
+
+    const events = [eventA, eventB, eventC, eventD];
+    extendEventsWithPrimaryKey(events, []);
+
+    assert.deepStrictEqual(
+      events.map(event => event.transactionHash),
+      [eventB.transactionHash, eventC.transactionHash, eventA.transactionHash, eventD.transactionHash]
+    );
+  });
+
+
   it('assign primary keys, event list, overwritten are empty', async function () {
     const expectedEvents = JSON.parse(JSON.stringify([inputEvent1, inputEvent2]));
     extendEventsWithPrimaryKey([inputEvent1, inputEvent2], []);
