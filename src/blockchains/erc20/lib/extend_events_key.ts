@@ -53,9 +53,10 @@ export function extendEventsWithPrimaryKey(events: ERC20Transfer[], overwritten_
   overwritten_events.forEach(function (event) {
     const blockNumber = event.blockNumber;
     if (typeof lastLogIndexPerBlock[blockNumber] !== 'number') {
-      lastLogIndexPerBlock[blockNumber] = -1;
+      lastLogIndexPerBlock[blockNumber] = 0;
+    } else {
+      lastLogIndexPerBlock[blockNumber] += 1;
     }
-    lastLogIndexPerBlock[blockNumber] += 1;
     event.primaryKey = event.blockNumber * constants.PRIMARY_KEY_MULTIPLIER + lastLogIndexPerBlock[blockNumber];
   });
 }
