@@ -149,7 +149,7 @@ export class BeaconWorker extends BaseWorker {
 
       const prev = this.lastState.get(index);
 
-      if (prev && prev.balance === balance) {
+      if ((prev && (prev.balance === balance)) || (!prev && balance === 0)) {
         continue;
       }
 
