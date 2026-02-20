@@ -164,7 +164,6 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
 // Build a balance map for all addresses involved in transactions
 async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][],
   maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS): Promise<BlockNumberToBalances> {
-  const results: Utils.BlockNumberAddressContractBalance[] = []
   if (batchedAddresses.length === 0) {
     return new Map() as BlockNumberToBalances
   }
@@ -178,13 +177,15 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
     for (let idx = startIdx; idx <= endIdx; idx++) {
       const [blockNumber, addressContracts] = batchedAddresses[idx]
       const balances = await getBalancesPerBlock(web3, addressContracts, blockNumber, multicallAddress)
-      chunkResults.push(...balances)
+      for (const balance of balances) {
+        chunkResults.push(balance)
+      }
     }
     return chunkResults
   })())
 
-  const chunkResults = await Promise.all(chunkPromises)
-  results.push(...chunkResults.flat())
+  const allChunkResults = await Promise.all(chunkPromises)
+  const results: Utils.BlockNumberAddressContractBalance[] = allChunkResults.flat()
 
   return results.reduce((acc, result) => {
     const blockNumber = result[0];
