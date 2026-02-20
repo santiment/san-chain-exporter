@@ -3,7 +3,6 @@ import { BaseWorker } from '../../lib/worker_base';
 import { logger } from '../../lib/logger';
 import { BeaconBalance } from './beacon_types';
 
-const BEACON_API = 'https://ethereum-beacon.santiment.net';
 const SECONDS_PER_SLOT = 12;
 const SECONDS_PER_DAY = 86400;
 const MAX_KAFKA_MESSAGES = 140_000;
@@ -26,11 +25,15 @@ export class BeaconWorker extends BaseWorker {
 
   private pendingBatches: BeaconBalance[][] = [];
 
+  private processingDailySlot: number | null = null;
+  private processingChangesCount = 0;
+
+  private beaconAPI;
+
   constructor(settings: any) {
     super(settings);
-    this.client = new BeaconHttpClient(
-      settings.BEACON_API || BEACON_API
-    );
+    this.client = new BeaconHttpClient(settings.BEACON_API);
+    this.beaconAPI = settings.BEACON_API;
     this.LOOP_INTERVAL_CURRENT_MODE_SEC =
       settings.LOOP_INTERVAL_CURRENT_MODE_SEC ?? 30;
   }
@@ -41,26 +44,16 @@ export class BeaconWorker extends BaseWorker {
     this.lastConfirmedBlock = await this.getLatestSlot();
   }
 
-  private async fetchJSON<T>(url: string): Promise<T> {
-    const res = await fetch(url, {
-      headers: { accept: 'application/json' },
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${url}`);
-    }
-    return res.json() as Promise<T>;
-  }
-
   private async getGenesisTime(): Promise<number> {
-    const genesis = await this.fetchJSON<any>(
-      `${BEACON_API}/eth/v1/beacon/genesis`
+    const genesis = await this.client.fetchJSON<any>(
+      `${this.beaconAPI}/eth/v1/beacon/genesis`
     );
     return Number(genesis.data.genesis_time);
   }
 
   private async getLatestSlot(): Promise<number> {
-    const head = await this.fetchJSON<any>(
-      `${BEACON_API}/eth/v1/beacon/headers/head`
+    const head = await this.client.fetchJSON<any>(
+      `${this.beaconAPI}/eth/v1/beacon/headers/head`
     );
     return Number(head.data.header.message.slot);
   }
@@ -98,7 +91,26 @@ export class BeaconWorker extends BaseWorker {
 
   async work(): Promise<BeaconBalance[]> {
     if (this.pendingBatches.length > 0) {
-      return this.pendingBatches.shift()!;
+      const batch = this.pendingBatches.shift()!;
+
+      if (
+        this.pendingBatches.length === 0 &&
+        this.processingDailySlot !== null
+      ) {
+        this.lastExportedBlock = this.processingDailySlot;
+        this.lastPrimaryKey += this.processingChangesCount;
+        this.lastExportTime = Date.now();
+
+        logger.info(
+          `[Beacon] Completed daily slot=${this.processingDailySlot}`
+        );
+
+        this.processingDailySlot = null;
+        this.processingChangesCount = 0;
+        this.currentDailySlot = null;
+      }
+
+      return batch;
     }
 
     if (!this.balancesPreloaded) {
@@ -149,7 +161,7 @@ export class BeaconWorker extends BaseWorker {
 
       const prev = this.lastState.get(index);
 
-      if ((prev && (prev.balance === balance)) || (!prev && balance === 0)) {
+      if ((prev && prev.balance === balance) || (!prev && balance === 0)) {
         continue;
       }
 
@@ -178,11 +190,8 @@ export class BeaconWorker extends BaseWorker {
       );
     }
 
-    this.lastExportedBlock = dailySlot;
-    this.currentDailySlot = null;
-
-    this.lastExportTime = Date.now();
-    this.lastPrimaryKey += dayChanges.length;
+    this.processingDailySlot = dailySlot;
+    this.processingChangesCount = dayChanges.length;
 
     logger.info(
       `[Beacon] UTC daily slot=${dailySlot} total_changes=${dayChanges.length} batches=${this.pendingBatches.length}`
