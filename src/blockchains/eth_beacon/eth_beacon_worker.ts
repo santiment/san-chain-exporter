@@ -28,12 +28,10 @@ export class BeaconWorker extends BaseWorker {
   private processingDailySlot: number | null = null;
   private processingChangesCount = 0;
 
-  private beaconAPI;
 
   constructor(settings: any) {
     super(settings);
-    this.client = new BeaconHttpClient(settings.BEACON_API);
-    this.beaconAPI = settings.BEACON_API;
+    this.client = new BeaconHttpClient(settings.NODE_URL);
     this.LOOP_INTERVAL_CURRENT_MODE_SEC =
       settings.LOOP_INTERVAL_CURRENT_MODE_SEC ?? 30;
   }
@@ -46,14 +44,14 @@ export class BeaconWorker extends BaseWorker {
 
   private async getGenesisTime(): Promise<number> {
     const genesis = await this.client.fetchJSON<any>(
-      `${this.beaconAPI}/eth/v1/beacon/genesis`
+      '/eth/v1/beacon/genesis'
     );
     return Number(genesis.data.genesis_time);
   }
 
   private async getLatestSlot(): Promise<number> {
     const head = await this.client.fetchJSON<any>(
-      `${this.beaconAPI}/eth/v1/beacon/headers/head`
+      '/eth/v1/beacon/headers/head'
     );
     return Number(head.data.header.message.slot);
   }
