@@ -3,6 +3,7 @@ const rewire = require('rewire');
 import assert from 'assert';
 // For this test, presume we are creating the ETH worker
 process.env.BLOCKCHAIN = 'eth';
+process.env.IS_ETH = 'true';
 process.env.TEST_ENV = 'true';
 import { Main } from '../main';
 const { Main: MainRewired } = rewire('../main');

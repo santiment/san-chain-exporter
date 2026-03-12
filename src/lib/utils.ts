@@ -13,10 +13,6 @@ export function getBoolEnvVariable(name: string, defaultValue?: boolean) {
   return lowerCasedValue === 'true' || lowerCasedValue === '1';
 }
 
-export const getLazyBoolEnvVariable = (name: string) => {
-  return () => getBoolEnvVariable(name);
-};
-
 export function getIntEnvVariable(name: string, defaultValue: number | undefined) {
   const value = process.env[name]
   if (value === undefined) {
