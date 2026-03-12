@@ -27,7 +27,7 @@
     "csv-parser": "^3.0.0",
     "got": "^14.4.0",
     "jayson": "^4.1.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "micro": "^10.0.1",
     "node-fetch": "^2.7.0",
     "node-json-logger": "^0.2.1",
