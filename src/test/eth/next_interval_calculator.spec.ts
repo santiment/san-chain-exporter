@@ -1,3 +1,4 @@
+process.env.IS_ETH = 'true';
 const sinon = require('sinon');
 import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import * as constants from '../../blockchains/eth/lib/constants';

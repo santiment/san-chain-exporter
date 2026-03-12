@@ -1,3 +1,4 @@
+process.env.IS_ETH = 'true';
 import assert from 'assert';
 import { ETHWorker } from '../../blockchains/eth/eth_worker';
 import * as constants from '../../blockchains/eth/lib/constants';

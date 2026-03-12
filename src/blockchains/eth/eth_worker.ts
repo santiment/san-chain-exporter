@@ -14,6 +14,7 @@ import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
 import { EOB, collectEndOfBlocks } from './lib/end_of_block';
 import { TrackingHttpClient, attachWeb3RequestTracker } from '../lib/request_tracking';
+import { getBoolEnvVariable } from '../../lib/utils';
 
 
 export class ETHWorker extends BaseWorker {
@@ -26,6 +27,7 @@ export class ETHWorker extends BaseWorker {
 
   constructor(settings: any) {
     super(settings);
+    this.settings.IS_ETH = getBoolEnvVariable('IS_ETH');
 
     logger.info(`Connecting to Ethereum node ${settings.NODE_URL}`);
     this.requestsSinceLastReport = 0;
