@@ -5,7 +5,9 @@ import * as constants from './constants';
 import { logger } from '../../../lib/logger';
 import { ERC20Transfer } from '../erc20_types';
 
-function transactionOrder(a: ERC20Transfer, b: ERC20Transfer) {
+// Comparator for sorting ERC20 transfers by block number, then transaction index, then log index.
+// Used for initial ordering before primary key assignment.
+export function transactionOrder(a: ERC20Transfer, b: ERC20Transfer) {
   const blockDif = a.blockNumber - b.blockNumber;
   if (blockDif !== 0) {
     return blockDif;
@@ -19,6 +21,35 @@ function transactionOrder(a: ERC20Transfer, b: ERC20Transfer) {
     }
     return a.logIndex - b.logIndex;
   }
+}
+
+// Extended comparator that adds primaryKey as a final tiebreaker after block/tx/log ordering.
+// Used when merging overwritten events back into the main event list, where two events can
+// share the same block/tx/log but have different primary keys.
+export function primaryKeyOrderComparator(a: ERC20Transfer, b: ERC20Transfer): number {
+  const blockDif = a.blockNumber - b.blockNumber;
+  if (blockDif !== 0) {
+    return blockDif;
+  }
+  const aTxIndex = typeof a.transactionIndex === 'number' ? a.transactionIndex : -1;
+  const bTxIndex = typeof b.transactionIndex === 'number' ? b.transactionIndex : -1;
+  const txIndexDiff = aTxIndex - bTxIndex;
+  if (txIndexDiff !== 0) {
+    return txIndexDiff;
+  }
+  if (a.logIndex !== b.logIndex) {
+    return a.logIndex - b.logIndex;
+  }
+  if (typeof a.primaryKey !== 'number' || typeof b.primaryKey !== 'number') {
+    throw Error('Primary keys should be set to number before event');
+  }
+  return a.primaryKey - b.primaryKey;
+}
+
+// Checks whether the maximum log index plus the count of overwritten events exceeds the
+// PRIMARY_KEY_MULTIPLIER, which would cause primary key collisions between blocks.
+export function isPrimaryKeyOverflow(maxLogIndex: number, overwrittenCount: number, multiplier: number): boolean {
+  return maxLogIndex + overwrittenCount >= multiplier;
 }
 
 export function extendEventsWithPrimaryKey(events: ERC20Transfer[], overwritten_events: ERC20Transfer[] = []) {
@@ -42,7 +73,7 @@ export function extendEventsWithPrimaryKey(events: ERC20Transfer[], overwritten_
   Object.entries(lastLogIndexPerBlock).forEach(([blockNumberRaw, maxLogIndex]) => {
     const blockNumber = Number(blockNumberRaw);
     const overwrittenCount = overwrittenEventsCountPerBlock[blockNumber] || 0;
-    if (maxLogIndex + overwrittenCount >= constants.PRIMARY_KEY_MULTIPLIER) {
+    if (isPrimaryKeyOverflow(maxLogIndex, overwrittenCount, constants.PRIMARY_KEY_MULTIPLIER)) {
       logger.error(`An event with log index ${maxLogIndex} is breaking the primaryKey generation logic at block `
         + `${blockNumber}. There are ${overwrittenCount} overwritten events.`);
     }

@@ -2,7 +2,7 @@
 import { logger } from '../../lib/logger';
 import { Exporter } from '../../lib/kafka_storage';
 import { constructRPCClient } from '../../lib/http_client';
-import { extendEventsWithPrimaryKey } from './lib/extend_events_key';
+import { extendEventsWithPrimaryKey, primaryKeyOrderComparator } from './lib/extend_events_key';
 import { ContractOverwrite, changeContractAddresses, extractChangedContractAddresses } from './lib/contract_overwrite';
 import { stableSort, readJsonFile } from './lib/util';
 import { BaseWorker } from '../../lib/worker_base';
@@ -230,25 +230,7 @@ export class ERC20Worker extends BaseWorker {
 
     // If overwritten events have been generated, they need to be merged into the original events
     if (overwritten_events.length > 0) {
-      stableSort(resultEvents, function primaryKeyOrder(a: ERC20Transfer, b: ERC20Transfer) {
-        const blockDif = a.blockNumber - b.blockNumber;
-        if (blockDif !== 0) {
-          return blockDif;
-        }
-        const aTxIndex = typeof a.transactionIndex === 'number' ? a.transactionIndex : -1;
-        const bTxIndex = typeof b.transactionIndex === 'number' ? b.transactionIndex : -1;
-        const txIndexDiff = aTxIndex - bTxIndex;
-        if (txIndexDiff !== 0) {
-          return txIndexDiff;
-        }
-        else if (a.logIndex !== b.logIndex) {
-          return a.logIndex - b.logIndex;
-        }
-        if (typeof a.primaryKey !== 'number' || typeof b.primaryKey !== 'number') {
-          throw Error('Primary keys should be set to number before event')
-        }
-        return a.primaryKey - b.primaryKey;
-      });
+      stableSort(resultEvents, primaryKeyOrderComparator);
     }
 
     return resultEvents;

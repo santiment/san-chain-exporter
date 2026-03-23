@@ -1,16 +1,54 @@
 import { BeaconHttpClient } from './lib/beacon_http_client';
 import { BaseWorker } from '../../lib/worker_base';
 import { logger } from '../../lib/logger';
-import { BeaconBalance } from './beacon_types';
+import { BeaconBalance, BalanceState } from './beacon_types';
 
 const SECONDS_PER_SLOT = 12;
 const SECONDS_PER_DAY = 86400;
 const MAX_KAFKA_MESSAGES = 140_000;
 
-type BalanceState = {
-  balance: number;
-  timestamp: number;
-};
+// Compares current validator balances against previous state to detect changes.
+// Returns an array of BeaconBalance change records. Mutates lastState in place:
+// - Sets new balance/timestamp for changed validators
+// - Deletes entries for validators whose balance dropped to 0 (exited)
+// - Skips validators with no previous state and 0 balance (never active)
+export function detectBalanceChanges(
+  balancesData: { index: string; balance: string }[],
+  lastState: Map<number, BalanceState>,
+  slot: number,
+  timestamp: number
+): BeaconBalance[] {
+  const changes: BeaconBalance[] = [];
+
+  for (const b of balancesData) {
+    const index = Number(b.index);
+    const balance = Number(b.balance);
+
+    const prev = lastState.get(index);
+
+    // Skip if balance unchanged, or if validator was never seen and has 0 balance
+    if ((prev && prev.balance === balance) || (!prev && balance === 0)) {
+      continue;
+    }
+
+    changes.push({
+      slot,
+      timestamp,
+      balance,
+      oldBalance: prev?.balance ?? 0,
+      oldTimestamp: prev?.timestamp ?? null,
+      validatorIndex: index,
+    });
+
+    if (balance === 0) {
+      lastState.delete(index);
+    } else {
+      lastState.set(index, { balance, timestamp });
+    }
+  }
+
+  return changes;
+}
 
 export class BeaconWorker extends BaseWorker {
   private readonly LOOP_INTERVAL_CURRENT_MODE_SEC: number;
@@ -151,36 +189,7 @@ export class BeaconWorker extends BaseWorker {
     const balancesRes =
       await this.client.getValidatorBalances(dailySlot);
 
-    const dayChanges: BeaconBalance[] = [];
-
-    for (const b of balancesRes.data) {
-      const index = Number(b.index);
-      const balance = Number(b.balance);
-
-      const prev = this.lastState.get(index);
-
-      if ((prev && prev.balance === balance) || (!prev && balance === 0)) {
-        continue;
-      }
-
-      dayChanges.push({
-        slot: dailySlot,
-        timestamp: dailyTimestamp,
-        balance,
-        oldBalance: prev?.balance ?? 0,
-        oldTimestamp: prev?.timestamp ?? null,
-        validatorIndex: index,
-      });
-
-      if (balance === 0) {
-        this.lastState.delete(index);
-      } else {
-        this.lastState.set(index, {
-          balance,
-          timestamp: dailyTimestamp,
-        });
-      }
-    }
+    const dayChanges = detectBalanceChanges(balancesRes.data, this.lastState, dailySlot, dailyTimestamp);
 
     for (let i = 0; i < dayChanges.length; i += MAX_KAFKA_MESSAGES) {
       this.pendingBatches.push(
