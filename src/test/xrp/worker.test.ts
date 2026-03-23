@@ -111,6 +111,15 @@ describe('workLoopSimpleTest', function () {
     validateXRPTransaction({ hash: 'abc', meta: {} }, 0, '100');
   });
 
+  it('work surfaces stored XRPL connection errors through the async work loop', async function () {
+    const worker = new XRPWorker(constants);
+    (worker as any).connectionError = new Error('XRPL connection dropped');
+    worker.lastExportedBlock = 10;
+    worker.lastConfirmedBlock = 20;
+
+    await assert.rejects(async () => worker.work(), /XRPL connection dropped/);
+  });
+
   it('should loop several times due to lack of transactions', async () => {
     const worker = new XRPWorker(constants);
     // The invalid block would have no transactions but a non 0 transaction_hash

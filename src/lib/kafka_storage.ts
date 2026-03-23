@@ -218,22 +218,41 @@ export class Exporter {
 
   /**
    * Disconnect from Zookeeper and Kafka.
+   * Supports both the new Promise-based API and the legacy callback style.
    */
-  async disconnect(): Promise<void> {
-    try {
-      logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
-      await this.zookeeperClient.closeAsync();
-    } catch (err) {
-      logger.error('Error disconnecting from Zookeeper:', err);
-    }
+  disconnect(): Promise<void>;
+  disconnect(callback: (err?: unknown) => void): Promise<void>;
+  async disconnect(callback?: (err?: unknown) => void): Promise<void> {
+    let disconnectError: unknown;
 
-    if (this.producer.isConnected()) {
-      logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
-      await new Promise<void>((resolve) => {
-        this.producer.disconnect(() => resolve());
-      });
-    } else {
-      logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
+    try {
+      try {
+        logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
+        await this.zookeeperClient.closeAsync();
+      } catch (err) {
+        logger.error('Error disconnecting from Zookeeper:', err);
+      }
+
+      if (this.producer.isConnected()) {
+        logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
+        await new Promise<void>((resolve, reject) => {
+          this.producer.disconnect((err: LibrdKafkaError | null) => {
+            if (err) {
+              return reject(err);
+            }
+            resolve();
+          });
+        });
+      } else {
+        logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
+      }
+    } catch (err) {
+      disconnectError = err;
+      throw err;
+    } finally {
+      if (callback) {
+        callback(disconnectError);
+      }
     }
   }
 

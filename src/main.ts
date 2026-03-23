@@ -75,6 +75,8 @@ export class Main {
 
     this.microServer.on('error', (err) => {
       logger.error('Monitoring Micro server failure:', err);
+      process.exitCode = 1;
+      this.stop();
     });
     this.microServer.listen(3000, () => {
       logger.info('Micro Server started on port 3000');
@@ -115,15 +117,20 @@ export class Main {
   }
 
   async disconnect(timeoutMs: number = 30000) {
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Disconnect timed out after ${timeoutMs}ms`)), timeoutMs)
-    );
+    let timeoutHandle: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error(`Disconnect timed out after ${timeoutMs}ms`)), timeoutMs);
+    });
 
     try {
       await Promise.race([this.#doDisconnect(), timeout]);
     } catch (err) {
       logger.error('Error during disconnect:', err);
       process.exit(1);
+    } finally {
+      if (timeoutHandle !== undefined) {
+        clearTimeout(timeoutHandle);
+      }
     }
   }
 
@@ -132,8 +139,13 @@ export class Main {
       await this.exporter.disconnect();
     }
     if (this.microServer !== undefined) {
-      await new Promise<void>((resolve) => {
-        this.microServer.close(() => resolve());
+      await new Promise<void>((resolve, reject) => {
+        this.microServer.close((err) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        });
       });
     }
   }
@@ -205,6 +217,4 @@ const microHandler = async (request: IncomingMessage, response: ServerResponse, 
       return send(response, 404, 'Not found');
   }
 };
-
-
 

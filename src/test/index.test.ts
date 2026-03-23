@@ -1,5 +1,7 @@
 const sinon = require('sinon');
 const rewire = require('rewire');
+const metrics = require('../lib/metrics');
+const { logger } = require('../lib/logger');
 import assert from 'assert';
 // For this test, presume we are creating the ETH worker
 process.env.BLOCKCHAIN = 'eth';
@@ -194,6 +196,31 @@ describe('Main tests', () => {
     }
   });
 
+  it('micro server errors trigger exporter termination', async () => {
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+
+    const mainInstance = new Main();
+    sinon.stub(mainInstance, 'initExporter').resolves();
+    sinon.stub(mainInstance, 'initWorker').resolves();
+    sinon.stub(metrics, 'startCollection').returns(undefined);
+    sinon.stub((mainInstance as any).microServer, 'listen').callsFake((_port: number, callback: () => void) => {
+      callback();
+      return (mainInstance as any).microServer;
+    });
+    const stopStub = sinon.stub(mainInstance, 'stop');
+
+    try {
+      await mainInstance.init(blockchain);
+      (mainInstance as any).microServer.emit('error', new Error('micro failed'));
+
+      sinon.assert.calledOnce(stopStub);
+      assert.strictEqual(process.exitCode, 1);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
+
   it('initWorker throws error when worker is already present', async () => {
     const mainInstance = new Main();
     sinon.stub(mainInstance, 'worker').value(new BaseWorker(constants));
@@ -360,6 +387,18 @@ describe('Main tests', () => {
     sinon.assert.calledOnce(fakeServer.close);
   });
 
+  it('disconnect clears the timeout after successful cleanup', async () => {
+    const clock = sinon.useFakeTimers();
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    exporterStub.disconnect.resolves();
+    mainInstance.exporter = exporterStub;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect(1000);
+    assert.strictEqual(clock.countTimers(), 0);
+  });
+
   // Edge case: disconnect() called before init() completes (e.g. early SIGTERM).
   it('disconnect handles undefined exporter and micro server gracefully', async () => {
     const mainInstance = new MainRewired();
@@ -422,7 +461,48 @@ describe('Exporter delivery-report listeners', () => {
   });
 });
 
+describe('Exporter disconnect', () => {
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  it('supports legacy callback-style disconnect callers', async () => {
+    const exporter = Object.create(Exporter.prototype) as Exporter;
+    const closeAsync = sinon.stub().resolves();
+    const disconnect = sinon.stub().callsFake((callback: (err: null) => void) => callback(null));
+    (exporter as any).zookeeperClient = { closeAsync };
+    (exporter as any).producer = { isConnected: sinon.stub().returns(true), disconnect };
+
+    const callback = sinon.stub();
+    await exporter.disconnect(callback);
+
+    sinon.assert.calledOnce(closeAsync);
+    sinon.assert.calledOnce(disconnect);
+    sinon.assert.calledOnceWithExactly(callback, undefined);
+  });
+
+  it('rejects when producer disconnect reports an error', async () => {
+    const exporter = Object.create(Exporter.prototype) as Exporter;
+    const closeAsync = sinon.stub().resolves();
+    const disconnectError = new Error('kafka disconnect failed');
+    const disconnect = sinon.stub().callsFake((callback: (err: Error) => void) => callback(disconnectError));
+    (exporter as any).zookeeperClient = { closeAsync };
+    (exporter as any).producer = { isConnected: sinon.stub().returns(true), disconnect };
+
+    const callback = sinon.stub();
+
+    await assert.rejects(() => exporter.disconnect(callback), /kafka disconnect failed/);
+    sinon.assert.calledOnce(closeAsync);
+    sinon.assert.calledOnce(disconnect);
+    sinon.assert.calledOnceWithExactly(callback, disconnectError);
+  });
+});
+
 describe('main function', () => {
+  beforeEach(() => {
+    sinon.stub(logger, 'error');
+  });
+
   afterEach(() => {
     sinon.restore();
   });

@@ -9,6 +9,7 @@ export class XRPWorker extends BaseWorker {
   private nodeURLs: string;
   private connections: XRPConnection[];
   private retryIntervalMs: number;
+  private connectionError: Error | null;
 
   constructor(settings: any) {
     super(settings);
@@ -16,6 +17,7 @@ export class XRPWorker extends BaseWorker {
     this.nodeURLs = settings.XRP_NODE_URLS.split(',');
     this.connections = [];
     this.retryIntervalMs = 1000;
+    this.connectionError = null;
   }
 
   async createNewSetConnections() {
@@ -31,7 +33,7 @@ export class XRPWorker extends BaseWorker {
       const api = new Client(nodeURL, clientOptions);
 
       api.on('error', (...error) => {
-        throw new Error('Error in XRPL API connection number: ' + i + ': ' + error);
+        this.recordConnectionError(i, error);
       });
       await api.connect();
 
@@ -52,13 +54,17 @@ export class XRPWorker extends BaseWorker {
   }
 
   async connectionSend(connection: XRPConnection, params: LedgerRequest) {
-    return connection.queue.add(() => {
+    this.throwConnectionErrorIfAny();
+    const response = await connection.queue.add(() => {
       return connection.connection.request(params);
     });
+    this.throwConnectionErrorIfAny();
+    return response;
   }
 
   async init() {
     await this.createNewSetConnections();
+    this.throwConnectionErrorIfAny();
     const lastValidatedLedger = await this.connectionSend(this.connections[0], {
       command: 'ledger',
       ledger_index: 'validated',
@@ -67,6 +73,38 @@ export class XRPWorker extends BaseWorker {
     });
     const lastValidatedLedgerData = lastValidatedLedger.result;
     this.lastConfirmedBlock = parseInt(lastValidatedLedgerData.ledger.ledger_index) - this.settings.CONFIRMATIONS;
+  }
+
+  private recordConnectionError(connectionIndex: number, errorParts: unknown[]) {
+    const details = errorParts
+      .map((errorPart) => {
+        if (errorPart instanceof Error) {
+          return errorPart.message;
+        }
+        if (typeof errorPart === 'string') {
+          return errorPart;
+        }
+        try {
+          return JSON.stringify(errorPart);
+        } catch (_err) {
+          return String(errorPart);
+        }
+      })
+      .join(', ');
+    const errorMessage = details.length > 0
+      ? `Error in XRPL API connection number: ${connectionIndex}: ${details}`
+      : `Error in XRPL API connection number: ${connectionIndex}`;
+
+    logger.error(errorMessage);
+    if (this.connectionError === null) {
+      this.connectionError = new Error(errorMessage);
+    }
+  }
+
+  private throwConnectionErrorIfAny() {
+    if (this.connectionError !== null) {
+      throw this.connectionError;
+    }
   }
 
   isEmptyTransactionHash(transaction_hash: string) {
@@ -149,6 +187,7 @@ export class XRPWorker extends BaseWorker {
   }
 
   async work() {
+    this.throwConnectionErrorIfAny();
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
       this.sleepTimeMsec = this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
       const lastValidatedLedger = await this.connectionSend(this.connections[0], {
@@ -176,6 +215,7 @@ export class XRPWorker extends BaseWorker {
       );
     }
     const resolvedRequests = await Promise.all(requests);
+    this.throwConnectionErrorIfAny();
     const ledgers = resolvedRequests.map(({ ledger, transactions }) => {
       return { ledger, transactions, primaryKey: ledger.ledger_index };
     });
