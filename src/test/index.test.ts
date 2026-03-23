@@ -6,6 +6,7 @@ process.env.BLOCKCHAIN = 'eth';
 process.env.IS_ETH = 'true';
 process.env.TEST_ENV = 'true';
 import { Main, getPathname } from '../main';
+import { parseZookeeperValue, FORMAT_HEADER } from '../lib/kafka_storage';
 const { Main: MainRewired } = rewire('../main');
 const { main } = rewire('../index');
 import { BaseWorker } from '../lib/worker_base';
@@ -33,6 +34,38 @@ describe('getPathname', () => {
 
   it('returns / for root path', () => {
     assert.strictEqual(getPathname('/'), '/');
+  });
+});
+
+describe('parseZookeeperValue', () => {
+  // Extracted from the duplicated logic in getLastPosition() and getLastBlockTimestamp().
+  // Tests the three cases: JSON with format header, raw Buffer, and null/missing input.
+
+  it('parses JSON data with format header', () => {
+    const data = Buffer.from(FORMAT_HEADER + '{"blockNumber":100,"primaryKey":5}', 'utf-8');
+    const result = parseZookeeperValue({ data });
+    assert.deepStrictEqual(result, { blockNumber: 100, primaryKey: 5 });
+  });
+
+  it('returns raw Buffer when no format header is present', () => {
+    const data = Buffer.from('raw-data', 'utf-8');
+    const result = parseZookeeperValue({ data });
+    assert.ok(Buffer.isBuffer(result));
+    assert.strictEqual(result.toString('utf8'), 'raw-data');
+  });
+
+  it('returns null when zkResult is null (node deleted between exists and read)', () => {
+    assert.strictEqual(parseZookeeperValue(null), null);
+  });
+
+  it('returns null when zkResult.data is not a Buffer', () => {
+    assert.strictEqual(parseZookeeperValue({ data: 'not a buffer' }), null);
+  });
+
+  it('parses numeric timestamp value with format header', () => {
+    const data = Buffer.from(FORMAT_HEADER + '1700000000', 'utf-8');
+    const result = parseZookeeperValue({ data });
+    assert.strictEqual(result, 1700000000);
   });
 });
 

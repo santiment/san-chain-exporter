@@ -1,6 +1,6 @@
 import { logger } from '../../lib/logger';
 import { BaseWorker } from '../../lib/worker_base';
-import { ICPBlock, Transaction, ExtendedTransaction } from './lib/icp_types';
+import { ICPBlock, ICPTransaction, Transaction, ExtendedTransaction } from './lib/icp_types';
 import fetch from 'node-fetch';
 import assert from 'assert';
 import { transactionOrder, stableSort } from './lib/util';
@@ -122,80 +122,12 @@ export class ICPWorker extends BaseWorker {
 
   async getTransactions(blocks: ICPBlock[]) {
     const transactions: Transaction[] = [];
-
     for (const block of blocks) {
-      const blockNumber = block.block_identifier.index;
       for (const tx of block.transactions) {
-        const txHash = tx.transaction_identifier.hash;
-        const timestamp = tx.metadata.timestamp;
-        let from, to, valueFrom, valueTo, operationIndexFrom, operationIndexTo, symbolFrom, symbolTo;
-        assert (tx.operations.length >= 1 && tx.operations.length <= 3);
-        for (const operation of tx.operations) {
-          if (operation.type === 'FEE') {
-            const transactionJson: Transaction = {
-              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
-              blockNumber: blockNumber,
-              transactionHash: txHash,
-              from: operation.account.address,
-              to: this.BURN_ADDRESS,
-              value: operation.amount.value.replace(/-/g, ''),
-              symbol: operation.amount.currency.symbol,
-              type: operation.type,
-            };
-            transactions.push(transactionJson);
-          }
-          else if (operation.type === 'MINT') {
-            const transactionJson: Transaction = {
-              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
-              blockNumber: blockNumber,
-              transactionHash: txHash,
-              from: 'mint',
-              to:  operation.account.address,
-              value: operation.amount.value,
-              symbol: operation.amount.currency.symbol,
-              type: operation.type,
-            };
-            transactions.push(transactionJson);
-          }
-          else if (operation.type === 'APPROVE') {
-            const transactionJson: Transaction = {
-              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
-              blockNumber: blockNumber,
-              transactionHash: txHash,
-              from: operation.account.address,
-              to:  operation.metadata.spender,
-              value: operation.metadata.allowance.e8s,
-              symbol: 'ICP',
-              type: operation.type,
-            };
-            transactions.push(transactionJson);
-          }
-          else if (operation.type === 'TRANSACTION' && operation.amount.value.includes("-")) {
-            from = operation.account.address;
-            valueFrom = operation.amount.value.replace(/-/g, '');
-            symbolFrom = operation.amount.currency.symbol;
-            operationIndexFrom = operation.operation_identifier.index;
-          }
-          else if (operation.type === 'TRANSACTION' && !operation.amount.value.includes("-")) {
-            to = operation.account.address;
-            valueTo = operation.amount.value;
-            symbolTo = operation.amount.currency.symbol; 
-            operationIndexTo = operation.operation_identifier.index;
-          }
-          if (operation.type === 'TRANSACTION' && from && to && valueTo && symbolTo && valueFrom === valueTo && (Number(operationIndexFrom) + 1 === Number(operationIndexTo) || Number(operationIndexFrom) === Number(operationIndexTo) + 1)) {
-            const transactionJson: Transaction = {
-              timestamp: BigNumber(timestamp).div(1000000000).toFixed(0).toString(), // nanoseconds to seconds
-              blockNumber: blockNumber,
-              transactionHash: txHash,
-              from: from,
-              to: to,
-              value: valueTo,
-              symbol: symbolTo,
-              type: operation.type,
-            };
-            transactions.push(transactionJson);            
-          }
-        }
+        // A single ICP transaction can produce multiple normalized transfers (e.g. a FEE + a TRANSACTION).
+        // The spread (...) appends all elements of the returned array into the flat result list.
+        const parsed = parseICPBlockTransaction(tx, block.block_identifier.index, this.BURN_ADDRESS);
+        transactions.push(...parsed);
       }
     }
     return transactions;
@@ -230,6 +162,83 @@ export class ICPWorker extends BaseWorker {
     this.lastExportedBlock += blocks.length;
     return extendedTransactions;
   }
+}
+
+/**
+ * Parse a single ICP transaction's operations into our normalized Transaction format.
+ * Handles FEE, MINT, APPROVE, and TRANSACTION (debit/credit pair matching) operation types.
+ */
+export function parseICPBlockTransaction(tx: ICPTransaction, blockNumber: number, burnAddress: string): Transaction[] {
+  const result: Transaction[] = [];
+  const txHash = tx.transaction_identifier.hash;
+  const timestamp = BigNumber(tx.metadata.timestamp).div(1000000000).toFixed(0).toString(); // nanoseconds to seconds
+
+  assert(tx.operations.length >= 1 && tx.operations.length <= 3);
+
+  let from: string | undefined, to: string | undefined;
+  let valueFrom: string | undefined, valueTo: string | undefined;
+  let operationIndexFrom: string | undefined, operationIndexTo: string | undefined;
+  let symbolTo: string | undefined;
+
+  for (const operation of tx.operations) {
+    if (operation.type === 'FEE') {
+      result.push({
+        timestamp, blockNumber, transactionHash: txHash,
+        from: operation.account.address,
+        to: burnAddress,
+        value: operation.amount.value.replace(/-/g, ''),
+        symbol: operation.amount.currency.symbol,
+        type: operation.type,
+      });
+    }
+    else if (operation.type === 'MINT') {
+      result.push({
+        timestamp, blockNumber, transactionHash: txHash,
+        from: 'mint',
+        to: operation.account.address,
+        value: operation.amount.value,
+        symbol: operation.amount.currency.symbol,
+        type: operation.type,
+      });
+    }
+    else if (operation.type === 'APPROVE') {
+      result.push({
+        timestamp, blockNumber, transactionHash: txHash,
+        from: operation.account.address,
+        to: operation.metadata.spender,
+        value: operation.metadata.allowance.e8s,
+        symbol: 'ICP',
+        type: operation.type,
+      });
+    }
+    else if (operation.type === 'TRANSACTION' && operation.amount.value.includes("-")) {
+      from = operation.account.address;
+      valueFrom = operation.amount.value.replace(/-/g, '');
+      operationIndexFrom = operation.operation_identifier.index;
+    }
+    else if (operation.type === 'TRANSACTION' && !operation.amount.value.includes("-")) {
+      to = operation.account.address;
+      valueTo = operation.amount.value;
+      symbolTo = operation.amount.currency.symbol;
+      operationIndexTo = operation.operation_identifier.index;
+    }
+
+    // Match a debit/credit TRANSACTION pair: values must match and operation indices must be adjacent.
+    if (operation.type === 'TRANSACTION' && from && to && valueTo && symbolTo
+      && valueFrom === valueTo
+      && (Number(operationIndexFrom) + 1 === Number(operationIndexTo)
+        || Number(operationIndexFrom) === Number(operationIndexTo) + 1)) {
+      result.push({
+        timestamp, blockNumber, transactionHash: txHash,
+        from, to,
+        value: valueTo,
+        symbol: symbolTo,
+        type: operation.type,
+      });
+    }
+  }
+
+  return result;
 }
 
 export function extendTransactionsWithPrimaryKey(transactions: Transaction[], lastPrimaryKey: number): ExtendedTransaction[] {

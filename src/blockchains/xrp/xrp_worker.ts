@@ -143,13 +143,7 @@ export class XRPWorker extends BaseWorker {
       const blockNumber = ledgers[indexLedger].ledger.ledger_index;
       logger.info(`Block number ${blockNumber} has ${transactions.length} transactions`);
       for (let index = 0; index < transactions.length; index++) {
-        const transaction = transactions[index];
-        if ('validated' in transaction && !transaction.validated) {
-          throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated.`);
-        }
-        if (!('meta' in transaction) && !('metaData' in transaction)) {
-          throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field.`);
-        }
+        validateXRPTransaction(transactions[index], index, blockNumber);
       }
     }
   }
@@ -193,5 +187,18 @@ export class XRPWorker extends BaseWorker {
     }
 
     return ledgers;
+  }
+}
+
+/**
+ * Validate a single XRP transaction. Throws if the transaction is not validated
+ * or is missing the required 'meta'/'metaData' field.
+ */
+export function validateXRPTransaction(transaction: any, index: number, blockNumber: string) {
+  if ('validated' in transaction && !transaction.validated) {
+    throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated.`);
+  }
+  if (!('meta' in transaction) && !('metaData' in transaction)) {
+    throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field.`);
   }
 }

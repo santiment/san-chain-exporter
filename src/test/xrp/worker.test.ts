@@ -1,7 +1,7 @@
 /*jshint esversion: 6 */
 import assert from 'assert';
 const sinon = require('sinon');
-import { XRPWorker } from '../../blockchains/xrp/xrp_worker';
+import { XRPWorker, validateXRPTransaction } from '../../blockchains/xrp/xrp_worker';
 import { XRPConnection } from '../../blockchains/xrp/xrp_types';
 import * as constants from '../../blockchains/xrp/lib/constants';
 
@@ -81,46 +81,34 @@ describe('workLoopSimpleTest', function () {
 
   // Previously these cases called process.exit(-1), which killed the process without cleanup.
   // Now they throw errors that propagate through the work loop for graceful handling.
-  it('checkAllTransactionsValid throws on unvalidated transaction', function () {
-    const worker = new XRPWorker(constants);
-    const ledgers = [{
-      ledger: { ledger_index: '100' },
-      transactions: [{ hash: 'abc', validated: false, meta: {} }]
-    }];
-
+  // Tests use the extracted validateXRPTransaction() directly for isolated coverage.
+  it('validateXRPTransaction throws on unvalidated transaction', function () {
     assert.throws(
-      () => worker.checkAllTransactionsValid(ledgers),
+      () => validateXRPTransaction({ hash: 'abc', validated: false, meta: {} }, 0, '100'),
       (err: Error) => err.message.includes('is not validated')
     );
   });
 
   // A transaction without 'meta' or 'metaData' is corrupt and must not be silently exported.
-  it('checkAllTransactionsValid throws on missing meta field', function () {
-    const worker = new XRPWorker(constants);
-    const ledgers = [{
-      ledger: { ledger_index: '100' },
-      transactions: [{ hash: 'def' }]
-    }];
-
+  it('validateXRPTransaction throws on missing meta field', function () {
     assert.throws(
-      () => worker.checkAllTransactionsValid(ledgers),
+      () => validateXRPTransaction({ hash: 'def' }, 0, '100'),
       (err: Error) => err.message.includes("missing 'meta' field")
     );
   });
 
   // Sanity check: valid transactions (with 'meta' or 'metaData') pass without throwing.
-  it('checkAllTransactionsValid passes for valid transactions', function () {
-    const worker = new XRPWorker(constants);
-    const ledgers = [{
-      ledger: { ledger_index: '100' },
-      transactions: [
-        { hash: 'abc', validated: true, meta: {} },
-        { hash: 'def', metaData: {} }
-      ]
-    }];
+  it('validateXRPTransaction passes with meta', function () {
+    validateXRPTransaction({ hash: 'abc', validated: true, meta: {} }, 0, '100');
+  });
 
-    // Should not throw
-    worker.checkAllTransactionsValid(ledgers);
+  it('validateXRPTransaction passes with metaData', function () {
+    validateXRPTransaction({ hash: 'abc', metaData: {} }, 0, '100');
+  });
+
+  // A transaction without the 'validated' field at all should not throw (only explicit false is invalid).
+  it('validateXRPTransaction passes when validated field is absent', function () {
+    validateXRPTransaction({ hash: 'abc', meta: {} }, 0, '100');
   });
 
   it('should loop several times due to lack of transactions', async () => {

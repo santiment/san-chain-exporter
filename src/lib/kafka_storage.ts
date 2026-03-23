@@ -10,7 +10,25 @@ const ZOOKEEPER_RETRIES: number = parseInt(process.env.ZOOKEEPER_RETRIES || '0')
 const ZOOKEEPER_SPIN_DELAY: number = parseInt(process.env.ZOOKEEPER_SPIN_DELAY || '1000');
 const ZOOKEEPER_SESSION_TIMEOUT: number = parseInt(process.env.ZOOKEEPER_SESSION_TIMEOUT || '30000');
 
-const FORMAT_HEADER: string = 'format=json;';
+export const FORMAT_HEADER: string = 'format=json;';
+
+/**
+ * Parse a value read from Zookeeper. The stored data is a Buffer that may be prefixed with
+ * FORMAT_HEADER ("format=json;") followed by JSON, or a raw Buffer from older versions.
+ * Returns the parsed JSON object, the raw Buffer, or null if the input is not usable.
+ */
+export function parseZookeeperValue(zkResult: { data: any; stat?: any } | null): any {
+  if (!zkResult || !Buffer.isBuffer(zkResult.data)) {
+    return null;
+  }
+
+  const value = zkResult.data.toString('utf8');
+  if (value.startsWith(FORMAT_HEADER)) {
+    return JSON.parse(value.replace(FORMAT_HEADER, ''));
+  }
+
+  return zkResult.data;
+}
 const RDKAFKA_DEBUG: string | null = process.env.RDKAFKA_DEBUG || null;
 const KAFKA_URL: string = process.env.KAFKA_URL || 'localhost:9092';
 const KAFKA_COMPRESSION_CODEC: string = process.env.KAFKA_COMPRESSION_CODEC || 'lz4';
@@ -221,22 +239,9 @@ export class Exporter {
 
   async getLastPosition() {
     if (await this.zookeeperClient.existsAsync(this.zookeeperPositionNode)) {
-      // getDataAsync returns { data: Buffer, stat: object } on success, or null if the node
-      // was deleted between the exists check and the read. Guard against null before accessing .data.
-      const previousPosition = await this.zookeeperClient.getDataAsync(
-        this.zookeeperPositionNode
-      );
-
       try {
-        if (previousPosition && Buffer.isBuffer(previousPosition.data)) {
-          const value = previousPosition.data.toString('utf8');
-
-          if (value.startsWith(FORMAT_HEADER)) {
-            return JSON.parse(value.replace(FORMAT_HEADER, ''));
-          } else {
-            return previousPosition.data;
-          }
-        }
+        const zkResult = await this.zookeeperClient.getDataAsync(this.zookeeperPositionNode);
+        return parseZookeeperValue(zkResult);
       } catch (err) {
         logger.error(err);
       }
@@ -247,22 +252,9 @@ export class Exporter {
 
   async getLastBlockTimestamp() {
     if (await this.zookeeperClient.existsAsync(this.zookeeperTimestampNode)) {
-      // getDataAsync returns { data: Buffer, stat: object } on success, or null if the node
-      // was deleted between the exists check and the read. Guard against null before accessing .data.
-      const previousPosition = await this.zookeeperClient.getDataAsync(
-        this.zookeeperTimestampNode
-      );
-
       try {
-        if (previousPosition && Buffer.isBuffer(previousPosition.data)) {
-          const value = previousPosition.data.toString('utf8');
-
-          if (value.startsWith(FORMAT_HEADER)) {
-            return JSON.parse(value.replace(FORMAT_HEADER, ''));
-          } else {
-            return previousPosition.data;
-          }
-        }
+        const zkResult = await this.zookeeperClient.getDataAsync(this.zookeeperTimestampNode);
+        return parseZookeeperValue(zkResult);
       } catch (err) {
         logger.error(err);
       }
