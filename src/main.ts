@@ -1,5 +1,4 @@
 'use strict';
-import url from 'url';
 import { Server, IncomingMessage, ServerResponse } from 'http'
 const { send, serve } = require('micro');
 const metrics = require('./lib/metrics');
@@ -177,19 +176,21 @@ export class Main {
 }
 
 
-const microHandler = async (request: IncomingMessage, response: ServerResponse, mainInstance: Main) => {
-  let requestURL: string;
+/**
+ * Extract the pathname from a request URL string. request.url is typically a path
+ * (e.g. "/healthcheck"). The URL constructor needs a base to parse relative paths —
+ * it is ignored if request.url is already absolute. Replaces deprecated url.parse().
+ */
+export function getPathname(requestUrl: string): string {
+  return new URL(requestUrl, 'http://unused').pathname;
+}
 
-  if (request.url !== undefined) {
-    requestURL = request.url;
-  }
-  else {
+const microHandler = async (request: IncomingMessage, response: ServerResponse, mainInstance: Main) => {
+  if (request.url === undefined) {
     throw Error('URL needs to be set in micro call')
   }
 
-  const req = url.parse(requestURL, true);
-
-  switch (req.pathname) {
+  switch (getPathname(request.url)) {
     case '/healthcheck':
       return mainInstance.healthcheck()
         .then(() => send(response, 200, 'ok'))

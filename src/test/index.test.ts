@@ -5,7 +5,7 @@ import assert from 'assert';
 process.env.BLOCKCHAIN = 'eth';
 process.env.IS_ETH = 'true';
 process.env.TEST_ENV = 'true';
-import { Main } from '../main';
+import { Main, getPathname } from '../main';
 const { Main: MainRewired } = rewire('../main');
 const { main } = rewire('../index');
 import { BaseWorker } from '../lib/worker_base';
@@ -16,6 +16,26 @@ import zkClientAsync from '../lib/zookeeper_client_async';
 
 
 const blockchain = 'eth';
+
+describe('getPathname', () => {
+  // Verifies the url.parse() → new URL() migration parses paths correctly.
+  it('extracts pathname from a simple path', () => {
+    assert.strictEqual(getPathname('/healthcheck'), '/healthcheck');
+  });
+
+  it('extracts pathname from a path with query string', () => {
+    assert.strictEqual(getPathname('/metrics?foo=bar'), '/metrics');
+  });
+
+  it('extracts pathname from an absolute URL', () => {
+    assert.strictEqual(getPathname('http://host:3000/healthcheck'), '/healthcheck');
+  });
+
+  it('returns / for root path', () => {
+    assert.strictEqual(getPathname('/'), '/');
+  });
+});
+
 describe('Main tests', () => {
   const constants = {
     START_BLOCK: -1,

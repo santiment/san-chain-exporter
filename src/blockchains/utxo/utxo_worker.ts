@@ -53,7 +53,10 @@ export class UTXOWorker extends BaseWorker {
     let retryIntervalMs = 0;
     while (retries < this.MAX_RETRIES) {
       try {
-        const response = await this.sendRequest(method, params).catch(err => Promise.reject(err));
+        // If sendRequest rejects, `await` throws into the catch block below.
+        // Previously had `.catch(err => Promise.reject(err))` which was a no-op —
+        // it caught the rejection and re-rejected with the same error.
+        const response = await this.sendRequest(method, params);
         if (response.error || response.result === null) {
           retries++;
           retryIntervalMs += (2000 * retries);
