@@ -79,6 +79,50 @@ describe('workLoopSimpleTest', function () {
     assert.deepStrictEqual(result, expectedResult);
   });
 
+  // Previously these cases called process.exit(-1), which killed the process without cleanup.
+  // Now they throw errors that propagate through the work loop for graceful handling.
+  it('checkAllTransactionsValid throws on unvalidated transaction', function () {
+    const worker = new XRPWorker(constants);
+    const ledgers = [{
+      ledger: { ledger_index: '100' },
+      transactions: [{ hash: 'abc', validated: false, meta: {} }]
+    }];
+
+    assert.throws(
+      () => worker.checkAllTransactionsValid(ledgers),
+      (err: Error) => err.message.includes('is not validated')
+    );
+  });
+
+  // A transaction without 'meta' or 'metaData' is corrupt and must not be silently exported.
+  it('checkAllTransactionsValid throws on missing meta field', function () {
+    const worker = new XRPWorker(constants);
+    const ledgers = [{
+      ledger: { ledger_index: '100' },
+      transactions: [{ hash: 'def' }]
+    }];
+
+    assert.throws(
+      () => worker.checkAllTransactionsValid(ledgers),
+      (err: Error) => err.message.includes("missing 'meta' field")
+    );
+  });
+
+  // Sanity check: valid transactions (with 'meta' or 'metaData') pass without throwing.
+  it('checkAllTransactionsValid passes for valid transactions', function () {
+    const worker = new XRPWorker(constants);
+    const ledgers = [{
+      ledger: { ledger_index: '100' },
+      transactions: [
+        { hash: 'abc', validated: true, meta: {} },
+        { hash: 'def', metaData: {} }
+      ]
+    }];
+
+    // Should not throw
+    worker.checkAllTransactionsValid(ledgers);
+  });
+
   it('should loop several times due to lack of transactions', async () => {
     const worker = new XRPWorker(constants);
     // The invalid block would have no transactions but a non 0 transaction_hash

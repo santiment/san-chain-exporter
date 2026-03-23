@@ -266,6 +266,71 @@ describe('Main tests', () => {
       }
     }
   });
+
+  // Verify that disconnect() actually awaits the exporter cleanup (Zookeeper + Kafka flush)
+  // rather than firing and forgetting, which previously caused data loss on shutdown.
+  it('disconnect awaits exporter disconnect', async () => {
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    exporterStub.disconnect.resolves();
+    mainInstance.exporter = exporterStub;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect();
+    sinon.assert.calledOnce(exporterStub.disconnect);
+  });
+
+  // Verify the HTTP server is closed via callback-to-promise, not fire-and-forget.
+  it('disconnect awaits micro server close', async () => {
+    const mainInstance = new MainRewired();
+    mainInstance.exporter = undefined;
+
+    const fakeServer = { close: sinon.stub().callsFake((cb: () => void) => cb()) };
+    mainInstance.microServer = fakeServer;
+
+    await mainInstance.disconnect();
+    sinon.assert.calledOnce(fakeServer.close);
+  });
+
+  // Full shutdown path: both exporter and HTTP server are awaited in sequence.
+  it('disconnect handles both exporter and micro server', async () => {
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    exporterStub.disconnect.resolves();
+    mainInstance.exporter = exporterStub;
+
+    const fakeServer = { close: sinon.stub().callsFake((cb: () => void) => cb()) };
+    mainInstance.microServer = fakeServer;
+
+    await mainInstance.disconnect();
+    sinon.assert.calledOnce(exporterStub.disconnect);
+    sinon.assert.calledOnce(fakeServer.close);
+  });
+
+  // Edge case: disconnect() called before init() completes (e.g. early SIGTERM).
+  it('disconnect handles undefined exporter and micro server gracefully', async () => {
+    const mainInstance = new MainRewired();
+    mainInstance.exporter = undefined;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect();
+    // Should complete without throwing
+  });
+
+  // If Zookeeper or Kafka hangs during close, disconnect should not block forever.
+  // After the timeout, process.exit(1) is called to force-kill the process.
+  it('disconnect times out if cleanup hangs', async () => {
+    const exitStub = sinon.stub(process, 'exit');
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    // Simulate a hanging disconnect — never resolves
+    exporterStub.disconnect.returns(new Promise(() => {}));
+    mainInstance.exporter = exporterStub;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect(100);
+    sinon.assert.calledOnceWithExactly(exitStub, 1);
+  });
 });
 
 

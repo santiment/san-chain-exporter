@@ -31,8 +31,7 @@ export class XRPWorker extends BaseWorker {
       const api = new Client(nodeURL, clientOptions);
 
       api.on('error', (...error) => {
-        logger.error('Error in XRPL API connection number: ' + i + error);
-        process.exit(-1);
+        throw new Error('Error in XRPL API connection number: ' + i + ': ' + error);
       });
       await api.connect();
 
@@ -146,12 +145,10 @@ export class XRPWorker extends BaseWorker {
       for (let index = 0; index < transactions.length; index++) {
         const transaction = transactions[index];
         if ('validated' in transaction && !transaction.validated) {
-          logger.error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated. Aborting.`);
-          process.exit(-1);
+          throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated.`);
         }
         if (!('meta' in transaction) && !('metaData' in transaction)) {
-          logger.error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field. Aborting.`);
-          process.exit(-1);
+          throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field.`);
         }
       }
     }

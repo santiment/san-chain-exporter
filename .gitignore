@@ -69,3 +69,6 @@ built
 .idea
 devbox*
 jest*
+
+PLAN.md
+.claude

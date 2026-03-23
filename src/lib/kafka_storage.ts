@@ -30,7 +30,9 @@ process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void =>
   else {
     logger.error('Unhandled Rejection at: ', p, 'reason:', reason);
   }
-  process.exit(1);
+  // Let the process crash naturally rather than calling process.exit() which skips cleanup.
+  // Throwing here will trigger an uncaughtException if not caught elsewhere.
+  throw reason;
 });
 
 /**
@@ -198,19 +200,23 @@ export class Exporter {
 
   /**
    * Disconnect from Zookeeper and Kafka.
-   * This method is completed once the callback is invoked.
    */
-  disconnect(callback?: () => void) {
-    logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
-    this.zookeeperClient.closeAsync().then(() => {
-      if (this.producer.isConnected()) {
-        logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
-        this.producer.disconnect(callback);
-      }
-      else {
-        logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
-      }
-    });
+  async disconnect(): Promise<void> {
+    try {
+      logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
+      await this.zookeeperClient.closeAsync();
+    } catch (err) {
+      logger.error('Error disconnecting from Zookeeper:', err);
+    }
+
+    if (this.producer.isConnected()) {
+      logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
+      await new Promise<void>((resolve) => {
+        this.producer.disconnect(() => resolve());
+      });
+    } else {
+      logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
+    }
   }
 
   async getLastPosition() {

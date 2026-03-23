@@ -76,7 +76,6 @@ export class Main {
 
     this.microServer.on('error', (err) => {
       logger.error('Monitoring Micro server failure:', err);
-      process.exit(1);
     });
     this.microServer.listen(3000, () => {
       logger.info('Micro Server started on port 3000');
@@ -116,13 +115,27 @@ export class Main {
     }
   }
 
-  async disconnect() {
-    // This call should be refactored to work with async/await
+  async disconnect(timeoutMs: number = 30000) {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Disconnect timed out after ${timeoutMs}ms`)), timeoutMs)
+    );
+
+    try {
+      await Promise.race([this.#doDisconnect(), timeout]);
+    } catch (err) {
+      logger.error('Error during disconnect:', err);
+      process.exit(1);
+    }
+  }
+
+  async #doDisconnect() {
     if (this.exporter !== undefined) {
-      this.exporter.disconnect();
+      await this.exporter.disconnect();
     }
     if (this.microServer !== undefined) {
-      this.microServer.close();
+      await new Promise<void>((resolve) => {
+        this.microServer.close(() => resolve());
+      });
     }
   }
 
