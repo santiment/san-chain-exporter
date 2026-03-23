@@ -221,12 +221,14 @@ export class Exporter {
 
   async getLastPosition() {
     if (await this.zookeeperClient.existsAsync(this.zookeeperPositionNode)) {
+      // getDataAsync returns { data: Buffer, stat: object } on success, or null if the node
+      // was deleted between the exists check and the read. Guard against null before accessing .data.
       const previousPosition = await this.zookeeperClient.getDataAsync(
         this.zookeeperPositionNode
       );
 
       try {
-        if (Buffer.isBuffer(previousPosition && previousPosition.data)) {
+        if (previousPosition && Buffer.isBuffer(previousPosition.data)) {
           const value = previousPosition.data.toString('utf8');
 
           if (value.startsWith(FORMAT_HEADER)) {
@@ -245,12 +247,14 @@ export class Exporter {
 
   async getLastBlockTimestamp() {
     if (await this.zookeeperClient.existsAsync(this.zookeeperTimestampNode)) {
+      // getDataAsync returns { data: Buffer, stat: object } on success, or null if the node
+      // was deleted between the exists check and the read. Guard against null before accessing .data.
       const previousPosition = await this.zookeeperClient.getDataAsync(
         this.zookeeperTimestampNode
       );
 
       try {
-        if (Buffer.isBuffer(previousPosition && previousPosition.data)) {
+        if (previousPosition && Buffer.isBuffer(previousPosition.data)) {
           const value = previousPosition.data.toString('utf8');
 
           if (value.startsWith(FORMAT_HEADER)) {
@@ -345,6 +349,7 @@ export class Exporter {
    * @param {Function} Callback to be invoked on message delivery.
    */
   async subscribeDeliveryReports(callback: () => void) {
+    this.producer.removeAllListeners('delivery-report');
     this.producer.on('delivery-report', callback);
   }
 
@@ -352,11 +357,7 @@ export class Exporter {
    * Unsubscribe from delivery reports, restoring the default error checking.
    */
   async unSubscribeDeliveryReports() {
-    this.producer.on('delivery-report', function (err) {
-      if (err) {
-        throw err;
-      }
-    });
+    this.producer.removeAllListeners('delivery-report');
   }
 
   async initTransactions() {
