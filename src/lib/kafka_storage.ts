@@ -204,8 +204,6 @@ export class Exporter {
     const promise_result = new Promise((resolve, reject) => {
       this.producer.on('ready', resolve);
       this.producer.on('event.error', reject);
-      // The user can provide a callback for delivery reports with the
-      // dedicated method 'subscribeDeliveryReports'.
       this.producer.on('delivery-report', function (err) {
         if (err) {
           reject(err);
@@ -218,41 +216,27 @@ export class Exporter {
 
   /**
    * Disconnect from Zookeeper and Kafka.
-   * Supports both the new Promise-based API and the legacy callback style.
    */
-  disconnect(): Promise<void>;
-  disconnect(callback: (err?: unknown) => void): Promise<void>;
-  async disconnect(callback?: (err?: unknown) => void): Promise<void> {
-    let disconnectError: unknown;
-
+  async disconnect(): Promise<void> {
     try {
-      try {
-        logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
-        await this.zookeeperClient.closeAsync();
-      } catch (err) {
-        logger.error('Error disconnecting from Zookeeper:', err);
-      }
-
-      if (this.producer.isConnected()) {
-        logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
-        await new Promise<void>((resolve, reject) => {
-          this.producer.disconnect((err: LibrdKafkaError | null) => {
-            if (err) {
-              return reject(err);
-            }
-            resolve();
-          });
-        });
-      } else {
-        logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
-      }
+      logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
+      await this.zookeeperClient.closeAsync();
     } catch (err) {
-      disconnectError = err;
-      throw err;
-    } finally {
-      if (callback) {
-        callback(disconnectError);
-      }
+      logger.error('Error disconnecting from Zookeeper:', err);
+    }
+
+    if (this.producer.isConnected()) {
+      logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
+      await new Promise<void>((resolve, reject) => {
+        this.producer.disconnect((err: LibrdKafkaError | null) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+    } else {
+      logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
     }
   }
 
@@ -353,22 +337,6 @@ export class Exporter {
         resolve();
       })
     );
-  }
-
-  /**
-   * Subscribe to delivery reports.
-   * @param {Function} Callback to be invoked on message delivery.
-   */
-  async subscribeDeliveryReports(callback: () => void) {
-    this.producer.removeAllListeners('delivery-report');
-    this.producer.on('delivery-report', callback);
-  }
-
-  /**
-   * Unsubscribe from delivery reports, restoring the default error checking.
-   */
-  async unSubscribeDeliveryReports() {
-    this.producer.removeAllListeners('delivery-report');
   }
 
   async initTransactions() {
