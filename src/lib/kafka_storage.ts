@@ -204,8 +204,6 @@ export class Exporter {
     const promise_result = new Promise((resolve, reject) => {
       this.producer.on('ready', resolve);
       this.producer.on('event.error', reject);
-      // The user can provide a callback for delivery reports with the
-      // dedicated method 'subscribeDeliveryReports'.
       this.producer.on('delivery-report', function (err) {
         if (err) {
           reject(err);
@@ -353,22 +351,6 @@ export class Exporter {
         resolve();
       })
     );
-  }
-
-  /**
-   * Subscribe to delivery reports.
-   * @param {Function} Callback to be invoked on message delivery.
-   */
-  async subscribeDeliveryReports(callback: () => void) {
-    this.producer.removeAllListeners('delivery-report');
-    this.producer.on('delivery-report', callback);
-  }
-
-  /**
-   * Unsubscribe from delivery reports, restoring the default error checking.
-   */
-  async unSubscribeDeliveryReports() {
-    this.producer.removeAllListeners('delivery-report');
   }
 
   async initTransactions() {

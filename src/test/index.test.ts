@@ -425,42 +425,6 @@ describe('Main tests', () => {
   });
 });
 
-
-describe('Exporter delivery-report listeners', () => {
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  // subscribeDeliveryReports should replace existing listeners, not stack new ones.
-  // Previously each call added a listener without removing old ones, causing a leak.
-  it('subscribeDeliveryReports replaces previous listener instead of stacking', async () => {
-    const exporter = new Exporter('test', false, 'topic');
-    const producer: any = (exporter as any).producer;
-
-    const cb1 = sinon.stub();
-    const cb2 = sinon.stub();
-
-    await exporter.subscribeDeliveryReports(cb1);
-    await exporter.subscribeDeliveryReports(cb2);
-
-    const listenerCount = producer.listenerCount('delivery-report');
-    assert.strictEqual(listenerCount, 1, 'Should have exactly one delivery-report listener');
-  });
-
-  // unSubscribeDeliveryReports should remove all listeners. Previously it added another
-  // listener containing a bare `throw` which would crash the process as an unhandled exception.
-  it('unSubscribeDeliveryReports removes all delivery-report listeners', async () => {
-    const exporter = new Exporter('test', false, 'topic');
-    const producer: any = (exporter as any).producer;
-
-    await exporter.subscribeDeliveryReports(sinon.stub());
-    await exporter.unSubscribeDeliveryReports();
-
-    const listenerCount = producer.listenerCount('delivery-report');
-    assert.strictEqual(listenerCount, 0, 'Should have no delivery-report listeners');
-  });
-});
-
 describe('Exporter disconnect', () => {
   afterEach(() => {
     sinon.restore();
