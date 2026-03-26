@@ -122,7 +122,7 @@ You can save the current position using the `savePosition(position)` API.
 The main `Exporter` API used by workers and tests currently includes:
 
 * `connect` - establish connection to the dependent services. Returns a Promise.
-* `disconnect` - close Zookeeper and Kafka connections. Supports both `await exporter.disconnect()` and legacy callback style `exporter.disconnect(callback)`.
+* `disconnect` - close Zookeeper and Kafka connections. Returns a Promise.
 * `initTransactions` - initialize Kafka transactions. Returns a Promise.
 * `getLastPosition` - fetch the last saved position. Returns a Promise.
 * `getLastBlockTimestamp` - fetch the last saved block timestamp. Returns a Promise.
@@ -130,4 +130,3 @@ The main `Exporter` API used by workers and tests currently includes:
 * `saveLastBlockTimestamp` - update the last saved block timestamp. Returns a Promise.
 * `sendData` - push a single event or an array of events. Returns a Promise.
 * `storeEvents` - write events inside a Kafka transaction. Returns a Promise.
-* `subscribeDeliveryReports` / `unSubscribeDeliveryReports` - manage Kafka delivery report listeners.
