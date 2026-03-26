@@ -98,33 +98,6 @@ $ npm test
 ```bash
 $ ./bin/test.sh
 ```
-## Kafka transaction tests
-
-
-1. Run the needed infrastructure
-
-In one console execute the command:
-
-```
-./e2e/start-environment.sh
-```
-
-2. Run the test itself
-
-In another console execute the test:
-
-```
-./e2e/test.sh
-```
-
-3. Stop the infrastructure
-
-Stop the infrastructure (Ctrl+C) in the first console and delete leftover containers:
-
-```
-./e2e/stop-environment.sh
-```
-
 ## Integration tests
 
 Those are tests which would run the exporter against a running Node and compare the output to expected values.

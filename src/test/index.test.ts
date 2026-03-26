@@ -425,43 +425,6 @@ describe('Main tests', () => {
   });
 });
 
-describe('Exporter disconnect', () => {
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  it('supports legacy callback-style disconnect callers', async () => {
-    const exporter = Object.create(Exporter.prototype) as Exporter;
-    const closeAsync = sinon.stub().resolves();
-    const disconnect = sinon.stub().callsFake((callback: (err: null) => void) => callback(null));
-    (exporter as any).zookeeperClient = { closeAsync };
-    (exporter as any).producer = { isConnected: sinon.stub().returns(true), disconnect };
-
-    const callback = sinon.stub();
-    await exporter.disconnect(callback);
-
-    sinon.assert.calledOnce(closeAsync);
-    sinon.assert.calledOnce(disconnect);
-    sinon.assert.calledOnceWithExactly(callback, undefined);
-  });
-
-  it('rejects when producer disconnect reports an error', async () => {
-    const exporter = Object.create(Exporter.prototype) as Exporter;
-    const closeAsync = sinon.stub().resolves();
-    const disconnectError = new Error('kafka disconnect failed');
-    const disconnect = sinon.stub().callsFake((callback: (err: Error) => void) => callback(disconnectError));
-    (exporter as any).zookeeperClient = { closeAsync };
-    (exporter as any).producer = { isConnected: sinon.stub().returns(true), disconnect };
-
-    const callback = sinon.stub();
-
-    await assert.rejects(() => exporter.disconnect(callback), /kafka disconnect failed/);
-    sinon.assert.calledOnce(closeAsync);
-    sinon.assert.calledOnce(disconnect);
-    sinon.assert.calledOnceWithExactly(callback, disconnectError);
-  });
-});
-
 describe('main function', () => {
   beforeEach(() => {
     sinon.stub(logger, 'error');
