@@ -9,6 +9,7 @@ export class XRPWorker extends BaseWorker {
   private nodeURLs: string;
   private connections: XRPConnection[];
   private retryIntervalMs: number;
+  private connectionError: Error | null;
 
   constructor(settings: any) {
     super(settings);
@@ -16,6 +17,7 @@ export class XRPWorker extends BaseWorker {
     this.nodeURLs = settings.XRP_NODE_URLS.split(',');
     this.connections = [];
     this.retryIntervalMs = 1000;
+    this.connectionError = null;
   }
 
   async createNewSetConnections() {
@@ -31,8 +33,7 @@ export class XRPWorker extends BaseWorker {
       const api = new Client(nodeURL, clientOptions);
 
       api.on('error', (...error) => {
-        logger.error('Error in XRPL API connection number: ' + i + error);
-        process.exit(-1);
+        this.recordConnectionError(i, error);
       });
       await api.connect();
 
@@ -53,13 +54,17 @@ export class XRPWorker extends BaseWorker {
   }
 
   async connectionSend(connection: XRPConnection, params: LedgerRequest) {
-    return connection.queue.add(() => {
+    this.throwConnectionErrorIfAny();
+    const response = await connection.queue.add(() => {
       return connection.connection.request(params);
     });
+    this.throwConnectionErrorIfAny();
+    return response;
   }
 
   async init() {
     await this.createNewSetConnections();
+    this.throwConnectionErrorIfAny();
     const lastValidatedLedger = await this.connectionSend(this.connections[0], {
       command: 'ledger',
       ledger_index: 'validated',
@@ -68,6 +73,38 @@ export class XRPWorker extends BaseWorker {
     });
     const lastValidatedLedgerData = lastValidatedLedger.result;
     this.lastConfirmedBlock = parseInt(lastValidatedLedgerData.ledger.ledger_index) - this.settings.CONFIRMATIONS;
+  }
+
+  private recordConnectionError(connectionIndex: number, errorParts: unknown[]) {
+    const details = errorParts
+      .map((errorPart) => {
+        if (errorPart instanceof Error) {
+          return errorPart.message;
+        }
+        if (typeof errorPart === 'string') {
+          return errorPart;
+        }
+        try {
+          return JSON.stringify(errorPart);
+        } catch (_err) {
+          return String(errorPart);
+        }
+      })
+      .join(', ');
+    const errorMessage = details.length > 0
+      ? `Error in XRPL API connection number: ${connectionIndex}: ${details}`
+      : `Error in XRPL API connection number: ${connectionIndex}`;
+
+    logger.error(errorMessage);
+    if (this.connectionError === null) {
+      this.connectionError = new Error(errorMessage);
+    }
+  }
+
+  private throwConnectionErrorIfAny() {
+    if (this.connectionError !== null) {
+      throw this.connectionError;
+    }
   }
 
   isEmptyTransactionHash(transaction_hash: string) {
@@ -144,20 +181,13 @@ export class XRPWorker extends BaseWorker {
       const blockNumber = ledgers[indexLedger].ledger.ledger_index;
       logger.info(`Block number ${blockNumber} has ${transactions.length} transactions`);
       for (let index = 0; index < transactions.length; index++) {
-        const transaction = transactions[index];
-        if ('validated' in transaction && !transaction.validated) {
-          logger.error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated. Aborting.`);
-          process.exit(-1);
-        }
-        if (!('meta' in transaction) && !('metaData' in transaction)) {
-          logger.error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field. Aborting.`);
-          process.exit(-1);
-        }
+        validateXRPTransaction(transactions[index], index, blockNumber);
       }
     }
   }
 
   async work() {
+    this.throwConnectionErrorIfAny();
     if (this.lastConfirmedBlock === this.lastExportedBlock) {
       this.sleepTimeMsec = this.settings.LOOP_INTERVAL_CURRENT_MODE_SEC * 1000;
       const lastValidatedLedger = await this.connectionSend(this.connections[0], {
@@ -185,6 +215,7 @@ export class XRPWorker extends BaseWorker {
       );
     }
     const resolvedRequests = await Promise.all(requests);
+    this.throwConnectionErrorIfAny();
     const ledgers = resolvedRequests.map(({ ledger, transactions }) => {
       return { ledger, transactions, primaryKey: ledger.ledger_index };
     });
@@ -196,5 +227,18 @@ export class XRPWorker extends BaseWorker {
     }
 
     return ledgers;
+  }
+}
+
+/**
+ * Validate a single XRP transaction. Throws if the transaction is not validated
+ * or is missing the required 'meta'/'metaData' field.
+ */
+export function validateXRPTransaction(transaction: any, index: number, blockNumber: string) {
+  if ('validated' in transaction && !transaction.validated) {
+    throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is not validated.`);
+  }
+  if (!('meta' in transaction) && !('metaData' in transaction)) {
+    throw new Error(`Transaction ${transaction.hash} at index ${index} in block ${blockNumber} is missing 'meta' field.`);
   }
 }

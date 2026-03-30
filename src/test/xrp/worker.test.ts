@@ -1,7 +1,7 @@
 /*jshint esversion: 6 */
 import assert from 'assert';
 const sinon = require('sinon');
-import { XRPWorker } from '../../blockchains/xrp/xrp_worker';
+import { XRPWorker, validateXRPTransaction } from '../../blockchains/xrp/xrp_worker';
 import { XRPConnection } from '../../blockchains/xrp/xrp_types';
 import * as constants from '../../blockchains/xrp/lib/constants';
 
@@ -77,6 +77,47 @@ describe('workLoopSimpleTest', function () {
       expectedResult.push(localBlock);
     }
     assert.deepStrictEqual(result, expectedResult);
+  });
+
+  // Previously these cases called process.exit(-1), which killed the process without cleanup.
+  // Now they throw errors that propagate through the work loop for graceful handling.
+  // Tests use the extracted validateXRPTransaction() directly for isolated coverage.
+  it('validateXRPTransaction throws on unvalidated transaction', function () {
+    assert.throws(
+      () => validateXRPTransaction({ hash: 'abc', validated: false, meta: {} }, 0, '100'),
+      (err: Error) => err.message.includes('is not validated')
+    );
+  });
+
+  // A transaction without 'meta' or 'metaData' is corrupt and must not be silently exported.
+  it('validateXRPTransaction throws on missing meta field', function () {
+    assert.throws(
+      () => validateXRPTransaction({ hash: 'def' }, 0, '100'),
+      (err: Error) => err.message.includes("missing 'meta' field")
+    );
+  });
+
+  // Sanity check: valid transactions (with 'meta' or 'metaData') pass without throwing.
+  it('validateXRPTransaction passes with meta', function () {
+    validateXRPTransaction({ hash: 'abc', validated: true, meta: {} }, 0, '100');
+  });
+
+  it('validateXRPTransaction passes with metaData', function () {
+    validateXRPTransaction({ hash: 'abc', metaData: {} }, 0, '100');
+  });
+
+  // A transaction without the 'validated' field at all should not throw (only explicit false is invalid).
+  it('validateXRPTransaction passes when validated field is absent', function () {
+    validateXRPTransaction({ hash: 'abc', meta: {} }, 0, '100');
+  });
+
+  it('work surfaces stored XRPL connection errors through the async work loop', async function () {
+    const worker = new XRPWorker(constants);
+    (worker as any).connectionError = new Error('XRPL connection dropped');
+    worker.lastExportedBlock = 10;
+    worker.lastConfirmedBlock = 20;
+
+    await assert.rejects(async () => worker.work(), /XRPL connection dropped/);
   });
 
   it('should loop several times due to lack of transactions', async () => {

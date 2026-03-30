@@ -1,11 +1,14 @@
 const sinon = require('sinon');
 const rewire = require('rewire');
+const metrics = require('../lib/metrics');
+const { logger } = require('../lib/logger');
 import assert from 'assert';
 // For this test, presume we are creating the ETH worker
 process.env.BLOCKCHAIN = 'eth';
 process.env.IS_ETH = 'true';
 process.env.TEST_ENV = 'true';
-import { Main } from '../main';
+import { Main, getPathname } from '../main';
+import { parseZookeeperValue, FORMAT_HEADER } from '../lib/kafka_storage';
 const { Main: MainRewired } = rewire('../main');
 const { main } = rewire('../index');
 import { BaseWorker } from '../lib/worker_base';
@@ -16,6 +19,58 @@ import zkClientAsync from '../lib/zookeeper_client_async';
 
 
 const blockchain = 'eth';
+
+describe('getPathname', () => {
+  // Verifies the url.parse() → new URL() migration parses paths correctly.
+  it('extracts pathname from a simple path', () => {
+    assert.strictEqual(getPathname('/healthcheck'), '/healthcheck');
+  });
+
+  it('extracts pathname from a path with query string', () => {
+    assert.strictEqual(getPathname('/metrics?foo=bar'), '/metrics');
+  });
+
+  it('extracts pathname from an absolute URL', () => {
+    assert.strictEqual(getPathname('http://host:3000/healthcheck'), '/healthcheck');
+  });
+
+  it('returns / for root path', () => {
+    assert.strictEqual(getPathname('/'), '/');
+  });
+});
+
+describe('parseZookeeperValue', () => {
+  // Extracted from the duplicated logic in getLastPosition() and getLastBlockTimestamp().
+  // Tests the three cases: JSON with format header, raw Buffer, and null/missing input.
+
+  it('parses JSON data with format header', () => {
+    const data = Buffer.from(FORMAT_HEADER + '{"blockNumber":100,"primaryKey":5}', 'utf-8');
+    const result = parseZookeeperValue({ data });
+    assert.deepStrictEqual(result, { blockNumber: 100, primaryKey: 5 });
+  });
+
+  it('returns raw Buffer when no format header is present', () => {
+    const data = Buffer.from('raw-data', 'utf-8');
+    const result = parseZookeeperValue({ data });
+    assert.ok(Buffer.isBuffer(result));
+    assert.strictEqual(result.toString('utf8'), 'raw-data');
+  });
+
+  it('returns null when zkResult is null (node deleted between exists and read)', () => {
+    assert.strictEqual(parseZookeeperValue(null), null);
+  });
+
+  it('returns null when zkResult.data is not a Buffer', () => {
+    assert.strictEqual(parseZookeeperValue({ data: 'not a buffer' }), null);
+  });
+
+  it('parses numeric timestamp value with format header', () => {
+    const data = Buffer.from(FORMAT_HEADER + '1700000000', 'utf-8');
+    const result = parseZookeeperValue({ data });
+    assert.strictEqual(result, 1700000000);
+  });
+});
+
 describe('Main tests', () => {
   const constants = {
     START_BLOCK: -1,
@@ -138,6 +193,31 @@ describe('Main tests', () => {
       else {
         assert.fail('Exception is not an instance of Error')
       }
+    }
+  });
+
+  it('micro server errors trigger exporter termination', async () => {
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+
+    const mainInstance = new Main();
+    sinon.stub(mainInstance, 'initExporter').resolves();
+    sinon.stub(mainInstance, 'initWorker').resolves();
+    sinon.stub(metrics, 'startCollection').returns(undefined);
+    sinon.stub((mainInstance as any).microServer, 'listen').callsFake((_port: number, callback: () => void) => {
+      callback();
+      return (mainInstance as any).microServer;
+    });
+    const stopStub = sinon.stub(mainInstance, 'stop');
+
+    try {
+      await mainInstance.init(blockchain);
+      (mainInstance as any).microServer.emit('error', new Error('micro failed'));
+
+      sinon.assert.calledOnce(stopStub);
+      assert.strictEqual(process.exitCode, 1);
+    } finally {
+      process.exitCode = previousExitCode;
     }
   });
 
@@ -266,10 +346,90 @@ describe('Main tests', () => {
       }
     }
   });
+
+  // Verify that disconnect() actually awaits the exporter cleanup (Zookeeper + Kafka flush)
+  // rather than firing and forgetting, which previously caused data loss on shutdown.
+  it('disconnect awaits exporter disconnect', async () => {
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    exporterStub.disconnect.resolves();
+    mainInstance.exporter = exporterStub;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect();
+    sinon.assert.calledOnce(exporterStub.disconnect);
+  });
+
+  // Verify the HTTP server is closed via callback-to-promise, not fire-and-forget.
+  it('disconnect awaits micro server close', async () => {
+    const mainInstance = new MainRewired();
+    mainInstance.exporter = undefined;
+
+    const fakeServer = { close: sinon.stub().callsFake((cb: () => void) => cb()) };
+    mainInstance.microServer = fakeServer;
+
+    await mainInstance.disconnect();
+    sinon.assert.calledOnce(fakeServer.close);
+  });
+
+  // Full shutdown path: both exporter and HTTP server are awaited in sequence.
+  it('disconnect handles both exporter and micro server', async () => {
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    exporterStub.disconnect.resolves();
+    mainInstance.exporter = exporterStub;
+
+    const fakeServer = { close: sinon.stub().callsFake((cb: () => void) => cb()) };
+    mainInstance.microServer = fakeServer;
+
+    await mainInstance.disconnect();
+    sinon.assert.calledOnce(exporterStub.disconnect);
+    sinon.assert.calledOnce(fakeServer.close);
+  });
+
+  it('disconnect clears the timeout after successful cleanup', async () => {
+    const clock = sinon.useFakeTimers();
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    exporterStub.disconnect.resolves();
+    mainInstance.exporter = exporterStub;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect(1000);
+    assert.strictEqual(clock.countTimers(), 0);
+  });
+
+  // Edge case: disconnect() called before init() completes (e.g. early SIGTERM).
+  it('disconnect handles undefined exporter and micro server gracefully', async () => {
+    const mainInstance = new MainRewired();
+    mainInstance.exporter = undefined;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect();
+    // Should complete without throwing
+  });
+
+  // If Zookeeper or Kafka hangs during close, disconnect should not block forever.
+  // After the timeout, process.exit(1) is called to force-kill the process.
+  it('disconnect times out if cleanup hangs', async () => {
+    const exitStub = sinon.stub(process, 'exit');
+    const mainInstance = new MainRewired();
+    const exporterStub = sinon.createStubInstance(Exporter);
+    // Simulate a hanging disconnect — never resolves
+    exporterStub.disconnect.returns(new Promise(() => {}));
+    mainInstance.exporter = exporterStub;
+    mainInstance.microServer = undefined;
+
+    await mainInstance.disconnect(100);
+    sinon.assert.calledOnceWithExactly(exitStub, 1);
+  });
 });
 
-
 describe('main function', () => {
+  beforeEach(() => {
+    sinon.stub(logger, 'error');
+  });
+
   afterEach(() => {
     sinon.restore();
   });

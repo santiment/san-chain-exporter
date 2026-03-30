@@ -8,44 +8,47 @@ function isETHTransaction(transaction: ETHTransaction | string): transaction is 
   return typeof transaction === 'object' && 'hash' in transaction && 'from' in transaction;
 }
 
+// Builds a fee transfer object from pre-computed gas expense.
+// Shared by pre-London, post-London burnt, and miner fee code paths to avoid duplicating
+// the same 10-field object construction three times.
+export function createFeeTransfer(
+  from: string,
+  to: string,
+  gasExpense: bigint,
+  transaction: ETHTransaction,
+  block: ETHBlock,
+  type: string
+): ETHTransfer {
+  return {
+    from,
+    to,
+    value: Number(gasExpense),
+    valueExactBase36: gasExpense.toString(36),
+    blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
+    timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
+    transactionHash: transaction.hash,
+    transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
+    internalTxPosition: 0,
+    type,
+  };
+}
+
 export class FeesDecoder {
   getPreLondonForkFees(transaction: ETHTransaction, block: ETHBlock, receipts: any): ETHTransfer[] {
     const gasExpense = BigInt(Web3Static.parseHexToNumber(transaction.gasPrice)) *
       BigInt(Web3Static.parseHexToNumber(receipts[transaction.hash].gasUsed));
-    return [{
-      from: transaction.from,
-      to: block.miner,
-      value: Number(gasExpense),
-      valueExactBase36: gasExpense.toString(36),
-      blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
-      timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
-      transactionHash: transaction.hash,
-      transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
-      internalTxPosition: 0,
-      type: 'fee'
-    }];
+    return [createFeeTransfer(transaction.from, block.miner, gasExpense, transaction, block, 'fee')];
   }
 
   getBurntFee(transaction: ETHTransaction, block: ETHBlock, receipts: ETHReceiptsMap,
     burnAddress: string): ETHTransfer {
     const gasExpense = (block.baseFeePerGas === undefined) ?
-      0
+      BigInt(0)
       :
       BigInt(Web3Static.parseHexToNumber(block.baseFeePerGas)) *
       BigInt(Web3Static.parseHexToNumber(receipts[transaction.hash].gasUsed))
 
-    return {
-      from: transaction.from,
-      to: burnAddress,
-      value: Number(gasExpense),
-      valueExactBase36: gasExpense.toString(36),
-      blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
-      timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
-      transactionHash: transaction.hash,
-      transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
-      internalTxPosition: 0,
-      type: 'fee_burnt'
-    };
+    return createFeeTransfer(transaction.from, burnAddress, gasExpense, transaction, block, 'fee_burnt');
   }
 
   /**
@@ -65,18 +68,7 @@ export class FeesDecoder {
     const tipMinerPerGas = BigInt(Web3Static.parseHexToNumber(transaction.gasPrice)) - baseFeePerGas;
     const gasExpense = tipMinerPerGas * BigInt(Web3Static.parseHexToNumber(receiptsMap[transaction.hash].gasUsed));
     if (tipMinerPerGas > 0) {
-      return {
-        from: transaction.from,
-        to: block.miner,
-        value: Number(gasExpense),
-        valueExactBase36: gasExpense.toString(36),
-        blockNumber: safeCastToNumber(Web3Static.parseHexToNumber(transaction.blockNumber)),
-        timestamp: safeCastToNumber(Web3Static.parseHexToNumber(block.timestamp)),
-        transactionHash: transaction.hash,
-        transactionPosition: safeCastToNumber(Web3Static.parseHexToNumber(transaction.transactionIndex)),
-        internalTxPosition: 0,
-        type: 'fee'
-      };
+      return createFeeTransfer(transaction.from, block.miner, gasExpense, transaction, block, 'fee');
     }
     else {
       return undefined

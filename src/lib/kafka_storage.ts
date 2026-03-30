@@ -10,7 +10,25 @@ const ZOOKEEPER_RETRIES: number = parseInt(process.env.ZOOKEEPER_RETRIES || '0')
 const ZOOKEEPER_SPIN_DELAY: number = parseInt(process.env.ZOOKEEPER_SPIN_DELAY || '1000');
 const ZOOKEEPER_SESSION_TIMEOUT: number = parseInt(process.env.ZOOKEEPER_SESSION_TIMEOUT || '30000');
 
-const FORMAT_HEADER: string = 'format=json;';
+export const FORMAT_HEADER: string = 'format=json;';
+
+/**
+ * Parse a value read from Zookeeper. The stored data is a Buffer that may be prefixed with
+ * FORMAT_HEADER ("format=json;") followed by JSON, or a raw Buffer from older versions.
+ * Returns the parsed JSON object, the raw Buffer, or null if the input is not usable.
+ */
+export function parseZookeeperValue(zkResult: { data: any; stat?: any } | null): any {
+  if (!zkResult || !Buffer.isBuffer(zkResult.data)) {
+    return null;
+  }
+
+  const value = zkResult.data.toString('utf8');
+  if (value.startsWith(FORMAT_HEADER)) {
+    return JSON.parse(value.replace(FORMAT_HEADER, ''));
+  }
+
+  return zkResult.data;
+}
 const RDKAFKA_DEBUG: string | null = process.env.RDKAFKA_DEBUG || null;
 const KAFKA_URL: string = process.env.KAFKA_URL || 'localhost:9092';
 const KAFKA_COMPRESSION_CODEC: string = process.env.KAFKA_COMPRESSION_CODEC || 'lz4';
@@ -30,7 +48,9 @@ process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void =>
   else {
     logger.error('Unhandled Rejection at: ', p, 'reason:', reason);
   }
-  process.exit(1);
+  // Let the process crash naturally rather than calling process.exit() which skips cleanup.
+  // Throwing here will trigger an uncaughtException if not caught elsewhere.
+  throw reason;
 });
 
 /**
@@ -184,8 +204,6 @@ export class Exporter {
     const promise_result = new Promise((resolve, reject) => {
       this.producer.on('ready', resolve);
       this.producer.on('event.error', reject);
-      // The user can provide a callback for delivery reports with the
-      // dedicated method 'subscribeDeliveryReports'.
       this.producer.on('delivery-report', function (err) {
         if (err) {
           reject(err);
@@ -198,37 +216,35 @@ export class Exporter {
 
   /**
    * Disconnect from Zookeeper and Kafka.
-   * This method is completed once the callback is invoked.
    */
-  disconnect(callback?: () => void) {
-    logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
-    this.zookeeperClient.closeAsync().then(() => {
-      if (this.producer.isConnected()) {
-        logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
-        this.producer.disconnect(callback);
-      }
-      else {
-        logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
-      }
-    });
+  async disconnect(): Promise<void> {
+    try {
+      logger.info(`Disconnecting from zookeeper host ${ZOOKEEPER_URL}`);
+      await this.zookeeperClient.closeAsync();
+    } catch (err) {
+      logger.error('Error disconnecting from Zookeeper:', err);
+    }
+
+    if (this.producer.isConnected()) {
+      logger.info(`Disconnecting from kafka host ${KAFKA_URL}`);
+      await new Promise<void>((resolve, reject) => {
+        this.producer.disconnect((err: LibrdKafkaError | null) => {
+          if (err) {
+            return reject(err);
+          }
+          resolve();
+        });
+      });
+    } else {
+      logger.info(`Producer is NOT connected to kafka host ${KAFKA_URL}`);
+    }
   }
 
   async getLastPosition() {
     if (await this.zookeeperClient.existsAsync(this.zookeeperPositionNode)) {
-      const previousPosition = await this.zookeeperClient.getDataAsync(
-        this.zookeeperPositionNode
-      );
-
       try {
-        if (Buffer.isBuffer(previousPosition && previousPosition.data)) {
-          const value = previousPosition.data.toString('utf8');
-
-          if (value.startsWith(FORMAT_HEADER)) {
-            return JSON.parse(value.replace(FORMAT_HEADER, ''));
-          } else {
-            return previousPosition.data;
-          }
-        }
+        const zkResult = await this.zookeeperClient.getDataAsync(this.zookeeperPositionNode);
+        return parseZookeeperValue(zkResult);
       } catch (err) {
         logger.error(err);
       }
@@ -239,20 +255,9 @@ export class Exporter {
 
   async getLastBlockTimestamp() {
     if (await this.zookeeperClient.existsAsync(this.zookeeperTimestampNode)) {
-      const previousPosition = await this.zookeeperClient.getDataAsync(
-        this.zookeeperTimestampNode
-      );
-
       try {
-        if (Buffer.isBuffer(previousPosition && previousPosition.data)) {
-          const value = previousPosition.data.toString('utf8');
-
-          if (value.startsWith(FORMAT_HEADER)) {
-            return JSON.parse(value.replace(FORMAT_HEADER, ''));
-          } else {
-            return previousPosition.data;
-          }
-        }
+        const zkResult = await this.zookeeperClient.getDataAsync(this.zookeeperTimestampNode);
+        return parseZookeeperValue(zkResult);
       } catch (err) {
         logger.error(err);
       }
@@ -332,25 +337,6 @@ export class Exporter {
         resolve();
       })
     );
-  }
-
-  /**
-   * Subscribe to delivery reports.
-   * @param {Function} Callback to be invoked on message delivery.
-   */
-  async subscribeDeliveryReports(callback: () => void) {
-    this.producer.on('delivery-report', callback);
-  }
-
-  /**
-   * Unsubscribe from delivery reports, restoring the default error checking.
-   */
-  async unSubscribeDeliveryReports() {
-    this.producer.on('delivery-report', function (err) {
-      if (err) {
-        throw err;
-      }
-    });
   }
 
   async initTransactions() {

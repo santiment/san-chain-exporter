@@ -44,12 +44,12 @@ export class ReceiptsWorker extends BaseWorker {
   }
 
   async fetchReceiptsFromTransaction(blocks: any[]) {
-    var batch = [];
+    const batch = [];
     for (let block = 0; block < blocks.length; block++) {
-      var transactions = blocks[block]['transactions'];
+      const transactions = blocks[block]['transactions'];
       if (transactions.length === 0) continue;
       for (let trx = 0; trx < transactions.length; trx++) {
-        var transactionHash = transactions[trx]['hash'];
+        const transactionHash = transactions[trx]['hash'];
         batch.push(
           this.client.generateRequest(
             this.settings.GET_RECEIPTS_ENDPOINT,
