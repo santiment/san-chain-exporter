@@ -117,7 +117,6 @@ export class CardanoWorker extends BaseWorker {
     const query = `{
     transactions(
        where: {
-         block: { epoch: { number: { _is_null: false } } }
          _and: [
            { block: { number: { _gte: ${fromBlock} } } },
            { block: { number: { _lte: ${toBlock} } } }
