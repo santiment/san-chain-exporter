@@ -6,6 +6,7 @@ import { MULTICALL_ADDRESS } from './constants';
 import * as Utils from './balance_utils';
 import { logger } from '../../../lib/logger';
 import { buildInclusiveChunks } from './chunk_utils';
+import { MulticallBlacklist } from './multicall_blacklist';
 
 const stringifyTransfer = (event: ERC20Transfer): string =>
   JSON.stringify(event, (_key, value) => typeof value === 'bigint' ? value.toString() : value);
@@ -50,8 +51,34 @@ function decodeMulticallResult(addressContractToMulticallResult: Utils.AddressCo
     }
   }
 
-  logger.warn(`Multicall partial failure at block ${blockNumber} for address-contract ${addressContract[0]}-${addressContract[1]}`)
   return [blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]
+}
+
+type ContractStats = Map<string, { failed: number, total: number }>;
+
+function computeContractStats(balances: Utils.BlockNumberAddressContractBalance[]): ContractStats {
+  const stats: ContractStats = new Map();
+  for (const [, , contract, balance] of balances) {
+    let contractStats = stats.get(contract);
+    if (!contractStats) {
+      contractStats = { failed: 0, total: 0 };
+      stats.set(contract, contractStats);
+    }
+    contractStats.total += 1;
+    if (balance === MULTICALL_FAILURE) {
+      contractStats.failed += 1;
+    }
+  }
+  return stats;
+}
+
+function logFailuresPerContract(stats: ContractStats, blockNumber: number) {
+  for (const [contract, contractStats] of Array.from(stats.entries())) {
+    if (contractStats.failed > 0) {
+      logger.warn(`Multicall partial failure at block ${blockNumber} for contract ${contract}: ` +
+        `${contractStats.failed}/${contractStats.total} addresses failed`);
+    }
+  }
 }
 
 async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number,
@@ -115,33 +142,83 @@ async function executeBatchMulticall(web3: Web3, addressContracts: Utils.Address
   return addressContracts.map((addressContract, index) => [addressContract, multicallResult[index]]);
 }
 
+// Split the pairs into ones which should be requested from the Node and ones belonging to
+// blacklisted contracts, which get marked as failure directly.
+function splitPerBlacklist(addressContracts: Utils.AddressContract[], blockNumber: number,
+  blacklist: MulticallBlacklist | null)
+  : { toRequest: Utils.AddressContract[], skipped: Utils.BlockNumberAddressContractBalance[] } {
+  if (blacklist === null) {
+    return { toRequest: addressContracts, skipped: [] };
+  }
+
+  const toRequest: Utils.AddressContract[] = [];
+  const skipped: Utils.BlockNumberAddressContractBalance[] = [];
+  for (const addressContract of addressContracts) {
+    if (blacklist.isBlacklisted(addressContract[1])) {
+      skipped.push([blockNumber, addressContract[0], addressContract[1], MULTICALL_FAILURE]);
+    }
+    else {
+      toRequest.push(addressContract);
+    }
+  }
+  return { toRequest, skipped };
+}
+
 async function getBalancesPerBlock(web3: Web3, addressContracts: Utils.AddressContract[], blockNumber: number,
-  multicallAddress: string = MULTICALL_ADDRESS)
+  multicallAddress: string = MULTICALL_ADDRESS, blacklist: MulticallBlacklist | null = null)
   : Promise<Utils.BlockNumberAddressContractBalance[]> {
 
+  const { toRequest, skipped } = splitPerBlacklist(addressContracts, blockNumber, blacklist);
+  if (toRequest.length === 0) {
+    return skipped;
+  }
+
   let rawMulticallResult: Utils.AddressContractToMulticallResult[] = []
+  let batchCallReturned = true;
   try {
-    rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber, multicallAddress)
+    rawMulticallResult = await executeBatchMulticall(web3, toRequest, blockNumber, multicallAddress)
   }
   catch (error: any) {
     logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
+    batchCallReturned = false;
   }
 
-  if (rawMulticallResult.length === 0) {
-    rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber, multicallAddress)
-    return rawMulticallResult.map((rawResult: Utils.AddressContractToMulticallResult) => {
+  if (!batchCallReturned) {
+    rawMulticallResult = await executeNonBatchMulticall(web3, toRequest, blockNumber, multicallAddress)
+  }
+
+  // A raw MULTICALL_FAILURE marks a request rejected at the RPC level on the non-batch fallback
+  // path. Fulfilled responses carrying an on-chain revert come through as result objects instead.
+  const contractsWithRpcFailure = new Set<string>();
+  const decoded: Utils.BlockNumberAddressContractBalance[] = rawMulticallResult.map(
+    (rawResult: Utils.AddressContractToMulticallResult) => {
       if (rawResult[1] === MULTICALL_FAILURE) {
-        // The balance call for this address-contract pair has failed. We would mark it as failure without decoding
+        contractsWithRpcFailure.add(rawResult[0][1]);
         return [blockNumber, rawResult[0][0], rawResult[0][1], MULTICALL_FAILURE]
       }
       else {
         return decodeMulticallResult(rawResult, web3, blockNumber)
       }
     })
+
+  const stats = computeContractStats(decoded);
+  logFailuresPerContract(stats, blockNumber);
+
+  // Successful resolutions and on-chain reverts inside fulfilled responses are clean signals on
+  // both the batch and the fallback path. RPC level rejections are not attributable to the
+  // contract, so a contract-wide failure involving one is not recorded.
+  if (blacklist !== null) {
+    for (const [contract, contractStats] of Array.from(stats.entries())) {
+      if (contractStats.failed < contractStats.total) {
+        blacklist.recordCleanResult(contract);
+      }
+      else if (!contractsWithRpcFailure.has(contract)) {
+        blacklist.recordAllFailed(contract, blockNumber)
+      }
+    }
   }
-  else {
-    return rawMulticallResult.map(rawResult => decodeMulticallResult(rawResult, web3, blockNumber))
-  }
+
+  return skipped.concat(decoded);
 }
 
 //Get all addresses invovled in transfers. Map them to the block where the transfer happened.
@@ -163,7 +240,8 @@ function identifyAddresses(events: ERC20Transfer[]): BlockNumberToAffectedAddres
 
 // Build a balance map for all addresses involved in transactions
 async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.AddressContract[]][],
-  maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS): Promise<BlockNumberToBalances> {
+  maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS,
+  blacklist: MulticallBlacklist | null = null): Promise<BlockNumberToBalances> {
   if (batchedAddresses.length === 0) {
     return new Map() as BlockNumberToBalances
   }
@@ -176,7 +254,7 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
     const chunkResults: Utils.BlockNumberAddressContractBalance[] = []
     for (let idx = startIdx; idx <= endIdx; idx++) {
       const [blockNumber, addressContracts] = batchedAddresses[idx]
-      const balances = await getBalancesPerBlock(web3, addressContracts, blockNumber, multicallAddress)
+      const balances = await getBalancesPerBlock(web3, addressContracts, blockNumber, multicallAddress, blacklist)
       for (const balance of balances) {
         chunkResults.push(balance)
       }
@@ -203,7 +281,8 @@ async function buildBalancesMap(web3: Web3, batchedAddresses: [number, Utils.Add
 }
 
 export async function extendTransfersWithBalances(web3: Web3, events: ERC20Transfer[], multicallBatchSize: number,
-  maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS) {
+  maxConnectionConcurrency: number, multicallAddress: string = MULTICALL_ADDRESS,
+  blacklist: MulticallBlacklist | null = null) {
   logger.info(`Enriching ${events.length} events with balances `);
   const addressesInvolved: BlockNumberToAffectedAddresses = identifyAddresses(events);
 
@@ -219,7 +298,8 @@ export async function extendTransfersWithBalances(web3: Web3, events: ERC20Trans
     })
   }
 
-  const balanceMap = await buildBalancesMap(web3, batchedAddresses, maxConnectionConcurrency, multicallAddress);
+  const balanceMap = await buildBalancesMap(web3, batchedAddresses, maxConnectionConcurrency, multicallAddress,
+    blacklist);
   for (const event of events) {
     if (Utils.isAddressEligableForBalance(event.from, event.contract)) {
       event.fromBalance = balanceMap.get(event.blockNumber)?.get(Utils.concatAddressAndContract(event.from, event.contract))

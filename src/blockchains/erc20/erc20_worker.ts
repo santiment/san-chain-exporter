@@ -14,6 +14,7 @@ import { initBlocksList } from '../../lib/fetch_blocks_list';
 import { HTTPClientInterface } from '../../types';
 import { ERC20Transfer } from './erc20_types';
 import { extendTransfersWithBalances } from './lib/add_balances'
+import { MulticallBlacklist } from './lib/multicall_blacklist'
 import { buildInclusiveChunks } from './lib/chunk_utils';
 import { TrackingHttpClient, attachWeb3RequestTracker } from '../lib/request_tracking';
 
@@ -49,6 +50,7 @@ export class ERC20Worker extends BaseWorker {
 
   private allOldContracts: string[];
   private requestsSinceLastReport: number;
+  private multicallBlacklist: MulticallBlacklist | null;
 
 
   constructor(settings: any) {
@@ -68,6 +70,9 @@ export class ERC20Worker extends BaseWorker {
     this.contractsUnmodified = [];
     this.allOldContracts = [];
     this.blocksList = [];
+    this.multicallBlacklist = settings.MULTICALL_BLACKLIST_ENABLED
+      ? new MulticallBlacklist(settings.MULTICALL_BLACKLIST_FAILURE_THRESHOLD)
+      : null;
   }
 
   async init(exporter?: Exporter) {
@@ -165,7 +170,8 @@ export class ERC20Worker extends BaseWorker {
               oldEvents,
               this.settings.MULTICALL_BATCH_SIZE,
               this.settings.MAX_CONNECTION_CONCURRENCY,
-              this.settings.MULTICALL_ADDRESS
+              this.settings.MULTICALL_ADDRESS,
+              this.multicallBlacklist
             );
           }
           changeContractAddresses(oldEvents, this.contractsOverwriteArray);
@@ -187,7 +193,8 @@ export class ERC20Worker extends BaseWorker {
               rawEvents,
               this.settings.MULTICALL_BATCH_SIZE,
               this.settings.MAX_CONNECTION_CONCURRENCY,
-              this.settings.MULTICALL_ADDRESS
+              this.settings.MULTICALL_ADDRESS,
+              this.multicallBlacklist
             );
           }
           return rawEvents;
@@ -202,7 +209,7 @@ export class ERC20Worker extends BaseWorker {
       if (shouldExtendWithBalances) {
         await extendTransfersWithBalances((this.web3Wrapper as Web3Wrapper).getWeb3(), events,
           this.settings.MULTICALL_BATCH_SIZE, this.settings.MAX_CONNECTION_CONCURRENCY,
-          this.settings.MULTICALL_ADDRESS);
+          this.settings.MULTICALL_ADDRESS, this.multicallBlacklist);
       }
       if ('extract_all_append' === this.settings.CONTRACT_MODE) {
         overwritten_events = extractChangedContractAddresses(events, this.contractsOverwriteArray);
