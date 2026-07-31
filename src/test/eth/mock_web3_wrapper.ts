@@ -15,6 +15,10 @@ export class MockWeb3Wrapper implements Web3Interface {
     throw Error("Should not be called")
   }
 
+  getBlockReceipts(blockNumber: number): Promise<any[]> {
+    throw Error("Should not be called")
+  }
+
 }
 
 export class MockEthClient {

@@ -234,6 +234,28 @@ export async function getPastEvents(web3Wrapper: Web3Interface, fromBlock: numbe
 }
 
 
+function isTooManyLogsError(error: any): boolean {
+  const message = String(error?.message ?? error);
+  return /too many logs|more than \d+ (results|logs)/i.test(message);
+}
+
+// Fetch all logs of a single block through eth_getBlockReceipts, which is not subject
+// to the node's eth_getLogs response limit.
+async function getRawEventsFromReceipts(web3Wrapper: Web3Interface, blockNumber: number,
+  contractAddress: string | string[] | null): Promise<RawEvent[]> {
+  const receipts = await web3Wrapper.getBlockReceipts(blockNumber);
+  let logs: RawEvent[] = receipts.flatMap((receipt: any) => receipt.logs ?? []);
+
+  if (contractAddress) {
+    const allowed = new Set(
+      (Array.isArray(contractAddress) ? contractAddress : [contractAddress]).map(a => a.toLowerCase())
+    );
+    logs = logs.filter(log => allowed.has(log.address.toLowerCase()));
+  }
+
+  return logs;
+}
+
 async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlock: number, contractAddress: string | string[] | null): Promise<RawEvent[]> {
   let queryObject: any = {
     fromBlock: Web3Static.parseNumberToHex(fromBlock),
@@ -247,7 +269,24 @@ async function getRawEvents(web3Wrapper: Web3Interface, fromBlock: number, toBlo
     queryObject.address = contractAddress;
   }
 
-  return await web3Wrapper.getPastLogs(queryObject);
+  try {
+    return await web3Wrapper.getPastLogs(queryObject);
+  } catch (error) {
+    if (!isTooManyLogsError(error)) {
+      throw error;
+    }
+
+    if (fromBlock === toBlock) {
+      logger.info(`Block ${fromBlock} exceeds the node eth_getLogs limit, falling back to eth_getBlockReceipts`);
+      return await getRawEventsFromReceipts(web3Wrapper, fromBlock, contractAddress);
+    }
+
+    const middle = Math.floor((fromBlock + toBlock) / 2);
+    logger.info(`Interval ${fromBlock}:${toBlock} exceeds the node eth_getLogs limit, splitting at ${middle}`);
+    const firstHalf = await getRawEvents(web3Wrapper, fromBlock, middle, contractAddress);
+    const secondHalf = await getRawEvents(web3Wrapper, middle + 1, toBlock, contractAddress);
+    return firstHalf.concat(secondHalf);
+  }
 }
 
 export function decodeEvents(events: RawEvent[], timestampsCache: TimestampsCacheInterface, decodeFunctions: Record<string, DecodeEventFunction> = decodeFunctionsMap): ERC20Transfer[] {

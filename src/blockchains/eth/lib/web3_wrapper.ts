@@ -6,6 +6,7 @@ import { buildHttpOptions } from '../../../lib/build_http_options';
 export interface Web3Interface {
     getBlockNumber(): Promise<number>;
     getPastLogs(queryObject: any): Promise<any>;
+    getBlockReceipts(blockNumber: number): Promise<any[]>;
 }
 
 function containsOnly0Andx(input: string) {
@@ -28,6 +29,13 @@ export class Web3Wrapper implements Web3Interface {
 
     async getPastLogs(queryObject: any): Promise<any> {
         return await this.web3.eth.getPastLogs(queryObject);
+    }
+
+    async getBlockReceipts(blockNumber: number): Promise<any[]> {
+        return await this.web3.requestManager.send({
+            method: 'eth_getBlockReceipts',
+            params: [Web3Static.parseNumberToHex(blockNumber)]
+        });
     }
 
     async getBlock(blockNumber: number): Promise<any> {
