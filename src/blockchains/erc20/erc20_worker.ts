@@ -70,7 +70,7 @@ export class ERC20Worker extends BaseWorker {
     this.contractsUnmodified = [];
     this.allOldContracts = [];
     this.blocksList = [];
-    this.multicallBlacklist = settings.MULTICALL_BLACKLIST_ENABLED
+    this.multicallBlacklist = settings.MULTICALL_BLACKLIST_FAILURE_THRESHOLD > 0
       ? new MulticallBlacklist(settings.MULTICALL_BLACKLIST_FAILURE_THRESHOLD)
       : null;
   }

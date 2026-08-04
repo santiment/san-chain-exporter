@@ -12,7 +12,6 @@ import { logger } from '../../../lib/logger';
 export class MulticallBlacklist {
   private readonly failureThreshold: number;
   private consecutiveFailures: Map<string, number> = new Map();
-  private blacklisted: Set<string> = new Set();
 
   constructor(failureThreshold: number) {
     this.failureThreshold = failureThreshold;
@@ -22,14 +21,10 @@ export class MulticallBlacklist {
   // clean on-chain reverts.
   recordAllFailed(contract: string, blockNumber: number) {
     const failures = (this.consecutiveFailures.get(contract) ?? 0) + 1;
-    if (failures >= this.failureThreshold) {
-      this.consecutiveFailures.delete(contract);
-      this.blacklisted.add(contract);
+    this.consecutiveFailures.set(contract, failures);
+    if (failures === this.failureThreshold) {
       logger.info(`Blacklisting contract ${contract} at block ${blockNumber} after ` +
         `${this.failureThreshold} consecutive contract-wide multicall failures`);
-    }
-    else {
-      this.consecutiveFailures.set(contract, failures);
     }
   }
 
@@ -39,6 +34,6 @@ export class MulticallBlacklist {
   }
 
   isBlacklisted(contract: string): boolean {
-    return this.blacklisted.has(contract);
+    return (this.consecutiveFailures.get(contract) ?? 0) >= this.failureThreshold;
   }
 }

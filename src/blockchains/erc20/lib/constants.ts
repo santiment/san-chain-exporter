@@ -21,9 +21,8 @@ export const MULTICALL_DEPLOY_BLOCK = getIntEnvVariable('MULTICALL_DEPLOY_BLOCK'
 export const MULTICALL_BATCH_SIZE = getIntEnvVariable('MULTICALL_BATCH_SIZE', 50);
 export const MAX_CONNECTION_CONCURRENCY = Math.max(1, Math.floor(getIntEnvVariable('MAX_CONNECTION_CONCURRENCY', 10)));
 export const MULTICALL_ADDRESS = process.env.MULTICALL_ADDRESS || '0x5ba1e12693dc8f9c48aad8770482f4739beed696';
-// Skip balance requests for contracts which consistently fail 'balanceOf' inside successful Multicall responses
-export const MULTICALL_BLACKLIST_ENABLED = getBoolEnvVariable('MULTICALL_BLACKLIST_ENABLED', true);
-// Number of consecutive contract-wide failures before a contract gets blacklisted
+// Number of consecutive contract-wide 'balanceOf' failures before a contract is skipped in Multicall
+// requests. A value of 0 or less disables the blacklist.
 export const MULTICALL_BLACKLIST_FAILURE_THRESHOLD = getIntEnvVariable('MULTICALL_BLACKLIST_FAILURE_THRESHOLD', 5);
 
 export const CONTRACT_MAPPING_FILE_PATH = (
