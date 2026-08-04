@@ -110,6 +110,11 @@ async function executeNonBatchMulticall(web3: Web3, addressContracts: Utils.Addr
    * This fails on our endpoint but succeeds on Ankr due to different limits. However the response is a long sequence
    * of 0s.
    */
+  // If every individual call failed we are most probably facing a Node level problem. Erroring the
+  // export is preferred to marking all balances as failed and feeding noise to the blacklist.
+  if (errors.length > 0 && errors.length === addressContracts.length) {
+    throw new Error(`All ${errors.length} individual multicalls failed at block ${blockNumber}. First error is: ${errors[0]}`);
+  }
   if (errors.length > 0) {
     logger.warn(`${errors.length} errors out of ${addressContracts.length} in multicall at block ${blockNumber}. First errors is: ${errors[0]}`);
   }

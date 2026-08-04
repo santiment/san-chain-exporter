@@ -355,7 +355,7 @@ describe('test multicall blacklist integration', function () {
     assert.strictEqual(blacklist.isBlacklisted('contract1'), false);
   });
 
-  it('RPC level rejections on the fallback path are not recorded', async function () {
+  it('all calls failing at the RPC level is a non recoverable error', async function () {
     const blacklist = new MulticallBlacklist(1);
 
     // Both the batch and the individual calls fail at the RPC level
@@ -363,10 +363,10 @@ describe('test multicall blacklist integration', function () {
     add_balances_rewired.__set__('doMulticall', doMulticallMock);
 
     const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
-    const result = await getBalancesPerBlock(web3Mock, [['address1', 'contract1']], 10,
-      'multicallAddress', blacklist);
-
-    assert.deepStrictEqual(result, [[10, 'address1', 'contract1', MULTICALL_FAILURE]]);
+    await assert.rejects(
+      () => getBalancesPerBlock(web3Mock, [['address1', 'contract1']], 10, 'multicallAddress', blacklist),
+      /All 1 individual multicalls failed at block 10/
+    );
     assert.strictEqual(blacklist.isBlacklisted('contract1'), false);
   });
 
