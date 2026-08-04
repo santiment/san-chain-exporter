@@ -1,10 +1,9 @@
 import { logger } from '../../../lib/logger';
 
 /**
- * Tracks ERC20 contracts whose 'balanceOf' consistently fails with a clean on-chain revert (the
- * request carrying the call succeeded). After 'failureThreshold' consecutive contract-wide
- * failures a contract is blacklisted and its balance requests are skipped. A success before the
- * threshold is reached resets the count.
+ * Tracks ERC20 contracts whose 'balanceOf' consistently fails in Multicall requests. After
+ * 'failureThreshold' consecutive contract-wide failures a contract is blacklisted and its balance
+ * requests are skipped. A success before the threshold is reached resets the count.
  *
  * The state is in-memory only: a blacklisted contract stays skipped for the lifetime of the
  * process and gets re-evaluated from scratch on restart.

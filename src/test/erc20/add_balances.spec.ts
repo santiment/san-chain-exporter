@@ -387,7 +387,7 @@ describe('test multicall blacklist integration', function () {
     assert.strictEqual(blacklist.isBlacklisted('contract1'), true);
   });
 
-  it('contract-wide failure including an RPC level rejection is not recorded', async function () {
+  it('contract-wide failure mixing an RPC level rejection is recorded', async function () {
     const blacklist = new MulticallBlacklist(1);
 
     // The batch is rejected, then one individual call is rejected while the other returns a revert
@@ -410,6 +410,6 @@ describe('test multicall blacklist integration', function () {
       [10, 'address1', 'contract1', MULTICALL_FAILURE],
       [10, 'address2', 'contract1', MULTICALL_FAILURE]
     ]);
-    assert.strictEqual(blacklist.isBlacklisted('contract1'), false);
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), true);
   });
 });
