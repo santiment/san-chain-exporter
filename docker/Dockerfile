@@ -8,10 +8,12 @@ RUN apt-get update && \
 
 WORKDIR /opt
 
-COPY package.json package-lock.json tsconfig.json copy_assets.sh .mocharc.js ./
+COPY package.json package-lock.json .npmrc tsconfig.json copy_assets.sh .mocharc.js ./
 COPY src ./src
 
-RUN echo "BUILD_ENV is $BUILD_ENV" && npm ci && npm run build
+# .npmrc sets ignore-scripts=true (supply-chain protection), so the native
+# build of node-rdkafka must be triggered explicitly after install.
+RUN echo "BUILD_ENV is $BUILD_ENV" && npm ci && npm rebuild node-rdkafka --ignore-scripts=false && npm run build
 
 # Verify that directories are created. Then prepare 'app' directory
 RUN ls -la /opt && \
