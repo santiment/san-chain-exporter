@@ -3,6 +3,7 @@ const rewire = require('rewire');
 const sinon = require('sinon');
 
 import { MULTICALL_FAILURE } from '../../blockchains/erc20/lib/add_balances';
+import { MulticallBlacklist } from '../../blockchains/erc20/lib/multicall_blacklist';
 
 const add_balances_rewired = rewire('../../blockchains/erc20/lib/add_balances.ts');
 import * as Utils from '../../blockchains/erc20/lib/balance_utils';
@@ -283,5 +284,132 @@ describe('test execute Multicall', function () {
     const expected = [[addressContract1, multicallResultAddress1], [addressContract2, multicallResultAddress2]]
 
     assert.deepStrictEqual(result, expected)
+  });
+});
+
+describe('test multicall blacklist integration', function () {
+  let doMulticallOriginal: any = null;
+
+  const failureResult = { "0": false, "1": "0x", "__length__": 2, "success": false, "returnData": "0x" };
+  const successResult = { "0": true, "1": "0x00000000000000000000000000000000000000000000000000000000000000ff", "__length__": 2, "success": true, "returnData": "0x00000000000000000000000000000000000000000000000000000000000000ff" };
+  const web3Mock = { eth: { abi: { decodeParameter: () => 255n } } };
+
+  beforeEach(function () {
+    doMulticallOriginal = add_balances_rewired.__get__('doMulticall');
+  })
+
+  afterEach(function () {
+    add_balances_rewired.__set__('doMulticall', doMulticallOriginal);
+  })
+
+  it('blacklisted contract is not requested from the node', async function () {
+    const blacklist = new MulticallBlacklist(1);
+    blacklist.recordAllFailed('contract1', 1);
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), true);
+
+    const doMulticallMock = sinon.stub().callsFake(
+      (_web3: any, _blockNumber: number, addressContracts: Utils.AddressContract[]) => {
+        assert.deepStrictEqual(addressContracts, [['address2', 'contract2']]);
+        return Promise.resolve([successResult]);
+      });
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
+    const result = await getBalancesPerBlock(web3Mock,
+      [['address1', 'contract1'], ['address2', 'contract2']], 2, 'multicallAddress', blacklist);
+
+    const expected = [
+      [2, 'address1', 'contract1', MULTICALL_FAILURE],
+      [2, 'address2', 'contract2', (255n).toString(36)]
+    ];
+    assert.deepStrictEqual(result, expected);
+    assert.strictEqual(doMulticallMock.callCount, 1);
+  });
+
+  it('contract-wide failures in successful batches lead to blacklisting', async function () {
+    const blacklist = new MulticallBlacklist(2);
+
+    const doMulticallMock = sinon.stub().resolves([failureResult, failureResult]);
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
+    const addressContracts = [['address1', 'contract1'], ['address2', 'contract1']];
+
+    await getBalancesPerBlock(web3Mock, addressContracts, 10, 'multicallAddress', blacklist);
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), false);
+
+    await getBalancesPerBlock(web3Mock, addressContracts, 11, 'multicallAddress', blacklist);
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), true);
+  });
+
+  it('partial success within a contract is not counted towards blacklisting', async function () {
+    const blacklist = new MulticallBlacklist(1);
+
+    const doMulticallMock = sinon.stub().resolves([failureResult, successResult]);
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
+    await getBalancesPerBlock(web3Mock, [['address1', 'contract1'], ['address2', 'contract1']], 10,
+      'multicallAddress', blacklist);
+
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), false);
+  });
+
+  it('all calls failing at the RPC level is a non recoverable error', async function () {
+    const blacklist = new MulticallBlacklist(1);
+
+    // Both the batch and the individual calls fail at the RPC level
+    const doMulticallMock = sinon.stub().rejects(new Error('Mocked RPC error'));
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
+    await assert.rejects(
+      () => getBalancesPerBlock(web3Mock, [['address1', 'contract1']], 10, 'multicallAddress', blacklist),
+      /All 1 individual multicalls failed at block 10/
+    );
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), false);
+  });
+
+  it('reverts inside fulfilled responses on the fallback path are recorded', async function () {
+    const blacklist = new MulticallBlacklist(1);
+
+    // The batch request is rejected at the RPC level, the individual call returns an on-chain revert
+    const doMulticallMock = sinon.stub();
+    doMulticallMock.onFirstCall().rejects(new Error('Mocked RPC error'));
+    doMulticallMock.resolves([failureResult]);
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
+    const result = await getBalancesPerBlock(web3Mock, [['address1', 'contract1']], 10,
+      'multicallAddress', blacklist);
+
+    assert.deepStrictEqual(result, [[10, 'address1', 'contract1', MULTICALL_FAILURE]]);
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), true);
+  });
+
+  it('contract-wide failure mixing an RPC level rejection is recorded', async function () {
+    const blacklist = new MulticallBlacklist(1);
+
+    // The batch is rejected, then one individual call is rejected while the other returns a revert
+    const doMulticallMock = sinon.stub().callsFake(
+      (_web3: any, _blockNumber: number, addressContracts: Utils.AddressContract[]) => {
+        if (addressContracts.length > 1) {
+          return Promise.reject(new Error('Mocked batch RPC error'));
+        }
+        return addressContracts[0][0] === 'address1'
+          ? Promise.reject(new Error('Mocked RPC error'))
+          : Promise.resolve([failureResult]);
+      });
+    add_balances_rewired.__set__('doMulticall', doMulticallMock);
+
+    const getBalancesPerBlock = add_balances_rewired.__get__('getBalancesPerBlock');
+    const result = await getBalancesPerBlock(web3Mock,
+      [['address1', 'contract1'], ['address2', 'contract1']], 10, 'multicallAddress', blacklist);
+
+    assert.deepStrictEqual(result, [
+      [10, 'address1', 'contract1', MULTICALL_FAILURE],
+      [10, 'address2', 'contract1', MULTICALL_FAILURE]
+    ]);
+    assert.strictEqual(blacklist.isBlacklisted('contract1'), true);
   });
 });
