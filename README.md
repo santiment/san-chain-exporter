@@ -27,7 +27,10 @@ asdf current nodejs
 
 ```bash
 npm ci
+npm rebuild node-rdkafka --ignore-scripts=false
 ```
+
+The repository `.npmrc` sets `ignore-scripts=true` so that dependency lifecycle scripts do not run on install (protection against npm supply-chain attacks that deliver payloads via `preinstall` hooks). The one dependency that legitimately needs an install script is `node-rdkafka` (native compile), hence the explicit rebuild with `--ignore-scripts=false` after every install.
 
 Useful `asdf` commands:
 
@@ -42,7 +45,7 @@ asdf shell nodejs 21.4.0
 asdf local nodejs 21.4.0
 ```
 
-`node-rdkafka` is a native module. If you switch Node.js versions after installing dependencies, rerun `npm ci` (or at least rebuild that module) so native bindings match the active Node.js version.
+`node-rdkafka` is a native module. If you switch Node.js versions after installing dependencies, rerun `npm rebuild node-rdkafka --ignore-scripts=false` so native bindings match the active Node.js version.
 
 ## Run
 
@@ -52,6 +55,7 @@ For local development:
 
 ```bash
 npm ci
+npm rebuild node-rdkafka --ignore-scripts=false
 npm run build
 npm start
 ```
@@ -91,6 +95,7 @@ You can run the unit tests in one of the following ways:
 Use Node.js `21.4.0` locally to match the Docker image and `.tool-versions`.
 ```bash
 $ npm ci
+$ npm rebuild node-rdkafka --ignore-scripts=false
 $ npm test
 ```
 
