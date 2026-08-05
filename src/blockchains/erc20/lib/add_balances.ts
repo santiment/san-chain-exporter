@@ -175,16 +175,12 @@ async function fetchBalancesPerBlock(web3: Web3, addressContracts: Utils.Address
   : Promise<Utils.BlockNumberAddressContractBalance[]> {
 
   let rawMulticallResult: Utils.AddressContractToMulticallResult[] = []
-  let batchCallReturned = true;
+
   try {
     rawMulticallResult = await executeBatchMulticall(web3, addressContracts, blockNumber, multicallAddress)
   }
-  catch (error: any) {
+  catch {
     logger.warn(`Error calling multicall at block ${blockNumber}, would try without batching`)
-    batchCallReturned = false;
-  }
-
-  if (!batchCallReturned) {
     rawMulticallResult = await executeNonBatchMulticall(web3, addressContracts, blockNumber, multicallAddress)
   }
 
