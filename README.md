@@ -4,11 +4,13 @@ An exporter that exports transfers from multiple blockchains to a Kafka topic.
 
 ## Runtime
 
-The Docker image is pinned to Node.js 21.4.0 in `docker/Dockerfile`, and the repository pins the same version in `.tool-versions`.
+The Docker image is pinned to Node.js 24.19.0 in `docker/Dockerfile`, and the repository pins the same version in `.tool-versions`.
+
+New dependency versions are gated by a supply-chain cooldown: the checked-in `.npmrc` sets `min-release-age=15`, so npm refuses to resolve package versions published less than 15 days ago. This requires npm >= 11.10 (older npm silently ignores the setting — keep your local npm current). It does not affect `npm ci`.
 
 ## Local Setup With asdf
 
-If you use `asdf`, the checked-in `.tool-versions` file already points to Node.js `21.4.0`.
+If you use `asdf`, the checked-in `.tool-versions` file already points to Node.js `24.19.0`.
 
 1. Install the `nodejs` plugin once on your machine:
 
@@ -39,10 +41,10 @@ Useful `asdf` commands:
 asdf current nodejs
 
 # Temporarily force a specific version in the current shell
-asdf shell nodejs 21.4.0
+asdf shell nodejs 24.19.0
 
 # Rewrite .tool-versions in the current directory
-asdf local nodejs 21.4.0
+asdf local nodejs 24.19.0
 ```
 
 `node-rdkafka` is a native module. If you switch Node.js versions after installing dependencies, rerun `npm rebuild node-rdkafka --ignore-scripts=false` so native bindings match the active Node.js version.
@@ -92,7 +94,7 @@ You can control the log level during development with the following environment 
 You can run the unit tests in one of the following ways:
 
 1) Without Docker
-Use Node.js `21.4.0` locally to match the Docker image and `.tool-versions`.
+Use Node.js `24.19.0` locally to match the Docker image and `.tool-versions`.
 ```bash
 $ npm ci
 $ npm rebuild node-rdkafka --ignore-scripts=false
