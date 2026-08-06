@@ -5,10 +5,15 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   update_release_draft:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@master
+      - uses: release-drafter/release-drafter@v7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
