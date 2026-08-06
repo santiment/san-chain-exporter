@@ -1,10 +1,14 @@
-FROM node:21.4.0-slim AS builder
+FROM node:24.19.0-trixie-slim AS builder
 
 ARG BUILD_ENV=production
 ENV BUILD_ENV=${BUILD_ENV}
 
 RUN apt-get update && \
     apt-get install -y bash g++ ca-certificates musl-dev make git python3
+
+# Node 24 bundles npm 11, but pin a floor so security features
+# (min-release-age, see .npmrc) are guaranteed present
+RUN npm install -g npm@^11.16
 
 WORKDIR /opt
 
@@ -29,7 +33,7 @@ RUN ls -la /opt && \
 
 
 
-FROM node:21.4.0-slim
+FROM node:24.19.0-trixie-slim
 
 RUN apt-get update && \
     apt-get install -y openssl netcat-openbsd
