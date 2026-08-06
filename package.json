@@ -57,5 +57,9 @@
     "sinon": "^18.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "node-rdkafka@3.6.1": true,
+    "fsevents@2.3.3": true
   }
 }
