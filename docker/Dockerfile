@@ -7,7 +7,7 @@ RUN apt-get update && \
     apt-get install -y bash g++ ca-certificates musl-dev make git python3
 
 # Node 24 bundles npm 11, but pin a floor so security features
-# (min-release-age, see .npmrc) are guaranteed present
+# (min-release-age and strict-allow-scripts, see .npmrc) are guaranteed present
 RUN npm install -g npm@^11.16
 
 WORKDIR /opt
@@ -15,9 +15,7 @@ WORKDIR /opt
 COPY package.json package-lock.json .npmrc tsconfig.json copy_assets.sh .mocharc.js ./
 COPY src ./src
 
-# .npmrc sets ignore-scripts=true (supply-chain protection), so the native
-# build of node-rdkafka must be triggered explicitly after install.
-RUN echo "BUILD_ENV is $BUILD_ENV" && npm ci && npm rebuild node-rdkafka --ignore-scripts=false && npm run build
+RUN echo "BUILD_ENV is $BUILD_ENV" && npm ci && npm run build
 
 # Verify that directories are created. Then prepare 'app' directory
 RUN ls -la /opt && \
@@ -30,6 +28,13 @@ RUN ls -la /opt && \
         mv /opt/src /opt/app/src; \
     fi && \
     cp package.json package-lock.json tsconfig.json .mocharc.js /opt/app
+
+# node-rdkafka's native addon is compiled during `npm ci` — its install
+# script is approved via the `allowScripts` field in package.json (.npmrc
+# sets strict-allow-scripts=true, blocking scripts of unreviewed packages).
+# Guard against regressions: a missing binding must fail the image build
+# here, not the pod at runtime.
+RUN test -f /opt/node_modules/node-rdkafka/build/Release/node-librdkafka.node
 
 
 
