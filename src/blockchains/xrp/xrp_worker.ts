@@ -1,5 +1,5 @@
 'use strict';
-import { Client, LedgerRequest } from 'xrpl';
+import { Client, LedgerRequest, RippledError } from 'xrpl';
 import assert from 'assert';
 import { logger } from '../../lib/logger';
 import { BaseWorker } from '../../lib/worker_base';
@@ -53,13 +53,35 @@ export class XRPWorker extends BaseWorker {
     }
   }
 
+  /**
+   * Send a request over the given connection. Rate limit errors returned by the XRPL endpoint are not fatal:
+   * we wait for the interval suggested by the endpoint (or a default one) and retry, up to
+   * XRP_ENDPOINT_RETRIES times.
+   */
   async connectionSend(connection: XRPConnection, params: LedgerRequest) {
-    this.throwConnectionErrorIfAny();
-    const response = await connection.queue.add(() => {
-      return connection.connection.request(params);
-    });
-    this.throwConnectionErrorIfAny();
-    return response;
+    for (let attempt = 0; ; attempt++) {
+      this.throwConnectionErrorIfAny();
+      try {
+        const response = await connection.queue.add(() => {
+          return connection.connection.request(params);
+        });
+        this.throwConnectionErrorIfAny();
+        return response;
+      }
+      catch (err: unknown) {
+        if (!isRateLimitError(err) || attempt + 1 >= this.settings.XRP_ENDPOINT_RETRIES) {
+          throw err;
+        }
+        const waitMs = rateLimitRetryDelayMs(err, this.retryIntervalMs);
+        logger.warn(`Rate limited by XRPL API connection number ${connection.index}: ${(err as Error).message}. ` +
+          `Retrying in ${waitMs} ms (attempt ${attempt + 1}/${this.settings.XRP_ENDPOINT_RETRIES}).`);
+        await this.sleep(waitMs);
+      }
+    }
+  }
+
+  async sleep(ms: number) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async init() {
@@ -228,6 +250,40 @@ export class XRPWorker extends BaseWorker {
 
     return ledgers;
   }
+}
+
+/**
+ * Extra time added on top of the retry interval suggested by the endpoint, so that we do not hit the limit again
+ * by retrying a bit too early.
+ */
+const RATE_LIMIT_RETRY_MARGIN_MS = 500;
+
+/**
+ * Check whether an error returned by the XRPL endpoint indicates that we are being rate limited.
+ *
+ * Public clusters (e.g. xrplcluster.com) respond with a 'rate limit: units quota (N per 10s) exhausted, retry in ~Xms'
+ * error message, while rippled itself responds with the 'slowDown' error code.
+ */
+export function isRateLimitError(err: unknown): boolean {
+  if (!(err instanceof RippledError)) {
+    return false;
+  }
+  const data: any = err.data;
+  if (data && (data.error === 'slowDown' || data.error === 'rateLimit')) {
+    return true;
+  }
+  return typeof err.message === 'string' && err.message.toLowerCase().includes('rate limit');
+}
+
+/**
+ * Extract the retry delay suggested by a rate limit error message ('... retry in ~6353ms'), falling back to
+ * the provided default. A small margin is added on top of the suggested delay.
+ */
+export function rateLimitRetryDelayMs(err: unknown, defaultMs: number): number {
+  const message = err instanceof Error ? err.message : '';
+  const match = message.match(/retry in ~?(\d+)\s*ms/i);
+  const suggestedMs = match ? parseInt(match[1]) : defaultMs;
+  return Math.max(suggestedMs, defaultMs) + RATE_LIMIT_RETRY_MARGIN_MS;
 }
 
 /**
