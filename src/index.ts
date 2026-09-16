@@ -37,7 +37,24 @@ if (!getBoolEnvVariable('TEST_ENV', false)) {
     mainInstance.stop();
   });
 
-  main();
+  process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void => {
+    // Otherwise unhandled promises are not possible to trace with the information logged
+    if (reason instanceof Error) {
+      logger.error('Unhandled Rejection at: ', p, 'reason:', reason, 'error stack:', reason.stack);
+    }
+    else {
+      logger.error('Unhandled Rejection at: ', p, 'reason:', reason);
+    }
+    // Throwing here will trigger an uncaughtException and crash the process.
+    throw reason;
+  });
+
+  main().catch((err: any) => {
+    // The underlying error (with its stack) has already been logged by main(). Log the wrapping message and exit
+    // with a failure code, so that the orchestrator restarts the exporter.
+    logger.error(err.message);
+    process.exit(1);
+  });
 }
 
 

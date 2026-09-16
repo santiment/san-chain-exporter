@@ -1,7 +1,7 @@
 /*jshint esversion: 6 */
 import assert from 'assert';
 const sinon = require('sinon');
-import { XRPWorker, validateXRPTransaction } from '../../blockchains/xrp/xrp_worker';
+import { XRPWorker, validateXRPTransaction, isRateLimitError, rateLimitRetryDelayMs, isConnectionError } from '../../blockchains/xrp/xrp_worker';
 import { XRPConnection } from '../../blockchains/xrp/xrp_types';
 import * as constants from '../../blockchains/xrp/lib/constants';
 
@@ -169,5 +169,156 @@ describe('workLoopSimpleTest', function () {
     assert.ok(sendCallsCountWhileInvalid >= 2);
     assert.ok(sendCallsCount >= 3);
     assert.deepStrictEqual(fetchResult, { ledger: validEmptyBlock.result.ledger, transactions: [] });
+  });
+});
+
+describe('rateLimitHandling', function () {
+  const { RippledError } = require('xrpl');
+  const rateLimitMessage = 'rate limit: units quota (2000 per 10s) exhausted, retry in ~6353ms';
+
+  const makeRateLimitError = () => new RippledError(rateLimitMessage, { error: rateLimitMessage, status: 'error' });
+
+  /** A fake XRP connection whose queue executes the task right away and records pause()/start() calls. */
+  const makeConnection = (request: any, extra: any = {}): XRPConnection => ({
+    connection: { request, isConnected: () => true, connect: async () => undefined, ...extra } as any,
+    queue: { add: (task: () => any) => task(), pause: sinon.spy(), start: sinon.spy() } as any,
+    index: 0
+  });
+
+  it('isRateLimitError recognizes rate limit errors', function () {
+    assert.strictEqual(isRateLimitError(makeRateLimitError()), true);
+    assert.strictEqual(isRateLimitError(new RippledError('You are placing too much load on the server.', { error: 'slowDown' })), true);
+    assert.strictEqual(isRateLimitError(new RippledError('ledgerNotFound', { error: 'lgrNotFound' })), false);
+    assert.strictEqual(isRateLimitError(new Error(rateLimitMessage)), false);
+    assert.strictEqual(isRateLimitError('rate limit'), false);
+  });
+
+  it('rateLimitRetryDelayMs honors the delay suggested by the endpoint', function () {
+    assert.strictEqual(rateLimitRetryDelayMs(makeRateLimitError(), 1000), 6353 + 500);
+    assert.strictEqual(rateLimitRetryDelayMs(new RippledError('slowDown', { error: 'slowDown' }), 1000), 1000 + 500);
+    assert.strictEqual(rateLimitRetryDelayMs(new RippledError('retry in ~10ms'), 1000), 1000 + 500);
+  });
+
+  it('connectionSend pauses the queue and retries on rate limit errors', async function () {
+    const worker = new XRPWorker(constants);
+    const sleepStub = sinon.stub(worker, 'sleep').resolves();
+    const request = sinon.stub();
+    request.onCall(0).rejects(makeRateLimitError());
+    request.onCall(1).rejects(makeRateLimitError());
+    request.onCall(2).resolves({ result: { ledger: {} } });
+    const connection = makeConnection(request);
+
+    const result = await worker.connectionSend(connection, { command: 'ledger', ledger_index: 1 });
+
+    assert.deepStrictEqual(result, { result: { ledger: {} } });
+    assert.strictEqual(request.callCount, 3);
+    assert.strictEqual(sleepStub.callCount, 2);
+    assert.strictEqual(sleepStub.firstCall.args[0], 6353 + 500);
+    assert.strictEqual(connection.queue.pause.callCount, 2);
+    assert.strictEqual(connection.queue.start.callCount, 2);
+    assert.strictEqual(connection.pausedUntil, undefined);
+  });
+
+  it('pauseConnection keeps the queue paused until the latest deadline', async function () {
+    const worker = new XRPWorker(constants);
+    const connection = makeConnection(sinon.stub());
+    const clock = sinon.useFakeTimers({ now: 1000000 });
+    try {
+      const shortPause = worker.pauseConnection(connection, 1000);
+      const longPause = worker.pauseConnection(connection, 5000);
+      assert.strictEqual(connection.queue.pause.callCount, 2);
+
+      await clock.tickAsync(1000);
+      await shortPause;
+      // The short pause elapsed, but a longer one is still in effect: the queue must stay paused.
+      assert.strictEqual(connection.queue.start.callCount, 0);
+      assert.strictEqual(connection.pausedUntil, 1000000 + 5000);
+
+      await clock.tickAsync(4000);
+      await longPause;
+      assert.strictEqual(connection.queue.start.callCount, 1);
+      assert.strictEqual(connection.pausedUntil, undefined);
+    } finally {
+      clock.restore();
+    }
+  });
+
+  it('connectionSend reconnects and retries on connection errors', async function () {
+    const { DisconnectedError } = require('xrpl');
+    const worker = new XRPWorker(constants);
+    const sleepStub = sinon.stub(worker, 'sleep').resolves();
+    const request = sinon.stub();
+    request.onCall(0).rejects(new DisconnectedError('WebSocket is not open: readyState 2 (CLOSING)'));
+    request.onCall(1).resolves({ result: { ledger: {} } });
+    let connected = false;
+    const connect = sinon.stub().callsFake(async () => { connected = true; });
+    const connection = makeConnection(request, { isConnected: () => connected, connect });
+
+    const result = await worker.connectionSend(connection, { command: 'ledger', ledger_index: 1 });
+
+    assert.deepStrictEqual(result, { result: { ledger: {} } });
+    assert.strictEqual(request.callCount, 2);
+    assert.strictEqual(connect.callCount, 1);
+    assert.strictEqual(sleepStub.callCount, 1);
+    assert.strictEqual(connection.queue.pause.callCount, 0);
+  });
+
+  it('connectionSend keeps retrying when reconnecting fails', async function () {
+    const { NotConnectedError } = require('xrpl');
+    const worker = new XRPWorker({ ...constants, XRP_ENDPOINT_RETRIES: 3 });
+    sinon.stub(worker, 'sleep').resolves();
+    const request = sinon.stub().rejects(new NotConnectedError('not connected'));
+    const connect = sinon.stub().rejects(new Error('Websocket connection never cleaned up.'));
+    const connection = makeConnection(request, { isConnected: () => false, connect });
+
+    await assert.rejects(
+      worker.connectionSend(connection, { command: 'ledger', ledger_index: 1 }),
+      (err: any) => err instanceof NotConnectedError
+    );
+    assert.strictEqual(request.callCount, 3);
+    assert.strictEqual(connect.callCount, 2);
+  });
+
+  it('isConnectionError recognizes xrpl.js transport errors only', function () {
+    const { DisconnectedError, NotConnectedError, TimeoutError } = require('xrpl');
+    assert.strictEqual(isConnectionError(new DisconnectedError('x')), true);
+    assert.strictEqual(isConnectionError(new NotConnectedError('x')), true);
+    assert.strictEqual(isConnectionError(new TimeoutError('x')), true);
+    assert.strictEqual(isConnectionError(makeRateLimitError()), false);
+    assert.strictEqual(isConnectionError(new Error('x')), false);
+  });
+
+  it('failed automatic reconnects of the xrpl.js client are not fatal', async function () {
+    const worker: any = new XRPWorker(constants);
+    worker.recordConnectionError(0, ['reconnect', 'connect() timed out after 5000 ms', new Error('timeout')]);
+    assert.strictEqual(worker.connectionError, null);
+    worker.recordConnectionError(0, [new Error('ECONNRESET')]);
+    assert.notStrictEqual(worker.connectionError, null);
+  });
+
+  it('connectionSend gives up after XRP_ENDPOINT_RETRIES attempts', async function () {
+    const worker = new XRPWorker({ ...constants, XRP_ENDPOINT_RETRIES: 3 });
+    const sleepStub = sinon.stub(worker, 'sleep').resolves();
+    const request = sinon.stub().rejects(makeRateLimitError());
+
+    await assert.rejects(
+      worker.connectionSend(makeConnection(request), { command: 'ledger', ledger_index: 1 }),
+      (err: any) => err instanceof RippledError && err.message === rateLimitMessage
+    );
+    assert.strictEqual(request.callCount, 3);
+    assert.strictEqual(sleepStub.callCount, 2);
+  });
+
+  it('connectionSend rethrows other errors without retrying', async function () {
+    const worker = new XRPWorker(constants);
+    const sleepStub = sinon.stub(worker, 'sleep').resolves();
+    const request = sinon.stub().rejects(new RippledError('ledgerNotFound', { error: 'lgrNotFound' }));
+
+    await assert.rejects(
+      worker.connectionSend(makeConnection(request), { command: 'ledger', ledger_index: 1 }),
+      /ledgerNotFound/
+    );
+    assert.strictEqual(request.callCount, 1);
+    assert.strictEqual(sleepStub.callCount, 0);
   });
 });

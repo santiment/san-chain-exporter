@@ -1,5 +1,5 @@
 'use strict';
-import { Client, LedgerRequest } from 'xrpl';
+import { Client, ConnectionError, LedgerRequest, RippledError } from 'xrpl';
 import assert from 'assert';
 import { logger } from '../../lib/logger';
 import { BaseWorker } from '../../lib/worker_base';
@@ -53,18 +53,123 @@ export class XRPWorker extends BaseWorker {
     }
   }
 
+  /**
+   * Send a request over the given connection. Recoverable failures (see recoverFromRequestError) are retried up to
+   * XRP_ENDPOINT_RETRIES times, anything else is thrown.
+   */
   async connectionSend(connection: XRPConnection, params: LedgerRequest) {
-    this.throwConnectionErrorIfAny();
-    const response = await connection.queue.add(() => {
-      return connection.connection.request(params);
-    });
-    this.throwConnectionErrorIfAny();
-    return response;
+    for (let attempt = 0; ; attempt++) {
+      this.throwConnectionErrorIfAny();
+      try {
+        const response = await connection.queue.add(() => {
+          return connection.connection.request(params);
+        });
+        this.throwConnectionErrorIfAny();
+        return response;
+      }
+      catch (err: unknown) {
+        await this.recoverFromRequestError(connection, err, attempt);
+      }
+    }
+  }
+
+  /**
+   * Decide whether a failed request can be retried and, if so, wait until it makes sense to retry. Two kinds of
+   * failures are recoverable:
+   *  - Rate limit errors returned by the XRPL endpoint. The connection's request queue is paused for the interval
+   *    suggested by the endpoint (or a default one) so that we stop sending requests while the endpoint rejects them.
+   *    Public clusters close the WebSocket of clients which keep sending while being rate limited.
+   *  - Connection errors (dropped WebSocket, request timeout). We wait, make sure the connection is re-established
+   *    and retry.
+   * Rethrows the error when it is of another kind or when the retries are exhausted.
+   */
+  async recoverFromRequestError(connection: XRPConnection, err: unknown, attempt: number) {
+    if (attempt + 1 >= this.settings.XRP_ENDPOINT_RETRIES) {
+      throw err;
+    }
+    const attemptInfo = `attempt ${attempt + 1}/${this.settings.XRP_ENDPOINT_RETRIES}`;
+    if (isRateLimitError(err)) {
+      await this.recoverFromRateLimit(connection, err as Error, attemptInfo);
+    }
+    else if (isConnectionError(err)) {
+      await this.recoverFromConnectionError(connection, err as Error, attempt, attemptInfo);
+    }
+    else {
+      throw err;
+    }
+  }
+
+  private async recoverFromRateLimit(connection: XRPConnection, err: Error, attemptInfo: string) {
+    const waitMs = rateLimitRetryDelayMs(err, this.retryIntervalMs);
+    logger.warn(`Rate limited by XRPL API connection number ${connection.index}: ${err.message}. ` +
+      `Pausing requests for ${waitMs} ms (${attemptInfo}).`);
+    await this.pauseConnection(connection, waitMs);
+  }
+
+  private async recoverFromConnectionError(connection: XRPConnection, err: Error, attempt: number, attemptInfo: string) {
+    const waitMs = Math.min(this.retryIntervalMs * (attempt + 1), MAX_RECONNECT_WAIT_MS);
+    logger.warn(`XRPL API connection number ${connection.index} failed: ${err.message}. ` +
+      `Reconnecting and retrying in ${waitMs} ms (${attemptInfo}).`);
+    await this.sleep(waitMs);
+    await this.ensureConnected(connection);
+  }
+
+  /**
+   * Pause the request queue of the connection for `waitMs`. Concurrent calls (several in-flight requests being
+   * rejected at once) extend the pause to the latest deadline. Resolves once `waitMs` has elapsed.
+   */
+  async pauseConnection(connection: XRPConnection, waitMs: number) {
+    const until = Date.now() + waitMs;
+    if (until > (connection.pausedUntil ?? 0)) {
+      connection.pausedUntil = until;
+      connection.queue.pause();
+    }
+    await this.sleep(waitMs);
+    if (connection.pausedUntil === until) {
+      connection.pausedUntil = undefined;
+      connection.queue.start();
+    }
+  }
+
+  /**
+   * Re-establish the WebSocket connection if it is not open. Failures are only logged: the caller retries the
+   * request, which fails again with a connection error and lands here again, until the retries are exhausted.
+   */
+  async ensureConnected(connection: XRPConnection) {
+    if (connection.connection.isConnected()) {
+      return;
+    }
+    try {
+      await connection.connection.connect();
+      logger.info(`XRPL API connection number ${connection.index} re-established.`);
+    }
+    catch (err: unknown) {
+      logger.warn(`XRPL API connection number ${connection.index} could not be re-established yet: ${(err as Error).message}`);
+    }
+  }
+
+  async sleep(ms: number) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Best effort logging of the rate limit quota the endpoint grants us. The 'quota' command is specific to public
+   * clusters (xrplcluster.com); rippled nodes reject it, which is fine.
+   */
+  async logEndpointQuota(connection: XRPConnection) {
+    try {
+      const response: any = await connection.connection.request({ command: 'quota' } as any);
+      logger.info(`XRPL endpoint quota for connection number ${connection.index}: ${JSON.stringify(response.result)}`);
+    }
+    catch (err: unknown) {
+      logger.info(`XRPL endpoint does not report a quota (connection number ${connection.index}): ${(err as Error).message}`);
+    }
   }
 
   async init() {
     await this.createNewSetConnections();
     this.throwConnectionErrorIfAny();
+    await this.logEndpointQuota(this.connections[0]);
     const lastValidatedLedger = await this.connectionSend(this.connections[0], {
       command: 'ledger',
       ledger_index: 'validated',
@@ -76,6 +181,12 @@ export class XRPWorker extends BaseWorker {
   }
 
   private recordConnectionError(connectionIndex: number, errorParts: unknown[]) {
+    if (errorParts[0] === 'reconnect') {
+      // The xrpl.js client failed one of its own automatic reconnection attempts after the WebSocket dropped.
+      // Not fatal: requests fail with a connection error and connectionSend() keeps reconnecting and retrying.
+      logger.warn(`XRPL API connection number ${connectionIndex} failed to reconnect: ${String(errorParts[1])}`);
+      return;
+    }
     const details = errorParts
       .map((errorPart) => {
         if (errorPart instanceof Error) {
@@ -228,6 +339,51 @@ export class XRPWorker extends BaseWorker {
 
     return ledgers;
   }
+}
+
+/**
+ * Extra time added on top of the retry interval suggested by the endpoint, so that we do not hit the limit again
+ * by retrying a bit too early.
+ */
+const RATE_LIMIT_RETRY_MARGIN_MS = 500;
+
+/** Upper bound of the wait between attempts to re-establish a dropped connection. */
+const MAX_RECONNECT_WAIT_MS = 30000;
+
+/**
+ * Check whether an error is a transport level error of the xrpl.js client (dropped WebSocket, not connected,
+ * request timeout, ...), as opposed to an error returned by the XRPL endpoint.
+ */
+export function isConnectionError(err: unknown): boolean {
+  return err instanceof ConnectionError;
+}
+
+/**
+ * Check whether an error returned by the XRPL endpoint indicates that we are being rate limited.
+ *
+ * Public clusters (e.g. xrplcluster.com) respond with a 'rate limit: units quota (N per 10s) exhausted, retry in ~Xms'
+ * error message, while rippled itself responds with the 'slowDown' error code.
+ */
+export function isRateLimitError(err: unknown): boolean {
+  if (!(err instanceof RippledError)) {
+    return false;
+  }
+  const data: any = err.data;
+  if (data && (data.error === 'slowDown' || data.error === 'rateLimit')) {
+    return true;
+  }
+  return typeof err.message === 'string' && err.message.toLowerCase().includes('rate limit');
+}
+
+/**
+ * Extract the retry delay suggested by a rate limit error message ('... retry in ~6353ms'), falling back to
+ * the provided default. A small margin is added on top of the suggested delay.
+ */
+export function rateLimitRetryDelayMs(err: unknown, defaultMs: number): number {
+  const message = err instanceof Error ? err.message : '';
+  const match = message.match(/retry in ~?(\d+)\s*ms/i);
+  const suggestedMs = match ? parseInt(match[1]) : defaultMs;
+  return Math.max(suggestedMs, defaultMs) + RATE_LIMIT_RETRY_MARGIN_MS;
 }
 
 /**

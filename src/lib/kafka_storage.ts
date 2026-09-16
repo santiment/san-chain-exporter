@@ -40,19 +40,6 @@ const KAFKA_MESSAGE_MAX_BYTES: number = parseInt(process.env.KAFKA_MESSAGE_MAX_B
 const jsonStringify = (value: unknown): string =>
   JSON.stringify(value, (_key, v) => (typeof v === 'bigint' ? v.toString() : v));
 
-process.on('unhandledRejection', (reason: unknown, p: Promise<unknown>): void => {
-  // Otherwise unhandled promises are not possible to trace with the information logged
-  if (reason instanceof Error) {
-    logger.error('Unhandled Rejection at: ', p, 'reason:', reason, 'error stack:', (reason as Error).stack);
-  }
-  else {
-    logger.error('Unhandled Rejection at: ', p, 'reason:', reason);
-  }
-  // Let the process crash naturally rather than calling process.exit() which skips cleanup.
-  // Throwing here will trigger an uncaughtException if not caught elsewhere.
-  throw reason;
-});
-
 /**
  * A class to pick partition for an event.
  */
