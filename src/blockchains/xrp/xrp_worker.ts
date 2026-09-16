@@ -54,13 +54,8 @@ export class XRPWorker extends BaseWorker {
   }
 
   /**
-   * Send a request over the given connection. Two kinds of failures are not fatal and are retried up to
-   * XRP_ENDPOINT_RETRIES times:
-   *  - Rate limit errors returned by the XRPL endpoint. The connection's request queue is paused for the interval
-   *    suggested by the endpoint (or a default one) so that we stop sending requests while the endpoint rejects them.
-   *    Public clusters close the WebSocket of clients which keep sending while being rate limited.
-   *  - Connection errors (dropped WebSocket, request timeout). We wait, make sure the connection is re-established
-   *    and retry.
+   * Send a request over the given connection. Recoverable failures (see recoverFromRequestError) are retried up to
+   * XRP_ENDPOINT_RETRIES times, anything else is thrown.
    */
   async connectionSend(connection: XRPConnection, params: LedgerRequest) {
     for (let attempt = 0; ; attempt++) {
@@ -73,26 +68,50 @@ export class XRPWorker extends BaseWorker {
         return response;
       }
       catch (err: unknown) {
-        const retriesLeft = attempt + 1 < this.settings.XRP_ENDPOINT_RETRIES;
-        const attemptInfo = `attempt ${attempt + 1}/${this.settings.XRP_ENDPOINT_RETRIES}`;
-        if (isRateLimitError(err) && retriesLeft) {
-          const waitMs = rateLimitRetryDelayMs(err, this.retryIntervalMs);
-          logger.warn(`Rate limited by XRPL API connection number ${connection.index}: ${(err as Error).message}. ` +
-            `Pausing requests for ${waitMs} ms (${attemptInfo}).`);
-          await this.pauseConnection(connection, waitMs);
-        }
-        else if (isConnectionError(err) && retriesLeft) {
-          const waitMs = Math.min(this.retryIntervalMs * (attempt + 1), MAX_RECONNECT_WAIT_MS);
-          logger.warn(`XRPL API connection number ${connection.index} failed: ${(err as Error).message}. ` +
-            `Reconnecting and retrying in ${waitMs} ms (${attemptInfo}).`);
-          await this.sleep(waitMs);
-          await this.ensureConnected(connection);
-        }
-        else {
-          throw err;
-        }
+        await this.recoverFromRequestError(connection, err, attempt);
       }
     }
+  }
+
+  /**
+   * Decide whether a failed request can be retried and, if so, wait until it makes sense to retry. Two kinds of
+   * failures are recoverable:
+   *  - Rate limit errors returned by the XRPL endpoint. The connection's request queue is paused for the interval
+   *    suggested by the endpoint (or a default one) so that we stop sending requests while the endpoint rejects them.
+   *    Public clusters close the WebSocket of clients which keep sending while being rate limited.
+   *  - Connection errors (dropped WebSocket, request timeout). We wait, make sure the connection is re-established
+   *    and retry.
+   * Rethrows the error when it is of another kind or when the retries are exhausted.
+   */
+  async recoverFromRequestError(connection: XRPConnection, err: unknown, attempt: number) {
+    if (attempt + 1 >= this.settings.XRP_ENDPOINT_RETRIES) {
+      throw err;
+    }
+    const attemptInfo = `attempt ${attempt + 1}/${this.settings.XRP_ENDPOINT_RETRIES}`;
+    if (isRateLimitError(err)) {
+      await this.recoverFromRateLimit(connection, err as Error, attemptInfo);
+    }
+    else if (isConnectionError(err)) {
+      await this.recoverFromConnectionError(connection, err as Error, attempt, attemptInfo);
+    }
+    else {
+      throw err;
+    }
+  }
+
+  private async recoverFromRateLimit(connection: XRPConnection, err: Error, attemptInfo: string) {
+    const waitMs = rateLimitRetryDelayMs(err, this.retryIntervalMs);
+    logger.warn(`Rate limited by XRPL API connection number ${connection.index}: ${err.message}. ` +
+      `Pausing requests for ${waitMs} ms (${attemptInfo}).`);
+    await this.pauseConnection(connection, waitMs);
+  }
+
+  private async recoverFromConnectionError(connection: XRPConnection, err: Error, attempt: number, attemptInfo: string) {
+    const waitMs = Math.min(this.retryIntervalMs * (attempt + 1), MAX_RECONNECT_WAIT_MS);
+    logger.warn(`XRPL API connection number ${connection.index} failed: ${err.message}. ` +
+      `Reconnecting and retrying in ${waitMs} ms (${attemptInfo}).`);
+    await this.sleep(waitMs);
+    await this.ensureConnected(connection);
   }
 
   /**
