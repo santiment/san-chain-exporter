@@ -57,7 +57,8 @@ export class XRPWorker extends BaseWorker {
 
   /**
    * Open the WebSocket of a client, retrying transient failures (handshake timeout, connection refused, ...) with
-   * the same bounded backoff as dropped connections. Anything that is not a connection error is thrown right away.
+   * the same bounded backoff as dropped connections, but with the smaller XRP_CONNECT_RETRIES budget. Anything
+   * that is not a connection error is thrown right away.
    */
   async connectWithRetries(api: Client, connectionIndex: number) {
     for (let attempt = 0; ; attempt++) {
@@ -66,12 +67,12 @@ export class XRPWorker extends BaseWorker {
         return;
       }
       catch (err: unknown) {
-        if (!isConnectionError(err) || attempt + 1 >= this.settings.XRP_ENDPOINT_RETRIES) {
+        if (!isConnectionError(err) || attempt + 1 >= this.settings.XRP_CONNECT_RETRIES) {
           throw err;
         }
         const waitMs = Math.min(this.retryIntervalMs * (attempt + 1), MAX_RECONNECT_WAIT_MS);
         logger.warn(`XRPL API connection number ${connectionIndex} could not be opened: ${(err as Error).message}. ` +
-          `Retrying in ${waitMs} ms (attempt ${attempt + 1}/${this.settings.XRP_ENDPOINT_RETRIES}).`);
+          `Retrying in ${waitMs} ms (attempt ${attempt + 1}/${this.settings.XRP_CONNECT_RETRIES}).`);
         await this.sleep(waitMs);
       }
     }

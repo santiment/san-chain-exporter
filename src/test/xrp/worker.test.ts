@@ -312,7 +312,7 @@ describe('rateLimitHandling', function () {
 
   it('connectWithRetries retries handshake timeouts and gives up after the retry budget', async function () {
     const { NotConnectedError } = require('xrpl');
-    const worker = new XRPWorker({ ...constants, XRP_ENDPOINT_RETRIES: 3 });
+    const worker = new XRPWorker({ ...constants, XRP_CONNECT_RETRIES: 3 });
     const sleepStub = sinon.stub(worker, 'sleep').resolves();
     const connect = sinon.stub();
     connect.onCall(0).rejects(new NotConnectedError('Error: connect() timed out after 5000 ms.'));
