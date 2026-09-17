@@ -27,7 +27,9 @@ export class XRPWorker extends BaseWorker {
     }
 
     for (let i = 0; i < this.settings.CONNECTIONS_COUNT; i++) {
-      const clientOptions = { timeout: this.settings.DEFAULT_WS_TIMEOUT };
+      // 'timeout' bounds individual requests, 'connectionTimeout' the WebSocket handshake (xrpl.js default: 5s,
+      // too short for a public cluster under load).
+      const clientOptions = { timeout: this.settings.DEFAULT_WS_TIMEOUT, connectionTimeout: this.settings.DEFAULT_WS_TIMEOUT };
       const nodeURL = this.nodeURLs[i % this.nodeURLs.length];
       logger.info(`Using ${nodeURL} as XRPL API endpoint.`);
       const api = new Client(nodeURL, clientOptions);
@@ -35,7 +37,7 @@ export class XRPWorker extends BaseWorker {
       api.on('error', (...error) => {
         this.recordConnectionError(i, error);
       });
-      await api.connect();
+      await this.connectWithRetries(api, i);
 
       const pQueueSettings: any = { concurrency: this.settings.MAX_CONNECTION_CONCURRENCY };
       if (this.settings.REQUEST_RATE_INTERVAL_MSEC > 0 && this.settings.REQUEST_RATE_INTERVAL_CAP > 0) {
@@ -50,6 +52,29 @@ export class XRPWorker extends BaseWorker {
         queue: new PQueue(pQueueSettings),
         index: i
       });
+    }
+  }
+
+  /**
+   * Open the WebSocket of a client, retrying transient failures (handshake timeout, connection refused, ...) with
+   * the same bounded backoff as dropped connections, but with the smaller XRP_CONNECT_RETRIES budget. Anything
+   * that is not a connection error is thrown right away.
+   */
+  async connectWithRetries(api: Client, connectionIndex: number) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await api.connect();
+        return;
+      }
+      catch (err: unknown) {
+        if (!isConnectionError(err) || attempt + 1 >= this.settings.XRP_CONNECT_RETRIES) {
+          throw err;
+        }
+        const waitMs = Math.min(this.retryIntervalMs * (attempt + 1), MAX_RECONNECT_WAIT_MS);
+        logger.warn(`XRPL API connection number ${connectionIndex} could not be opened: ${(err as Error).message}. ` +
+          `Retrying in ${waitMs} ms (attempt ${attempt + 1}/${this.settings.XRP_CONNECT_RETRIES}).`);
+        await this.sleep(waitMs);
+      }
     }
   }
 
@@ -91,7 +116,9 @@ export class XRPWorker extends BaseWorker {
     if (isRateLimitError(err)) {
       await this.recoverFromRateLimit(connection, err as Error, attemptInfo);
     }
-    else if (isConnectionError(err)) {
+    else if (isConnectionError(err) || !connection.connection.isConnected()) {
+      // Whatever the error is, if the connection is not open at this point the request could not have been served;
+      // reconnect and retry rather than fail.
       await this.recoverFromConnectionError(connection, err as Error, attempt, attemptInfo);
     }
     else {
@@ -347,6 +374,16 @@ export class XRPWorker extends BaseWorker {
  */
 const RATE_LIMIT_RETRY_MARGIN_MS = 500;
 
+/** Wait applied when the endpoint rejects us for load without saying when to retry. rippled's load penalty decays
+ * over a few seconds, so retrying sooner mostly burns retries. */
+const NO_HINT_RETRY_MS = 5000;
+
+/**
+ * rippled error codes meaning "you are sending too much, back off": 'tooBusy' ("The server is too busy to help you
+ * now."), 'slowDown' ("You are placing too much load on the server."). 'rateLimit' is used by some proxies.
+ */
+const RATE_LIMIT_ERROR_CODES = ['tooBusy', 'slowDown', 'rateLimit'];
+
 /** Upper bound of the wait between attempts to re-establish a dropped connection. */
 const MAX_RECONNECT_WAIT_MS = 30000;
 
@@ -355,7 +392,12 @@ const MAX_RECONNECT_WAIT_MS = 30000;
  * request timeout, ...), as opposed to an error returned by the XRPL endpoint.
  */
 export function isConnectionError(err: unknown): boolean {
-  return err instanceof ConnectionError;
+  if (err instanceof ConnectionError) {
+    return true;
+  }
+  // While the xrpl.js client is re-establishing a dropped WebSocket, sending a request makes the underlying 'ws'
+  // library throw a plain Error ("WebSocket is not open: readyState 0 (CONNECTING)"), which xrpl.js does not wrap.
+  return err instanceof Error && err.message.startsWith('WebSocket is not open');
 }
 
 /**
@@ -369,20 +411,25 @@ export function isRateLimitError(err: unknown): boolean {
     return false;
   }
   const data: any = err.data;
-  if (data && (data.error === 'slowDown' || data.error === 'rateLimit')) {
+  if (data && RATE_LIMIT_ERROR_CODES.includes(data.error)) {
     return true;
   }
-  return typeof err.message === 'string' && err.message.toLowerCase().includes('rate limit');
+  if (typeof err.message !== 'string') {
+    return false;
+  }
+  const message = err.message.toLowerCase();
+  return message.includes('rate limit') || message.includes('too busy') || message.includes('too much load');
 }
 
 /**
- * Extract the retry delay suggested by a rate limit error message ('... retry in ~6353ms'), falling back to
- * the provided default. A small margin is added on top of the suggested delay.
+ * Extract the retry delay suggested by a rate limit error message ('... retry in ~6353ms'). Without a hint
+ * (rippled's 'tooBusy' / 'slowDown' just say to back off) fall back to NO_HINT_RETRY_MS or the provided default,
+ * whichever is larger. A small margin is added on top.
  */
 export function rateLimitRetryDelayMs(err: unknown, defaultMs: number): number {
   const message = err instanceof Error ? err.message : '';
   const match = message.match(/retry in ~?(\d+)\s*ms/i);
-  const suggestedMs = match ? parseInt(match[1]) : defaultMs;
+  const suggestedMs = match ? parseInt(match[1]) : Math.max(defaultMs, NO_HINT_RETRY_MS);
   return Math.max(suggestedMs, defaultMs) + RATE_LIMIT_RETRY_MARGIN_MS;
 }
 

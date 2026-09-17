@@ -188,6 +188,8 @@ describe('rateLimitHandling', function () {
   it('isRateLimitError recognizes rate limit errors', function () {
     assert.strictEqual(isRateLimitError(makeRateLimitError()), true);
     assert.strictEqual(isRateLimitError(new RippledError('You are placing too much load on the server.', { error: 'slowDown' })), true);
+    assert.strictEqual(isRateLimitError(new RippledError('The server is too busy to help you now.', { error: 'tooBusy' })), true);
+    assert.strictEqual(isRateLimitError(new RippledError('The server is too busy to help you now.')), true);
     assert.strictEqual(isRateLimitError(new RippledError('ledgerNotFound', { error: 'lgrNotFound' })), false);
     assert.strictEqual(isRateLimitError(new Error(rateLimitMessage)), false);
     assert.strictEqual(isRateLimitError('rate limit'), false);
@@ -195,7 +197,9 @@ describe('rateLimitHandling', function () {
 
   it('rateLimitRetryDelayMs honors the delay suggested by the endpoint', function () {
     assert.strictEqual(rateLimitRetryDelayMs(makeRateLimitError(), 1000), 6353 + 500);
-    assert.strictEqual(rateLimitRetryDelayMs(new RippledError('slowDown', { error: 'slowDown' }), 1000), 1000 + 500);
+    // No hint from the endpoint: back off for at least NO_HINT_RETRY_MS (5s).
+    assert.strictEqual(rateLimitRetryDelayMs(new RippledError('slowDown', { error: 'slowDown' }), 1000), 5000 + 500);
+    assert.strictEqual(rateLimitRetryDelayMs(new RippledError('The server is too busy to help you now.', { error: 'tooBusy' }), 8000), 8000 + 500);
     assert.strictEqual(rateLimitRetryDelayMs(new RippledError('retry in ~10ms'), 1000), 1000 + 500);
   });
 
@@ -279,13 +283,51 @@ describe('rateLimitHandling', function () {
     assert.strictEqual(connect.callCount, 2);
   });
 
-  it('isConnectionError recognizes xrpl.js transport errors only', function () {
+  it('isConnectionError recognizes xrpl.js transport errors and raw ws errors only', function () {
     const { DisconnectedError, NotConnectedError, TimeoutError } = require('xrpl');
     assert.strictEqual(isConnectionError(new DisconnectedError('x')), true);
     assert.strictEqual(isConnectionError(new NotConnectedError('x')), true);
     assert.strictEqual(isConnectionError(new TimeoutError('x')), true);
+    assert.strictEqual(isConnectionError(new Error('WebSocket is not open: readyState 0 (CONNECTING)')), true);
     assert.strictEqual(isConnectionError(makeRateLimitError()), false);
     assert.strictEqual(isConnectionError(new Error('x')), false);
+  });
+
+  it('connectionSend retries any error when the connection turns out to be closed', async function () {
+    const worker = new XRPWorker(constants);
+    sinon.stub(worker, 'sleep').resolves();
+    const request = sinon.stub();
+    request.onCall(0).rejects(new Error('something unexpected'));
+    request.onCall(1).resolves({ result: { ledger: {} } });
+    let connected = false;
+    const connect = sinon.stub().callsFake(async () => { connected = true; });
+    const connection = makeConnection(request, { isConnected: () => connected, connect });
+
+    const result = await worker.connectionSend(connection, { command: 'ledger', ledger_index: 1 });
+
+    assert.deepStrictEqual(result, { result: { ledger: {} } });
+    assert.strictEqual(request.callCount, 2);
+    assert.strictEqual(connect.callCount, 1);
+  });
+
+  it('connectWithRetries retries handshake timeouts and gives up after the retry budget', async function () {
+    const { NotConnectedError } = require('xrpl');
+    const worker = new XRPWorker({ ...constants, XRP_CONNECT_RETRIES: 3 });
+    const sleepStub = sinon.stub(worker, 'sleep').resolves();
+    const connect = sinon.stub();
+    connect.onCall(0).rejects(new NotConnectedError('Error: connect() timed out after 5000 ms.'));
+    connect.onCall(1).resolves();
+    await worker.connectWithRetries({ connect } as any, 0);
+    assert.strictEqual(connect.callCount, 2);
+    assert.strictEqual(sleepStub.callCount, 1);
+
+    const alwaysFailing = sinon.stub().rejects(new NotConnectedError('Error: connect() timed out after 5000 ms.'));
+    await assert.rejects(worker.connectWithRetries({ connect: alwaysFailing } as any, 0), NotConnectedError);
+    assert.strictEqual(alwaysFailing.callCount, 3);
+
+    const badUrl = sinon.stub().rejects(new Error('Cannot connect because no server was specified'));
+    await assert.rejects(worker.connectWithRetries({ connect: badUrl } as any, 0), /no server/);
+    assert.strictEqual(badUrl.callCount, 1);
   });
 
   it('failed automatic reconnects of the xrpl.js client are not fatal', async function () {

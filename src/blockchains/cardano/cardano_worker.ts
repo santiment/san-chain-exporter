@@ -1,4 +1,3 @@
-import { v1 as uuidv1 } from 'uuid';
 import { BaseWorker } from '../../lib/worker_base';
 import { Transaction } from './cardano_types';
 import util from './lib/util';
@@ -8,6 +7,7 @@ import { logger } from '../../lib/logger';
 export class CardanoWorker extends BaseWorker {
   private pRetry: any;
   private got: any;
+  private uuidv1: any;
 
   constructor(settings: any) {
     super(settings);
@@ -18,7 +18,7 @@ export class CardanoWorker extends BaseWorker {
       return await this.got.post(this.settings.CARDANO_GRAPHQL_URL, {
         json: {
           jsonrpc: '2.0',
-          id: uuidv1(),
+          id: this.uuidv1(),
           query: query,
         },
         username: this.settings.RPC_USERNAME,
@@ -174,6 +174,8 @@ export class CardanoWorker extends BaseWorker {
   }
 
   async init() {
+    // ESM-only dependencies (uuid >= 11, got, p-retry) can not be require()d from this CommonJS module.
+    this.uuidv1 = (await import('uuid')).v1;
     const { default: got } = await import('got');
     this.got = got;
     await this.setLastConfirmedBlock();
