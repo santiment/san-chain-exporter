@@ -338,6 +338,62 @@ describe('rateLimitHandling', function () {
     assert.notStrictEqual(worker.connectionError, null);
   });
 
+  it('connectionSend retries connection errors on the next connection', async function () {
+    const { DisconnectedError } = require('xrpl');
+    const worker: any = new XRPWorker(constants);
+    sinon.stub(worker, 'sleep').resolves();
+    // The first endpoint drops the WebSocket on this request every time, the second one serves it.
+    const droppingRequest = sinon.stub().rejects(new DisconnectedError('websocket was closed, '));
+    const servingRequest = sinon.stub().resolves({ result: { ledger: {} } });
+    const dropping = makeConnection(droppingRequest);
+    const serving = makeConnection(servingRequest);
+    serving.index = 1;
+    worker.connections = [dropping, serving];
+
+    const result = await worker.connectionSend(dropping, { command: 'ledger', ledger_index: 1 });
+
+    assert.deepStrictEqual(result, { result: { ledger: {} } });
+    assert.strictEqual(droppingRequest.callCount, 1);
+    assert.strictEqual(servingRequest.callCount, 1);
+  });
+
+  it('connectionSend retries rate limit errors on the next connection', async function () {
+    const worker: any = new XRPWorker(constants);
+    sinon.stub(worker, 'sleep').resolves();
+    const limitedRequest = sinon.stub().rejects(makeRateLimitError());
+    const otherRequest = sinon.stub().resolves({ result: { ledger: {} } });
+    const limited = makeConnection(limitedRequest);
+    const other = makeConnection(otherRequest);
+    worker.connections = [limited, other];
+
+    const result = await worker.connectionSend(limited, { command: 'ledger', ledger_index: 1 });
+
+    assert.deepStrictEqual(result, { result: { ledger: {} } });
+    assert.strictEqual(limitedRequest.callCount, 1);
+    assert.strictEqual(otherRequest.callCount, 1);
+    // The rate limited connection stays paused for the suggested interval regardless.
+    assert.strictEqual(limited.queue.pause.callCount, 1);
+  });
+
+  it('connectionSend gives up once EXPORT_TIMEOUT_MLS has elapsed', async function () {
+    const { DisconnectedError } = require('xrpl');
+    const worker = new XRPWorker({ ...constants, EXPORT_TIMEOUT_MLS: 10000 });
+    const clock = sinon.useFakeTimers({ now: 1000000 });
+    try {
+      // Each retry wait advances the clock by 4s: the fourth failure (at 12s) is past the 10s budget.
+      sinon.stub(worker, 'sleep').callsFake(async () => { clock.tick(4000); });
+      const request = sinon.stub().rejects(new DisconnectedError('websocket was closed, '));
+
+      await assert.rejects(
+        worker.connectionSend(makeConnection(request), { command: 'ledger', ledger_index: 1 }),
+        (err: any) => err instanceof DisconnectedError
+      );
+      assert.strictEqual(request.callCount, 4);
+    } finally {
+      clock.restore();
+    }
+  });
+
   it('connectionSend gives up after XRP_ENDPOINT_RETRIES attempts', async function () {
     const worker = new XRPWorker({ ...constants, XRP_ENDPOINT_RETRIES: 3 });
     const sleepStub = sinon.stub(worker, 'sleep').resolves();

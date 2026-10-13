@@ -80,9 +80,12 @@ export class XRPWorker extends BaseWorker {
 
   /**
    * Send a request over the given connection. Recoverable failures (see recoverFromRequestError) are retried up to
-   * XRP_ENDPOINT_RETRIES times, anything else is thrown.
+   * XRP_ENDPOINT_RETRIES times, anything else is thrown. Retries go to the next connection, as an endpoint may
+   * deterministically drop the WebSocket for a given request (e.g. a huge ledger).
+   * Retrying stops once EXPORT_TIMEOUT_MLS has elapsed, before the healthcheck gets the process killed.
    */
   async connectionSend(connection: XRPConnection, params: LedgerRequest) {
+    const startedAt = Date.now();
     for (let attempt = 0; ; attempt++) {
       this.throwConnectionErrorIfAny();
       try {
@@ -93,7 +96,12 @@ export class XRPWorker extends BaseWorker {
         return response;
       }
       catch (err: unknown) {
-        await this.recoverFromRequestError(connection, err, attempt);
+        await this.recoverFromRequestError(connection, err, attempt, startedAt);
+        const next = this.nextConnection(connection);
+        if (next !== connection) {
+          logger.info(`Retrying request on XRPL API connection number ${next.index}.`);
+        }
+        connection = next;
       }
     }
   }
@@ -106,10 +114,15 @@ export class XRPWorker extends BaseWorker {
    *    Public clusters close the WebSocket of clients which keep sending while being rate limited.
    *  - Connection errors (dropped WebSocket, request timeout). We wait, make sure the connection is re-established
    *    and retry.
-   * Rethrows the error when it is of another kind or when the retries are exhausted.
+   * Rethrows the error when it is of another kind or when the retries or the time budget are exhausted.
    */
-  async recoverFromRequestError(connection: XRPConnection, err: unknown, attempt: number) {
+  async recoverFromRequestError(connection: XRPConnection, err: unknown, attempt: number, startedAt: number) {
     if (attempt + 1 >= this.settings.XRP_ENDPOINT_RETRIES) {
+      throw err;
+    }
+    if (Date.now() - startedAt >= this.settings.EXPORT_TIMEOUT_MLS) {
+      logger.error(`Giving up on XRPL request after ${attempt + 1} attempts: retrying exceeded ` +
+        `${this.settings.EXPORT_TIMEOUT_MLS} ms.`);
       throw err;
     }
     const attemptInfo = `attempt ${attempt + 1}/${this.settings.XRP_ENDPOINT_RETRIES}`;
@@ -139,6 +152,15 @@ export class XRPWorker extends BaseWorker {
       `Reconnecting and retrying in ${waitMs} ms (${attemptInfo}).`);
     await this.sleep(waitMs);
     await this.ensureConnected(connection);
+  }
+
+  /** The connection following the given one, or the given one if it is not part of the pool. */
+  nextConnection(connection: XRPConnection): XRPConnection {
+    const position = this.connections.indexOf(connection);
+    if (position === -1) {
+      return connection;
+    }
+    return this.connections[(position + 1) % this.connections.length];
   }
 
   /**
