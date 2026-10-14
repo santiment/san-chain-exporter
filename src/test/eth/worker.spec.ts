@@ -6,6 +6,7 @@ import * as constants from '../../blockchains/eth/lib/constants';
 import { ETHBlock, ETHTransfer } from '../../blockchains/eth/eth_types';
 import { expect } from 'earl'
 import { attachWeb3RequestTracker } from '../../blockchains/lib/request_tracking';
+import { ResponseTooBigError } from '../../blockchains/eth/lib/fetch_data';
 
 describe('Test worker', function () {
     let feeResultBlock5711191: ETHTransfer;
@@ -97,6 +98,62 @@ describe('Test worker', function () {
         const types = result.map((value) => value.type);
         expect(blocks).toEqual([5711191, 5711191, 5711192, 5711192, 5711193, 5711193, 5711193]);
         expect(types).toEqual(["fee", "EOB", "fee", "EOB", "fee", "call", "EOB"]);
+    })
+
+    it('halves the interval while the node response is too big', async function () {
+        const worker = new ETHWorker(constants);
+        const requested: string[] = [];
+        worker.fetchData = async function (fromBlock: number, toBlock: number) {
+            requested.push(`${fromBlock}:${toBlock}`);
+            if (toBlock - fromBlock + 1 > 5) throw new ResponseTooBigError('too big');
+            return [[], new Map(), {}];
+        };
+
+        const result = await worker.fetchDataHalvingIfTooBig(1, 20);
+
+        expect(requested).toEqual(['1:20', '1:10', '1:5']);
+        expect(result.toBlock).toEqual(5);
+    })
+
+    it('rethrows when a single block response is too big', async function () {
+        const worker = new ETHWorker(constants);
+        const requested: string[] = [];
+        worker.fetchData = async function (fromBlock: number, toBlock: number) {
+            requested.push(`${fromBlock}:${toBlock}`);
+            throw new ResponseTooBigError('too big');
+        };
+
+        await expect(worker.fetchDataHalvingIfTooBig(1, 3)).toBeRejectedWith(ResponseTooBigError);
+        expect(requested).toEqual(['1:3', '1:1']);
+    })
+
+    it('does not retry on other errors', async function () {
+        const worker = new ETHWorker(constants);
+        let calls = 0;
+        worker.fetchData = async function () {
+            calls++;
+            throw new Error('boom');
+        };
+
+        await expect(worker.fetchDataHalvingIfTooBig(1, 20)).toBeRejectedWith('boom');
+        expect(calls).toEqual(1);
+    })
+
+    it('exports only up to the halved interval', async function () {
+        const worker = new ETHWorker(constants);
+        worker.lastConfirmedBlock = 5711210;
+        worker.lastExportedBlock = 5711190;
+        worker.fetchData = async function (fromBlock: number, toBlock: number) {
+            if (toBlock - fromBlock + 1 > 5) throw new ResponseTooBigError('too big');
+            const blocks = new Map<number, ETHBlock>();
+            for (let i = fromBlock; i <= toBlock; i++) blocks.set(i, ethBlockEvent(i));
+            return [[], blocks, {}];
+        };
+        worker.transformPastEvents = function () { return []; };
+
+        await worker.work();
+
+        expect(worker.lastExportedBlock).toEqual(5711195);
     })
 
     it('tracks and resets node requests count', function () {
