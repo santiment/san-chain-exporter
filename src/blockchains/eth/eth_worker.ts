@@ -9,7 +9,7 @@ import { decodeTransferTrace } from './lib/decode_transfers';
 import { FeesDecoder } from './lib/fees_decoder';
 import { nextIntervalCalculator, analyzeWorkerContext, setWorkerSleepTime, NO_WORK_SLEEP } from './lib/next_interval_calculator';
 import { WithdrawalsDecoder } from './lib/withdrawals_decoder';
-import { fetchEthInternalTrx, fetchBlocks, fetchReceipts } from './lib/fetch_data';
+import { fetchEthInternalTrx, fetchBlocks, fetchReceipts, ResponseTooBigError } from './lib/fetch_data';
 import { HTTPClientInterface } from '../../types';
 import { Trace, ETHBlock, ETHTransfer, ETHReceiptsMap } from './eth_types';
 import { EOB, collectEndOfBlocks } from './lib/end_of_block';
@@ -58,6 +58,25 @@ export class ETHWorker extends BaseWorker {
       fetchReceipts(this.ethClient, this.web3Wrapper,
         this.settings.RECEIPTS_API_METHOD, fromBlock, toBlock),
     ]);
+  }
+
+  // Halves the interval until the node's response fits under its size limit. Only the current
+  // iteration is shrunk; the next one starts again from BLOCK_INTERVAL.
+  async fetchDataHalvingIfTooBig(fromBlock: number, toBlock: number):
+    Promise<{ toBlock: number, data: [Trace[], Map<number, ETHBlock>, ETHReceiptsMap] }> {
+    for (; ;) {
+      logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
+      try {
+        return { toBlock, data: await this.fetchData(fromBlock, toBlock) };
+      }
+      catch (error) {
+        if (!(error instanceof ResponseTooBigError) || fromBlock === toBlock) throw error;
+        const halvedToBlock = fromBlock + Math.floor((toBlock - fromBlock + 1) / 2) - 1;
+        logger.warn(`Node response too big for interval ${fromBlock}:${toBlock}, ` +
+          `retrying with ${fromBlock}:${halvedToBlock}`);
+        toBlock = halvedToBlock;
+      }
+    }
   }
 
   transformPastEvents(fromBlock: number, toBlock: number, traces: Trace[],
@@ -118,9 +137,9 @@ export class ETHWorker extends BaseWorker {
     setWorkerSleepTime(this, workerContext);
     if (workerContext === NO_WORK_SLEEP) return [];
 
-    const { fromBlock, toBlock } = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
-    logger.info(`Fetching transfer events for interval ${fromBlock}:${toBlock}`)
-    const [traces, blocks, receipts] = await this.fetchData(fromBlock, toBlock)
+    const interval = nextIntervalCalculator(this.lastExportedBlock, this.settings.BLOCK_INTERVAL, this.lastConfirmedBlock);
+    const fromBlock = interval.fromBlock;
+    const { toBlock, data: [traces, blocks, receipts] } = await this.fetchDataHalvingIfTooBig(fromBlock, interval.toBlock);
     const events: (ETHTransfer | EOB)[] = this.transformPastEvents(fromBlock, toBlock, traces, blocks, receipts)
     events.sort(transactionOrder)
     if (this.ethClientVerification) {

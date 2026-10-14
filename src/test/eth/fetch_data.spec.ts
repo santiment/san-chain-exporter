@@ -1,5 +1,7 @@
 import assert from 'assert';
-import { parseEthInternalTrx } from '../../blockchains/eth/lib/fetch_data';
+import {
+    parseEthInternalTrx, fetchEthInternalTrx, ResponseTooBigError, RESPONSE_TOO_BIG_CODE
+} from '../../blockchains/eth/lib/fetch_data';
 import * as constants from '../../blockchains/eth/lib/constants';
 import { Trace } from '../../blockchains/eth/eth_types';
 
@@ -93,4 +95,27 @@ describe('Test that when action is null parsing would not break', function () {
     });
 
 
+});
+
+describe('fetchEthInternalTrx node errors', function () {
+    function clientReturning(response: any): any {
+        return { request: async () => response };
+    }
+
+    it('throws ResponseTooBigError when the node response exceeds its size limit', async function () {
+        const client = clientReturning({
+            jsonrpc: '2.0', id: 1,
+            error: { code: RESPONSE_TOO_BIG_CODE, message: 'Response is too big', data: 'Exceeded max limit of 167772160' }
+        });
+
+        await assert.rejects(fetchEthInternalTrx(client, {} as any, 1, 20, true, constants.THE_MERGE),
+            (error: Error) => error instanceof ResponseTooBigError && error.message.includes('1:20'));
+    });
+
+    it('throws a plain Error on other node errors', async function () {
+        const client = clientReturning({ jsonrpc: '2.0', id: 1, error: { code: -32000, message: 'boom' } });
+
+        await assert.rejects(fetchEthInternalTrx(client, {} as any, 1, 20, true, constants.THE_MERGE),
+            (error: Error) => !(error instanceof ResponseTooBigError) && error.message.includes('boom'));
+    });
 });

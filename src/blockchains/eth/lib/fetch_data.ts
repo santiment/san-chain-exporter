@@ -5,6 +5,10 @@ import { Web3Interface, Web3Static } from './web3_wrapper';
 import { Trace, TraceSchema, ETHBlock, ETHReceiptsMap, ETHReceipt } from '../eth_types';
 import { HTTPClientInterface } from '../../../types'
 
+// Reth's JSON-RPC error code for a response exceeding --rpc.max-response-size.
+export const RESPONSE_TOO_BIG_CODE = -32008;
+
+export class ResponseTooBigError extends Error { }
 
 export function parseEthInternalTrx(traceFilterResult: any[], isETH: boolean, theMergeBlockNumber: number): Trace[] {
   const traces = filterErrors(traceFilterResult).map(t => {
@@ -37,9 +41,16 @@ export function fetchEthInternalTrx(ethClient: HTTPClientInterface, web3Wrapper:
     fromBlock: Web3Static.parseNumberToHex(fromBlock),
     toBlock: Web3Static.parseNumberToHex(toBlock)
   };
-  return ethClient.request('trace_filter', [filterParams]).then((data: any) => parseEthInternalTrx(data['result'],
-    isETH, theMergeBlockNumber
-  ));
+  return ethClient.request('trace_filter', [filterParams]).then((data: any) => {
+    if (data['error']) {
+      const message = `trace_filter for interval ${fromBlock}:${toBlock} failed: ${JSON.stringify(data['error'])}`;
+      if (data['error']['code'] === RESPONSE_TOO_BIG_CODE) {
+        throw new ResponseTooBigError(message);
+      }
+      throw new Error(message);
+    }
+    return parseEthInternalTrx(data['result'], isETH, theMergeBlockNumber);
+  });
 }
 
 export async function fetchBlocks(ethClient: HTTPClientInterface, fromBlock: number, toBlock: number,
