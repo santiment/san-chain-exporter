@@ -11,7 +11,7 @@ copyFiltered() {
     destPath="${path/$srcDir/$destDir}"
     mkdir -p "$(dirname "$destPath")"
     cp "$path" "$destPath"
-  done < <(find "$srcDir" \( -type f \( -name "*.csv" -o -name "*.json" \) \) -print0)
+  done < <(find "$srcDir" \( -type f \( -name "*.csv" -o -name "*.json" -o -name "*.proto" \) \) -print0)
 }
 
 copyFiltered

@@ -135,6 +135,9 @@ export class Main {
   }
 
   async #doDisconnect() {
+    if (this.worker !== undefined) {
+      await this.worker.stop();
+    }
     if (this.exporter !== undefined) {
       await this.exporter.disconnect();
     }

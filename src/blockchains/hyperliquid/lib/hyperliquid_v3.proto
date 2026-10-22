@@ -1,0 +1,582 @@
+syntax = "proto3";
+
+package hyperliquid_l1_gateway.v3;
+
+// ---------------------------------------------------------------------------
+// Raw feed service
+//
+// Per-feed RPCs over the block-envelope files the node writes. All streams
+// share one request/response shape:
+//
+//   - Position selects the start point (inclusive). Unset = live tail.
+//   - Filter narrows the stream server-side: a list of FieldFilter
+//     constraints, keyed by the field names a feed advertises via
+//     ListFeeds.filter_fields. Constraining any other field fails with
+//     INVALID_ARGUMENT. With a filter set, `data` carries the same block
+//     envelope with non-matching events removed, and blocks with zero
+//     matching events are skipped. Without a filter, `data` is an exact
+//     replica of the source line.
+//
+// Filtered replay shares the same capacity as unfiltered replay.
+// RESOURCE_EXHAUSTED means replay capacity is temporarily unavailable;
+// retry with backoff.
+//
+// Streams carry no heartbeat frames. UNAVAILABLE means no new records
+// arrived before the stream timeout. StreamOrderbookSnapshots is exempt.
+// DEADLINE_EXCEEDED means the consumer was too slow; reconnect from the last
+// processed cursor.
+//
+// All timestamp fields are Unix milliseconds.
+// ---------------------------------------------------------------------------
+
+service HyperliquidL1Gateway {
+  // Feed discovery: IDs, supported position kinds, and filterable fields.
+  rpc ListFeeds(ListFeedsRequest) returns (ListFeedsResponse) {}
+
+  // Blocks from replica_cmds. Not filterable.
+  rpc StreamBlocks(StreamRequest) returns (stream Record) {}
+
+  // Fills from node_fills_by_block.
+  rpc StreamFills(StreamRequest) returns (stream Record) {}
+
+  // Order book diffs from node_raw_book_diffs_by_block.
+  rpc StreamRawBookDiffs(StreamRequest) returns (stream Record) {}
+
+  // Order statuses from node_order_statuses_by_block.
+  rpc StreamOrderStatuses(StreamRequest) returns (stream Record) {}
+
+  // Miscellaneous events from misc_events_by_block. Filterable by users only.
+  rpc StreamMiscEvents(StreamRequest) returns (stream Record) {}
+
+  // TWAP statuses from node_twap_statuses_by_block.
+  rpc StreamTwapStatuses(StreamRequest) returns (stream Record) {}
+
+  // Orderbook snapshots from ABCI state dumps. Timestamp positioning only;
+  // not filterable. Unset Position sends the latest snapshot immediately,
+  // then each newer one as it is written.
+  rpc StreamOrderbookSnapshots(StreamRequest) returns (stream Record) {}
+
+  // Unary lookups: the single record at (or nearest at-or-after) Position.
+  // Unset Position waits for the next record to be written;
+  // GetOrderbookSnapshot returns the latest existing snapshot instead.
+  rpc GetBlock(GetRequest) returns (Record) {}
+  rpc GetFills(GetRequest) returns (Record) {}
+  rpc GetRawBookDiffs(GetRequest) returns (Record) {}
+  rpc GetOrderStatuses(GetRequest) returns (Record) {}
+  rpc GetMiscEvents(GetRequest) returns (Record) {}
+  rpc GetTwapStatuses(GetRequest) returns (Record) {}
+  rpc GetOrderbookSnapshot(GetRequest) returns (Record) {}
+}
+
+// Start point for streams or lookup point for unary gets; inclusive.
+// Unset = live tail for streams, next-written record for gets. An
+// explicitly set zero value fails with INVALID_ARGUMENT.
+message Position {
+  oneof position {
+    int64 timestamp = 1;    // Unix ms
+    int64 block_number = 2; // same axis as Record.block_number
+  }
+}
+
+// Constraints AND together; values within one constraint OR together.
+// An empty fields list means "no filter".
+message Filter {
+  repeated FieldFilter fields = 1;
+}
+
+// One field constraint. Valid names are the feed's advertised ListFeeds.filter_fields:
+// "users" matches case-insensitively, "coins" exact.
+message FieldFilter {
+  string field = 1; // required
+  FilterOp op = 2;            // unset = FILTER_OP_IN
+  repeated string values = 3; // at least one value required
+}
+
+enum FilterOp {
+  FILTER_OP_UNSPECIFIED = 0; // treated as FILTER_OP_IN
+  FILTER_OP_IN = 1;          // the event's <field> value is one of `values`
+}
+
+message StreamRequest {
+  Position position = 1;
+  Filter filter = 2;
+}
+
+// The record at Position is selected first; the filter then rewrites its
+// envelope, so the returned events array may be empty.
+message GetRequest {
+  Position position = 1;
+  Filter filter = 2;
+}
+
+// One block envelope (or one snapshot). A cursor field is unset when the
+// record has no value for it; only a set cursor is a valid resume Position.
+message Record {
+  optional int64 block_number = 1; // sequential height, never the HyperBFT consensus round
+  optional int64 timestamp = 2;    // block/event time, Unix ms
+  bytes data = 3;
+}
+
+message ListFeedsRequest {}
+
+message ListFeedsResponse {
+  repeated FeedInfo feeds = 1;
+}
+
+enum PositionKind {
+  POSITION_KIND_UNSPECIFIED = 0;
+  POSITION_KIND_TIMESTAMP = 1;
+  POSITION_KIND_BLOCK_NUMBER = 2;
+}
+
+message FeedInfo {
+  string id = 1;     // stable feed ID, e.g. "fills"
+  string source = 2; // stable source ID, e.g. "node_fills_by_block"
+  repeated PositionKind position_kinds = 3;
+  repeated string filter_fields = 4; // valid FieldFilter names; empty = not filterable
+}
+
+// ---------------------------------------------------------------------------
+// Market streaming service
+//
+// Typed market views: the full WebSocket channel surface delivered over gRPC.
+// Book, trade, TP/SL, fills-family, and candle channels are block-cadence
+// views. allMids and activeAssetCtx are Info-derived views; an upstream
+// outage appears as an absence of frames rather than a stream close.
+//
+// Subscription model: one RPC = one subscription; cancel the RPC context to
+// unsubscribe. Most streams open with current state: L2Book and BBO send
+// the current book immediately, the stateful incremental views (L4 book,
+// L4 order updates, TP/SL, L2 diff) open with a snapshot frame before
+// their diffs, and the Info-derived streams send their current snapshot
+// immediately. Trades and the fills family are live-only (no opening
+// snapshot); candle's opening behavior is described on StreamCandle.
+//
+// Lag contract: the snapshot-derived views (L2Book, BBO, candle, allMids,
+// activeAssetCtx) recover in-band after a lag (next emission supersedes
+// anything dropped). Incremental channels (trades, L4, L2 diff, TP/SL,
+// fills) terminate with ABORTED when the subscriber lags; reconnect and
+// rebuild from the new snapshot.
+//
+// Errors: one contract across the service. INVALID_ARGUMENT: a malformed
+// request (empty required fields, blank ("") or wildcard ("*") coin-list
+// entries, list-size or parameter violations, or an unknown coin where the
+// stream validates coins). FAILED_PRECONDITION: the requested feature is
+// unavailable. UNAVAILABLE: the requested view is not ready or its latest
+// upstream data is stale. ABORTED: the stream lost frames or its state was
+// reset; resubscribe, and rebuild from the new snapshot
+// where the stream opens with one. DEADLINE_EXCEEDED: the subscriber was too
+// slow; resubscribe and consume faster.
+//
+// Conventions: prices and sizes are decimal strings; times are Unix ms;
+// block_number is the sequential Hyperliquid block number (never the
+// HyperBFT consensus round). The Info-derived streams carry no
+// block_number, and their time identifies when the endpoint made the update
+// available, not a block or upstream time. Sides are native "B" (bid) / "A" (ask).
+// Frame-level `time` fields carry the frame's block time; the per-order
+// `timestamp` fields carry that order's placement time instead.
+//
+// Coins: names are the node's native identifiers -- perp base symbols
+// ("BTC"), "@N" spot indices, "#N" outcome markets; matching is exact
+// (case-sensitive). Coin lists come in two forms: optional scope lists
+// (empty = every coin in the view's universe, no cap; duplicates ignored)
+// and required 1-20 lists (counted after deduplication). The book, BBO,
+// trade, L4, and TP/SL streams validate listed coins against the current
+// universe; the fills family accepts unknown coins, which never match.
+//
+// Filters: inclusive -- an event is delivered when it matches. Values
+// within one list OR together; when a request carries more than one filter
+// (for example coins and users), an event must match every non-empty
+// filter (the filters AND together). User addresses are 0x-prefixed hex,
+// matched case-insensitively; the zero address is not special-cased.
+//
+// Sequencing: incremental streams carry a per-subscription `sequence`
+// (TP/SL, L4 order updates, the fills family) -- the loss-detection
+// convention future incremental RPCs follow. L2BookDiff predates it and
+// chains per-coin seq/prev_seq instead.
+//
+// Heartbeats: streams carry none; absence of messages is not a liveness
+// signal, and a long-idle stream is healthy unless it has been closed with
+// an error status.
+// ---------------------------------------------------------------------------
+
+service MarketStreaming {
+  // Aggregated L2 book for one coin: an immediate snapshot on subscribe, then
+  // one full snapshot per coalesce window (block_number may skip on a healthy stream).
+  rpc StreamL2Book(L2BookRequest) returns (stream L2BookUpdate) {}
+
+  // Best bid/offer for the requested coins: current top of book per coin on
+  // subscribe, then a frame only when a coin's top of book changes.
+  rpc StreamBbo(BboRequest) returns (stream BboUpdate) {}
+
+  // Incremental L2 level changes with per-coin sequence chain: one
+  // snapshot=true full-book entry per coin first, then per-window diffs.
+  rpc StreamL2BookDiff(L2BookDiffRequest) returns (stream L2BookDiffUpdate) {}
+
+  // Full L4 book for one coin: snapshot on connect, then per-block diffs
+  // in the node's native JSON shape ({order_statuses, book_diffs}).
+  // For decoded, typed diffs use StreamL4OrderUpdates instead.
+  rpc StreamL4Book(L4BookRequest) returns (stream L4BookUpdate) {}
+
+  // Typed L4 order diffs (NEW/UPDATE/REMOVE) -- the decoded alternative to
+  // StreamL4Book's JSON. Empty coins = all.
+  rpc StreamL4OrderUpdates(L4OrderUpdatesRequest) returns (stream L4OrderUpdate) {}
+
+  // TP/SL trigger-order lifecycle. Empty coins = all perp coins.
+  rpc StreamTpslUpdates(TpslUpdatesRequest) returns (stream TpslUpdate) {}
+
+  // Normalized trades, batched per (block, coin).
+  rpc StreamTrades(TradesRequest) returns (stream TradesUpdate) {}
+
+  // Every fill available to the endpoint, batched per block (WS allFills parity).
+  // A Fill is one party's execution with position context; a matched pair
+  // is a Trade (StreamTrades).
+  rpc StreamAllFills(AllFillsRequest) returns (stream FillsUpdate) {}
+
+  // Fills whose own account matches `user` (WS userFills parity).
+  rpc StreamUserFills(UserFillsRequest) returns (stream FillsUpdate) {}
+
+  // Fills attributed to builder `builder` (WS builderFills parity). Fills
+  // carrying no builder address never match.
+  rpc StreamBuilderFills(BuilderFillsRequest) returns (stream FillsUpdate) {}
+
+  // Fills produced by a liquidation (WS liquidationFills parity).
+  rpc StreamLiquidationFills(LiquidationFillsRequest) returns (stream FillsUpdate) {}
+
+  // Live OHLCV candles for one (coin, interval) (WS candle parity): the
+  // current bucket's state, re-emitted on a throttled cadence while it
+  // changes; a newer open_time implies the previous bucket closed, and its
+  // final state is sent first. On subscribe the current bucket is sent
+  // immediately when the gateway already tracks it; otherwise the first
+  // frame arrives with the next execution. Candle streaming returns
+  // FAILED_PRECONDITION when unavailable.
+  rpc StreamCandle(CandleRequest) returns (stream CandleUpdate) {}
+
+  // Full perp mid-price map (default dex only), re-sent whenever any mid
+  // changes (WS allMids parity); current map delivered immediately on subscribe.
+  // Info-derived stream; an upstream outage appears as silence.
+  rpc StreamAllMids(AllMidsRequest) returns (stream AllMidsUpdate) {}
+
+  // One perp coin's market context, re-sent whenever it changes (WS
+  // activeAssetCtx parity); current context delivered immediately on subscribe.
+  // Info-derived stream; an upstream outage appears as silence.
+  rpc StreamActiveAssetCtx(ActiveAssetCtxRequest) returns (stream ActiveAssetCtxUpdate) {}
+}
+
+message L2BookRequest {
+  string coin = 1;                // required; one coin per subscription (WS l2Book parity)
+  optional uint32 n_levels = 2;   // omitted = 20; explicit 0 = full depth when supported by the endpoint
+  optional uint32 n_sig_figs = 3; // price aggregation (WS l2Book rules)
+  optional uint64 mantissa = 4;
+  optional bool strict = 5; // suppress frames whose aggregated levels are unchanged
+}
+
+message L2BookUpdate {
+  string coin = 1;
+  int64 time = 2;
+  int64 block_number = 3;
+  repeated L2Level bids = 4;
+  repeated L2Level asks = 5;
+}
+
+// One aggregated price level.
+message L2Level {
+  string px = 1;
+  string sz = 2;
+  uint32 n = 3; // number of resting orders aggregated into this level
+}
+
+message BboRequest {
+  repeated string coins = 1; // required, 1-20
+}
+
+message BboUpdate {
+  string coin = 1;
+  int64 time = 2;
+  int64 block_number = 3;
+  L2Level bid = 4; // unset when the book side is empty
+  L2Level ask = 5; // unset when the book side is empty
+}
+
+message L2BookDiffRequest {
+  repeated string coins = 1;      // required, 1-20
+  optional uint32 n_levels = 2;   // depth/rounding contract identical to L2BookRequest
+  optional uint32 n_sig_figs = 3; // no strict flag: a diff stream emits only changes by construction
+  optional uint64 mantissa = 4;
+}
+
+message L2BookDiffUpdate {
+  int64 time = 1;
+  int64 block_number = 2;
+  repeated L2CoinDiff diffs = 3;
+}
+
+message L2CoinDiff {
+  string coin = 1;
+  uint64 seq = 2;
+  uint64 prev_seq = 3; // previous entry's seq for this coin; 0 on the snapshot
+  // Changed levels only (full book when snapshot); a level with sz "0.0"
+  // removes that price level.
+  repeated L2Level bids = 4;
+  repeated L2Level asks = 5;
+  bool snapshot = 6; // true: full book for this coin, not a diff; rebuild from it
+}
+
+message L4BookRequest {
+  string coin = 1;          // required
+  optional bool mirror = 2; // HIP-4 sibling projection (synthetic orders); omitted = true
+}
+
+// Snapshot first, then diffs.
+message L4BookUpdate {
+  oneof update {
+    L4BookSnapshot snapshot = 1;
+    L4BookDiff diff = 2;
+  }
+}
+
+message L4BookSnapshot {
+  string coin = 1;
+  int64 time = 2;
+  int64 block_number = 3;
+  repeated L4Order bids = 4;
+  repeated L4Order asks = 5;
+}
+
+message L4BookDiff {
+  int64 time = 1;
+  int64 block_number = 2;
+  bytes data = 3; // JSON-encoded {order_statuses, book_diffs}, the node's native shape
+}
+
+message L4OrderUpdatesRequest {
+  repeated string coins = 1; // scope; empty = all coins
+  repeated string users = 2; // only diffs whose order belongs to one of these; empty = no filter
+}
+
+message L4OrderUpdate {
+  int64 time = 1;
+  int64 block_number = 2;
+  repeated L4OrderDiff diffs = 3;
+  bool snapshot = 4;   // true: rebuild local state from the included diffs
+  uint64 sequence = 5; // starts at 1 on the snapshot frame; a gap means loss -- resubscribe
+}
+
+enum L4OrderDiffType {
+  L4_ORDER_DIFF_TYPE_UNSPECIFIED = 0;
+  L4_ORDER_DIFF_TYPE_NEW = 1;
+  L4_ORDER_DIFF_TYPE_UPDATE = 2;
+  L4_ORDER_DIFF_TYPE_REMOVE = 3;
+}
+
+message L4OrderDiff {
+  L4OrderDiffType diff_type = 1;
+  string coin = 2;
+  uint64 oid = 3;
+  string user = 4;
+  string side = 5; // "B" or "A"
+  string px = 6;
+  string sz = 7;
+}
+
+message L4Order {
+  string user = 1;
+  string coin = 2;
+  string side = 3; // "B" or "A"
+  string limit_px = 4;
+  string sz = 5;
+  uint64 oid = 6;
+  int64 timestamp = 7; // order placement time, not the frame's block time
+  string trigger_condition = 8;
+  bool is_trigger = 9;
+  string trigger_px = 10;
+  bool is_position_tpsl = 11;
+  bool reduce_only = 12;
+  string order_type = 13;
+  optional string tif = 14;
+  optional string cloid = 15;
+  bool synthetic = 16; // true only on a synthesized HIP-4 mirror order
+}
+
+message TpslUpdatesRequest {
+  repeated string coins = 1; // scope; empty = all perp coins
+  repeated string users = 2; // only diffs for these addresses; empty = no filter
+}
+
+message TpslUpdate {
+  int64 time = 1;
+  int64 block_number = 2;
+  repeated TpslOrderDiff diffs = 3;
+  bool snapshot = 4;   // true: rebuild local TP/SL state from the included adds
+  uint64 sequence = 5; // starts at 1 on the snapshot frame; a gap means loss -- resubscribe
+}
+
+enum TpslDiffType {
+  TPSL_DIFF_TYPE_UNSPECIFIED = 0;
+  TPSL_DIFF_TYPE_ADD = 1;
+  TPSL_DIFF_TYPE_REMOVE = 2;
+  TPSL_DIFF_TYPE_UPDATE = 3; // in-place modify, including resolved-size moves
+}
+
+message TpslOrderDiff {
+  TpslDiffType diff_type = 1;
+  uint64 oid = 2;
+  string coin = 3;
+  string user = 4;
+  string side = 5; // "B" or "A"
+  string trigger_px = 6;
+  string limit_px = 7;
+  string sz = 8;
+  string trigger_condition = 9;
+  string order_type = 10;
+  bool is_position_tpsl = 11;
+  bool reduce_only = 12;
+  int64 timestamp = 13;              // order placement time, not the frame's block time
+  optional string reason = 14; // set on remove; mirrors the node's status
+  // Live effective size: equals sz for standalone triggers; derived from
+  // the position for position-level TP/SL (whose sz is "0.0"). Unset only
+  // until that position is first seen.
+  optional string resolved_sz = 15;
+}
+
+message TradesRequest {
+  repeated string coins = 1; // required, 1-20
+  repeated string users = 2; // only trades with one of these as any counterparty; empty = no filter
+}
+
+message TradesUpdate {
+  int64 time = 1;
+  int64 block_number = 2;
+  repeated Trade trades = 3;
+}
+
+message Trade {
+  string coin = 1;
+  string side = 2; // taker side, "B" or "A"
+  string px = 3;
+  string sz = 4;
+  string hash = 5;
+  int64 time = 6;
+  uint64 tid = 7; // trade ID; not globally unique, fills group by (coin, tid)
+  // Bid- and ask-side addresses. Either side may hold several (multi-maker
+  // fill); a self-trading address appears on both sides. Together they
+  // equal the WS trades channel's `users` array as a set.
+  repeated string bid_users = 8;
+  repeated string ask_users = 9;
+  bool synthetic = 10; // true only on a synthesized HIP-4 sibling record
+}
+
+message AllFillsRequest {
+  repeated string coins = 1; // scope; empty = all coins
+  repeated string users = 2; // only fills whose own account matches; empty = no filter
+}
+
+message UserFillsRequest {
+  string user = 1;           // required; the fill's own account
+  repeated string coins = 2; // scope; empty = all coins
+}
+
+message BuilderFillsRequest {
+  string builder = 1;        // required; only fills carrying this builder match
+  repeated string coins = 2; // scope; empty = all coins
+}
+
+message LiquidationFillsRequest {
+  repeated string coins = 1;            // scope; empty = all coins
+  repeated string liquidated_users = 2; // only fills whose liquidated account matches; empty = no filter
+}
+
+message FillsUpdate {
+  int64 time = 1;
+  int64 block_number = 2;
+  // Starts at 1; a gap means loss -- resubscribe. A frame whose fills were
+  // all filtered out is still sent with empty `fills`, keeping the counter
+  // contiguous.
+  uint64 sequence = 3;
+  repeated Fill fills = 4;
+}
+
+// One party's execution with position context (one Fill per counterparty
+// per match; the matched pair is a Trade).
+message Fill {
+  string user = 1; // the account this fill belongs to
+  string coin = 2;
+  string px = 3;
+  string sz = 4;
+  string side = 5; // "B" or "A"
+  int64 time = 6;
+  string hash = 7;
+  uint64 tid = 8; // shared by the fills of one match; not globally unique
+  bool crossed = 9; // true when this side was the taker
+  string dir = 10;  // human-readable direction, e.g. "Open Long"
+  string start_position = 11; // signed position held in `coin` immediately before this fill
+  uint64 oid = 12;
+  string closed_pnl = 13;
+  string fee = 14;
+  string fee_token = 15;             // fee denomination, e.g. "USDC"
+  FillBuilder builder = 16;          // set only on builder-routed fills
+  optional string cloid = 17;        // client order id
+  optional uint64 twap_id = 18;      // set only on fills executed by a TWAP order
+  FillLiquidation liquidation = 19;  // set only on fills produced by a liquidation
+}
+
+message FillBuilder {
+  string address = 1; // builder address
+  string fee = 2;     // builder fee charged on this fill
+}
+
+message FillLiquidation {
+  string liquidated_user = 1;
+  string mark_px = 2;
+  string method = 3;
+}
+
+message CandleRequest {
+  string coin = 1;     // required
+  string interval = 2; // required; fixed-width: "1s" "1m" "3m" "5m" "15m" "30m" "1h" "2h" "4h" "8h" "12h" "1d"
+}
+
+// One OHLCV bucket snapshot. Buckets are epoch-aligned and sparse (no
+// executions, no frames). A frame supersedes any earlier frame with the
+// same open_time; a newer open_time is the rollover signal.
+message CandleUpdate {
+  string coin = 1;
+  string interval = 2;
+  int64 open_time = 3;  // bucket open, epoch-aligned
+  int64 close_time = 4; // open_time + interval width - 1
+  string open = 5;
+  string high = 6;
+  string low = 7;
+  string close = 8;
+  string volume = 9;      // base volume, exact decimal sum
+  uint64 trade_count = 10; // executions in the bucket; a matched pair counts once
+}
+
+message AllMidsRequest {}
+
+// Full perp mid-price map snapshot; each frame supersedes the previous one.
+message AllMidsUpdate {
+  int64 time = 1;               // endpoint update time, not a block or upstream timestamp
+  map<string, string> mids = 2; // coin -> mid (book midpoint, or last trade for a bookless market)
+}
+
+message ActiveAssetCtxRequest {
+  string coin = 1; // required; a perp on the default dex
+}
+
+// One perp coin's market context snapshot; each frame supersedes the
+// previous one.
+message ActiveAssetCtxUpdate {
+  string coin = 1;
+  int64 time = 2;    // endpoint update time, not a block or upstream timestamp
+  string funding = 3; // hourly funding rate
+  string open_interest = 4;
+  string prev_day_px = 5; // price 24h ago
+  string day_ntl_vlm = 6; // 24h notional volume
+  optional string premium = 7; // mark/oracle premium; unset when the market has no book
+  string oracle_px = 8;
+  string mark_px = 9;
+  optional string mid_px = 10; // book midpoint; unset when the market has no book
+  repeated string impact_pxs = 11; // [bid impact, ask impact]; empty when the market has no book
+  string day_base_vlm = 12; // 24h base-unit volume
+}
