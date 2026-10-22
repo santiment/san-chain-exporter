@@ -12,6 +12,7 @@ import { XRPWorker } from './xrp/xrp_worker';
 import { ICPWorker } from './icp/icp_worker';
 import { ICRCWorker } from './icrc/icrc_worker';
 import { BeaconWorker } from './eth_beacon/eth_beacon_worker'
+import { HyperliquidWorker } from './hyperliquid/hyperliquid_worker';
 
 export function constructWorker(blockchain: string, settings: any): BaseWorker {
   switch (blockchain) {
@@ -39,6 +40,8 @@ export function constructWorker(blockchain: string, settings: any): BaseWorker {
       return new ICRCWorker(settings);
     case 'eth_beacon':
       return new BeaconWorker(settings);
+    case 'hyperliquid':
+      return new HyperliquidWorker(settings);
     default:
       throw Error(`Blockchain type '${blockchain}' is not recognized`);
   }
