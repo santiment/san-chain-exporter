@@ -1,4 +1,4 @@
-FROM node:24.19.0-trixie-slim AS builder
+FROM node:26.13.0-trixie-slim AS builder
 
 ARG BUILD_ENV=production
 ENV BUILD_ENV=${BUILD_ENV}
@@ -6,7 +6,7 @@ ENV BUILD_ENV=${BUILD_ENV}
 RUN apt-get update && \
     apt-get install -y bash g++ ca-certificates musl-dev make git python3
 
-# Node 24 bundles npm 11, but pin a floor so security features
+# Node 26 bundles npm 11, but pin a floor so security features
 # (min-release-age and strict-allow-scripts, see .npmrc) are guaranteed present
 RUN npm install -g npm@^11.16
 
@@ -38,7 +38,7 @@ RUN test -f /opt/node_modules/node-rdkafka/build/Release/node-librdkafka.node
 
 
 
-FROM node:24.19.0-trixie-slim
+FROM node:26.13.0-trixie-slim
 
 RUN apt-get update && \
     apt-get install -y openssl netcat-openbsd
