@@ -41,7 +41,7 @@
     "web3": "^4.9.0",
     "web3-validator": "^2.0.6",
     "xrpl": "^3.1.0",
-    "zod": "^3.24.1"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.13",
