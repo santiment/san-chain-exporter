@@ -83,6 +83,13 @@ export class BaseWorker {
   }
 
   /**
+   * Release connections which would keep the process alive after the work loop has stopped (e.g. open streams).
+   * Invoked on disconnect. Override when needed.
+   */
+  async stop() {
+  }
+
+  /**
    * A healthcheck metric for  theblockchain. Can be a check on the Node and/or other.
    * @returns {Promise} Promise that needs to be overriden
    */
